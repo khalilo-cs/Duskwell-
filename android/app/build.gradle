@@ -1,0 +1,36 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.zakiadventure.game'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.zakiadventure.game'
+        minSdk 26
+        targetSdk 34
+        versionCode 2
+        versionName '1.1'
+    }
+    signingConfigs {
+        // مفتاح للتثبيت المباشر (Sideload). لنشر اللعبة في Google Play أنشئ مفتاحك الخاص (راجع android/README.md)
+        release {
+            storeFile file('../sideload.keystore')
+            storePassword 'zakigame'
+            keyAlias 'zaki'
+            keyPassword 'zakigame'
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+
+// نسخ ملفات اللعبة من مجلد game/ إلى أصول التطبيق (مصدر واحد للويب والأندرويد)
+tasks.register('copyWeb', Copy) {
+    from("${rootDir}/../game") { include 'index.html', 'game.js', 'config.js' }
+    into "${projectDir}/src/main/assets/www"
+}
+preBuild.dependsOn 'copyWeb'

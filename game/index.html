@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>مغامرة زاكي - لعبة منصات كلاسيكية</title>
+<meta name="description" content="مغامرة زاكي: لعبة منصات كلاسيكية بـ 96 مرحلة و24 عالماً و24 زعيماً. العبها مجاناً على الهاتف والكمبيوتر!">
+<meta property="og:title" content="مغامرة زاكي - 96 مرحلة من المرح الكلاسيكي">
+<meta property="og:description" content="اقفز، اجمع العملات، اهزم الزعماء! العبها مجاناً الآن.">
+<meta property="og:image" content="preview.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#101030">
+<style>
+:root{--bg:#0b0b1e;--btn:#ffffff22;--btn-on:#ffffff55}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:Tahoma,Arial,sans-serif;color:#fff}
+#app{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;height:100dvh;gap:6px;padding:4px}
+#wrap{position:relative;flex:0 1 auto;line-height:0}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;background:#000;border-radius:6px;box-shadow:0 0 30px #0008;
+  width:min(100vw - 8px,(100dvh - 8px - var(--reserve,0px))*256/224);height:auto;aspect-ratio:256/224;display:block}
+#touch{display:none;width:100%;max-width:640px;justify-content:space-between;align-items:center;padding:0 10px;direction:ltr}
+.pad{display:flex;gap:10px}
+.b{width:64px;height:64px;border-radius:50%;background:var(--btn);border:2px solid #fff5;color:#fff;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center}
+.b.on{background:var(--btn-on);transform:scale(.94)}
+.b.small{width:44px;height:44px;font-size:14px}
+@media (pointer:coarse){#touch{display:flex}:root{--reserve:96px}}
+@media (pointer:coarse) and (orientation:landscape){
+  :root{--reserve:0px}
+  #app{padding:0;gap:0} #ad,#foot{display:none}
+  #touch{position:fixed;top:0;bottom:calc(8px + env(safe-area-inset-bottom));left:0;right:0;max-width:none;align-items:flex-end;
+    padding:0 calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left));pointer-events:none}
+  #touch .b{pointer-events:auto;width:76px;height:76px}
+  #touch .b.small{width:44px;height:44px;position:absolute;top:8px;right:calc(14px + env(safe-area-inset-right))}
+}
+#ad{max-width:728px;width:100%;text-align:center;min-height:0;line-height:0}
+#foot{font-size:11px;opacity:.7;line-height:1.2;text-align:center}
+#foot a{color:#ffd76a}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="wrap"><canvas id="c" aria-label="لعبة مغامرة زاكي"></canvas></div>
+  <div id="touch">
+    <div class="pad"><div class="b" data-act="left">◀</div><div class="b" data-act="right">▶</div></div>
+    <div class="b small" data-act="pause">II</div>
+    <div class="pad"><div class="b" data-act="run">B</div><div class="b" data-act="jump">A</div></div>
+  </div>
+  <div id="ad"></div>
+  <div id="foot"></div>
+</div>
+<script src="config.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

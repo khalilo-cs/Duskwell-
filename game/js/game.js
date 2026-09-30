@@ -8,7 +8,7 @@ function resize() { const dpr = window.devicePixelRatio || 1, r = cv.getBounding
 addEventListener('resize', resize); resize();
 Z.SC = () => SC;
 
-let state = 'title', tick = 0, sel = 0, selW = 0, selS = 0, selH = 0, introT = 0, results = null, resT = 0, pauseSel = 0, overT = 0, toast = null, lastState = '';
+let state = 'title', tick = 0, stateT = 0, sel = 0, selW = 0, selS = 0, selH = 0, introT = 0, results = null, resT = 0, pauseSel = 0, overT = 0, toast = null, lastState = '';
 const P = Z.prog;
 const NS = Z.NS, NW = Z.NW, NLEV = Z.NLEV;
 const idxOf = (w, s) => w * NS + s;
@@ -57,9 +57,18 @@ function titleItems() {
   items.push({ label: 'شارك اللعبة 📤', fn: shareGame });
   return items;
 }
-function go(s) { state = s; sel = 0; if (s === 'title') { menuItems = titleItems(); AU.music({ bpm: 108, root: 57, scale: 'pent', leadWave: 'triangle', seed: 5 }); } if (s === 'settings') sel = 0; AU.sfx('select'); }
+function go(s) { state = s; sel = 0; stateT = 0; if (s === 'title') { menuItems = titleItems(); AU.music({ bpm: 108, root: 57, scale: 'pent', leadWave: 'triangle', seed: 5 }); } if (s === 'settings') sel = 0; AU.sfx('select'); }
 function layout(items, x, y, w, h, gap) { items.forEach((it, i) => { it.x = x; it.y = y + i * (h + gap); it.w = w; it.h = h; }); }
-function drawItems(c, items, selIdx) { items.forEach((it, i) => D.button(c, it.x, it.y, it.w, it.h, typeof it.label === 'function' ? it.label() : it.label, i === selIdx, { lock: it.lock })); }
+function drawItems(c, items, selIdx) {
+  items.forEach((it, i) => {
+    const k = clamp((stateT - i * 3) / 12, 0, 1), e = 1 - Math.pow(1 - k, 3);
+    if (e <= 0.01) return;
+    c.save(); c.globalAlpha = e; c.translate(it.x + it.w / 2, it.y + it.h / 2); c.scale(0.7 + 0.3 * e, 0.7 + 0.3 * e); c.translate(-(it.x + it.w / 2), -(it.y + it.h / 2) + (1 - e) * 8);
+    D.button(c, it.x, it.y, it.w, it.h, typeof it.label === 'function' ? it.label() : it.label, i === selIdx, { lock: it.lock });
+    c.restore();
+  });
+}
+function iris(c, cx, cy, r) { c.save(); c.beginPath(); c.rect(0, 0, VW, VH); c.arc(clamp(cx, 0, VW), clamp(cy, 0, VH), Math.max(0.1, r), 0, 7); c.fillStyle = '#06061a'; c.fill('evenodd'); c.restore(); }
 const inR = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 function navItems(items) {
   if (Z.hit.has('up') && !Z.hit.has('jump')) { } // تنقل
@@ -85,13 +94,13 @@ function finishLevel() {
 
 /* ---------------- الخطوة الرئيسية ---------------- */
 function step() {
-  tick++;
+  tick++; stateT++;
   switch (state) {
     case 'title': { layout(menuItems, VW / 2 - 70, 92, 140, 15, 3); navItems(menuItems); break; }
     case 'select': selectStep(); break;
     case 'heroes': heroStep(); break;
     case 'settings': settingsStep(); break;
-    case 'intro': if (--introT <= 0) { state = 'play'; AU.music(W.th.music); } if (Z.hit.has('start') || Z.hit.has('jump')) introT = Math.min(introT, 8); break;
+    case 'intro': if (--introT <= 0) { state = 'play'; W.irisIn = 40; AU.music(W.th.music); } if (Z.hit.has('start') || Z.hit.has('jump')) introT = Math.min(introT, 8); break;
     case 'play':
       if (isBack()) { state = 'paused'; pauseSel = 0; AU.pause(); AU.sfx('select'); break; }
       W.step();
@@ -239,7 +248,7 @@ function drawHUD(c) {
   if (p.star > 0) { D.fillRR(c, 6, 37, 34, 3, 1.5, 'rgba(255,255,255,.2)'); D.fillRR(c, 6, 37, 34 * p.star / 600, 3, 1.5, '#ffe066'); }
   // يمين: عملات، جواهر، نتيجة، وقت
   D.panel(c, VW - 92, 3, 89, 30, 8);
-  D.coin(c, VW - 84, 11, 4.4, tick / 10); D.text(c, '' + W.S.coins, VW - 76, 14, 9.5, '#fff', 'left');
+  D.coin(c, VW - 84, 11, 4.4 + (W.coinPulse > 0 ? W.coinPulse * 0.28 : 0), tick / 10); D.text(c, '' + W.S.coins, VW - 76, 14, 9.5, '#fff', 'left');
   D.text(c, '♥ ' + W.S.lives, VW - 44, 14, 9, '#ff8aa0', 'left');
   const gm = W.gemMask; for (let i = 0; i < 3; i++) { D.gem(c, VW - 84 + i * 12, 23, 9, ['#39e6ff', '#ff5ad8', '#7dff5a'][i], false); if (!(gm & (1 << i))) { c.fillStyle = 'rgba(15,15,35,.75)'; c.beginPath(); c.arc(VW - 84 + i * 12, 23, 4.4, 0, 6.3); c.fill(); } }
   D.text(c, '⏱' + W.time, VW - 44, 26, 8.5, W.time < 60 ? '#ff7a7a' : '#fff', 'left');
@@ -249,6 +258,8 @@ function drawHUD(c) {
   D.text(c, (L.w + 1) + '-' + (L.s + 1), VW / 2, 17, 8, 'rgba(255,255,255,.85)', 'center', '#20112e', 2);
   if (W.hint) { const a = Math.min(1, W.hint.t / 15); c.globalAlpha = a; const wd = Math.min(280, 40 + W.hint.text.length * 5.6); D.panel(c, VW / 2 - wd / 2, VH - 40, wd, 17, 8.5, 'rgba(10,10,40,.82)'); D.text(c, W.hint.text, VW / 2, VH - 28, 8.8, '#fff'); c.globalAlpha = 1; }
   if (W.boss && !W.boss.dead && W.boss.state !== 'sleep') { const b = W.boss; D.panel(c, VW / 2 - 70, VH - 22, 140, 16, 8); D.fillRR(c, VW / 2 - 66, VH - 14, 132, 6, 3, 'rgba(255,255,255,.15)'); D.fillRR(c, VW / 2 - 66, VH - 14, 132 * clamp(b.hp / b.max, 0, 1), 6, 3, b.enraged ? '#ff4a2a' : '#ff9a30'); D.text(c, '👑 ' + (W.BOSSNAME[b.kind] || 'الزعيم'), VW / 2, VH - 17, 7.5, '#fff'); }
+  // عملات تطير إلى العدّاد
+  if (W.flyList) for (const f of W.flyList) { const k = f.t / 26, e = k * k; D.coin(c, Z.lerp(f.x0, VW - 84, e), Z.lerp(f.y0, 11, e), 4.6 - 1.6 * k, f.t * 0.5); }
 }
 function drawIntro(c) {
   c.fillStyle = '#0a0a20'; c.fillRect(0, 0, VW, VH);
@@ -287,7 +298,12 @@ function render() {
     case 'heroes': drawHeroes(ctx); break;
     case 'settings': drawSettings(ctx); break;
     case 'intro': drawIntro(ctx); break;
-    case 'play': W.draw(ctx, SC); drawHUD(ctx); if (W.bossIntro > 0 && W.boss) { W.bossIntro--; } break;
+    case 'play': {
+      W.draw(ctx, SC); drawHUD(ctx); if (W.bossIntro > 0 && W.boss) { W.bossIntro--; }
+      const P2 = W.P, sx2 = P2.x + 5 - W.cam.x, sy2 = P2.y + 8 - W.cam.y;
+      if (W.irisIn > 0) { W.irisIn--; const k = 1 - W.irisIn / 40, e = 1 - Math.pow(1 - k, 2); iris(ctx, sx2, sy2, e * 380 + 6); }
+      else if (W.phase === 'dying' && P2.deadT > 25) { const k = Math.min(1, (P2.deadT - 25) / 55); iris(ctx, sx2, Math.min(VH - 24, sy2), (1 - k) * 380 + 6); }
+      break; }
     case 'paused': W.draw(ctx, SC); drawHUD(ctx); ctx.fillStyle = 'rgba(8,8,30,.6)'; ctx.fillRect(0, 0, VW, VH); D.text(ctx, 'إيقاف مؤقت', VW / 2, 44, 16, '#fff', 'center', '#20112e', 3); drawItems(ctx, pItems, pauseSel = sel); if (!pItems[0].x) layout(pItems, VW / 2 - 70, 60, 140, 18, 6); break;
     case 'results': drawResults(ctx); break;
     case 'over': drawOver(ctx); break;

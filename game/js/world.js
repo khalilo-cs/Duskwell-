@@ -50,7 +50,7 @@ W.load = (idx, keepCp) => {
   if (W.cp) L.cpOn.add(W.cp.tx);
   A.buildTiles(W.th); A.buildBG(W.th); Z.weather.setup(W.th); F.clear();
   W.tick = 0; W.hitstop = 0; W.shake = 0; W.bumps = new Map(); W.crumbling = new Map(); W.respawnQ = []; W.plats = L.plats.map(p => Object.assign({ x: p.x0, y: p.y0, dx: 0, dy: 0, dir: 1, h: 6 }, p, p.k === 'v' ? { x: p.x0, y: p.y1, dir: -1 } : {}));
-  W.items = []; W.fires = []; W.pops = [];
+  W.items = []; W.fires = []; W.pops = []; W.flyList = []; W.coinPulse = 0; W.irisIn = 0;
   W.time = L.time; W.timeAcc = 0; W.lvCoins = 0; W.kills = 0; W.combo = 0;
   if (!keepCp) { W.gemMask = 0; W.stats = { hits: 0, kills: 0, coins: 0 }; }
   W.hintIdx = 0; W.hint = null; W.hintT = 0; W.phase = 'play'; W.bossName = null;
@@ -100,6 +100,7 @@ function bumpBlock(tx, ty, by) {
 W.bumpBlock = bumpBlock;
 W.giveCoin = (x, y, pop) => {
   W.S.coins++; W.lvCoins++; W.stats.coins++; W.S.score += 50;
+  if (W.flyList) W.flyList.push({ x0: x - W.cam.x, y0: y - W.cam.y, t: 0 });
   if (pop) W.pops.push({ x, y, t: 0, k: 'coin' });
   F.sparkle(x, y, ['#ffe066', '#fff']);
   if (W.S.coins >= 100) { W.S.coins -= 100; W.oneUp(x, y - 8); }
@@ -220,11 +221,11 @@ W.updatePlayer = () => {
         p.vy = -7.0; p.vx = -p.wallDir * 3.3; p.face = -p.wallDir; p.wallLock = 12; p.jbuf = 0; p.airJumps = 1; p.dashAir = false; p.jumpCut = false; AU.sfx('wjump'); p.sx = 0.85; p.sy = 1.2;
         for (let i = 0; i < 5; i++) F.dust(p.x + (p.wallDir > 0 ? p.w : 0), p.y + 8, 1, -p.wallDir);
       } else if (p.coyote > 0) {
-        p.vy = -7.4 * hero.jump * (L.lowGrav ? 0.92 : 1); p.onG = false; p.coyote = 0; p.jbuf = 0; p.jumpCut = false; AU.sfx('jump'); p.sx = 0.8; p.sy = 1.25; F.dust(p.x + 5, p.y + p.h, 5, 0); if (p.slide) p.slide = false; p.springBoost = false;
+        p.vy = -7.7 * hero.jump * (L.lowGrav ? 0.92 : 1); p.onG = false; p.coyote = 0; p.jbuf = 0; p.jumpCut = false; AU.sfx('jump'); p.sx = 0.8; p.sy = 1.25; F.dust(p.x + 5, p.y + p.h, 5, 0); if (p.slide) p.slide = false; p.springBoost = false;
       }
     }
     if (Z.pressed('jump') && !p.onG && !p.swim && !p.wallDir && p.coyote <= 0 && p.airJumps > 0 && p.jbuf > 0 && p.hurtT <= 0 && !p.poundGo) {
-      p.vy = -6.7; p.airJumps--; p.jbuf = 0; p.djT = 14; AU.sfx('djump'); p.sx = 0.85; p.sy = 1.2; p.springBoost = false;
+      p.vy = -7.0; p.airJumps--; p.jbuf = 0; p.djT = 14; AU.sfx('djump'); p.sx = 0.85; p.sy = 1.2; p.springBoost = false;
       F.ring(p.x + 5, p.y + p.h, 'rgba(255,255,255,.85)', 2, 1.8, 16); for (let i = 0; i < 6; i++) F.add({ x: p.x + 5 + Z.rnd(-4, 4), y: p.y + p.h, vx: Z.rnd(-1, 1), vy: Z.rnd(0, 0.8), size: 1.6, color: 'rgba(255,255,255,.7)', life: 16 });
     }
     // الجاذبية
@@ -270,14 +271,18 @@ W.updatePlayer = () => {
   const x0 = Math.floor(p.x / T), x1 = Math.floor((p.x + p.w - 0.01) / T), y0 = Math.floor(p.y / T), y1 = Math.floor((p.y + p.h - 0.01) / T);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
     const ch = tileAt(tx, ty);
-    if (ch === 'o') { L.g[ty][tx] = '.'; W.giveCoin(tx * T + 8, ty * T + 4); AU.sfx('coin'); }
-    else if (ch === 'G') { const k = L.gemMap.get(tx + ',' + ty) || 0; L.g[ty][tx] = '.'; W.gemMask |= (1 << k); W.S.score += 1000; AU.sfx('gem'); F.burst(tx * T + 8, ty * T + 8, 22, ['#39e6ff', '#ff5ad8', '#7dff5a', '#fff'], 3, 3); F.ring(tx * T + 8, ty * T + 8, 'rgba(255,255,255,.9)', 3, 2, 24); W.popText(tx * T + 8, ty * T, '💎 ' + gemCount(W.gemMask) + '/3', '#8ff'); W.hint = { text: 'جوهرة! ' + gemCount(W.gemMask) + ' من 3', t: 120 }; }
+    if (ch === 'G') { const k = L.gemMap.get(tx + ',' + ty) || 0; L.g[ty][tx] = '.'; W.gemMask |= (1 << k); W.S.score += 1000; AU.sfx('gem'); F.burst(tx * T + 8, ty * T + 8, 22, ['#39e6ff', '#ff5ad8', '#7dff5a', '#fff'], 3, 3); F.ring(tx * T + 8, ty * T + 8, 'rgba(255,255,255,.9)', 3, 2, 24); W.popText(tx * T + 8, ty * T, '💎 ' + gemCount(W.gemMask) + '/3', '#8ff'); W.hint = { text: 'جوهرة! ' + gemCount(W.gemMask) + ' من 3', t: 120 }; }
     else if (ch === 'F' && !W.bossLocked()) { startFlag(p, ty); return; }
     else if (ch === 'K') { if (!L.cpOn.has(tx)) { L.cpOn.add(tx); W.cp = { tx, ty: ty + 1 }; AU.sfx('cp'); W.popText(tx * T + 8, ty * T - 6, 'نقطة حفظ ✔', '#8ff'); F.burst(tx * T + 8, ty * T, 12, ['#8ff', '#fff'], 2, 2); W.hint = { text: 'تم حفظ التقدم', t: 90 }; } }
     else if (ch === 'S') { const r = { x: tx * T + 2, y: ty * T + 6, w: 12, h: 10 }; if (Z.overlap(p, r)) { if (p.dashT || p.star) {} else W.hazardHit(); } }
     else if (ch === 'V') { W.hazardHit(); }
     else if (ch === 'P') { const cy = ty * T + 8; if (p.vy >= 0 && p.y + p.h >= cy && p.y + p.h <= ty * T + 16 + 4) { p.vy = -12; p.springBoost = true; p.airJumps = 1; p.dashAir = false; p.jumpCut = false; L.springT.set(tx + ',' + ty, 10); AU.sfx('spring'); p.sx = 0.75; p.sy = 1.3; p.poundGo = false; F.ring(tx * T + 8, ty * T + 10, 'rgba(255,255,255,.8)', 2, 1.4, 14); p.onG = false; } }
   }
+  // مغناطيس العملات: يجمع كل عملة قريبة من اللاعب
+  const mcx = p.x + p.w / 2, mcy = p.y + p.h / 2, MR = 32;
+  for (let ty = Math.floor((mcy - MR) / T); ty <= Math.floor((mcy + MR) / T); ty++)
+    for (let tx = Math.floor((mcx - MR) / T); tx <= Math.floor((mcx + MR) / T); tx++)
+      if (tileAt(tx, ty) === 'o') { const dx = tx * T + 8 - mcx, dy = ty * T + 8 - mcy; if (dx * dx + dy * dy < MR * MR) { L.g[ty][tx] = '.'; W.giveCoin(tx * T + 8, ty * T + 4); AU.sfx('coin'); } }
   // بلاطات تحت القدمين (الهشّة)
   if (p.onG && p.ground === 'Q') { const k = p.groundTx + ',' + p.groundTy; if (!W.crumbling.has(k)) { W.crumbling.set(k, 34); AU.sfx('crumble'); } }
   // حالة الرسم
@@ -285,6 +290,7 @@ W.updatePlayer = () => {
   else if (p.wallDir && !p.onG) p.st = 'wall'; else if (p.slide) p.st = 'slide'; else if (p.crouch) p.st = 'crouch'; else if (!p.onG) p.st = p.gliding ? 'glide' : (p.djT > 0 ? 'djump' : 'jump');
   else if (Math.abs(p.vx) > 0.25) { p.st = (dir && Z.sign(p.vx) === -dir && Math.abs(p.vx) > 1) ? 'skid' : 'run'; } else p.st = 'idle';
   p.anim += Math.abs(p.vx) * 0.9 + (p.st === 'swim' ? 1.2 : 0.2);
+  if (p.onG && Math.abs(p.vx) > 1.5 && !p.slide && T_ % 8 === 0) F.dust(p.x + 5 - p.face * 4, p.y + p.h, 1, -p.face);
   // إرشادات
   hintStep(p);
 };
@@ -359,6 +365,8 @@ W.step = () => {
     else if (W.tick % 2 === 0) F.add({ x: f.x + 3, y: f.y + 3, vx: 0, vy: 0, size: 2, color: 'rgba(255,150,40,.6)', life: 10 });
   }
   for (const pp of W.pops) pp.t++; W.pops = W.pops.filter(pp => pp.t < 46);
+  if (W.flyList) { for (const f of W.flyList) f.t++; W.flyList = W.flyList.filter(f => { if (f.t >= 26) { W.coinPulse = 8; return false; } return true; }); }
+  if (W.coinPulse > 0) W.coinPulse--;
   F.update(); Z.weather.update();
   if (W.shake > 0) W.shake -= 0.6;
   // الزمن

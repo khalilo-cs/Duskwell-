@@ -87,6 +87,7 @@ const SKINOF = { meadow: 'slime', desert: 'scarab', cave: 'slime', snow: 'pengui
 A.drawEnemy = (c, e, t, th) => {
   if (e.rm) return;
   const cx = e.x + e.w / 2, by = e.y + e.h, f = ((e.age >> 3) & 1) === 1, key = th.key, col = ECOL[key] || '#9b40c8';
+  if (!e.dead && !e.squash && e.onG) { c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.ellipse(cx, by + 1, e.w * 0.42, 1.6, 0, 0, TAU); c.fill(); }
   c.save(); c.translate(cx, by);
   if (e.dead) { c.translate(0, -e.h / 2); c.scale(1, -1); c.translate(0, e.h / 2); }
   if (e.flash > 0 && (e.flash >> 1) & 1) c.globalAlpha = 0.5;
@@ -194,6 +195,7 @@ A.drawEnemy = (c, e, t, th) => {
 /* ---------------- الزعماء ---------------- */
 A.drawBoss = (c, e, t, th) => {
   const cx = e.x + e.w / 2, by = e.y + e.h, acc = th.accent;
+  if (!e.dead && e.kind !== 'flyer' && e.kind !== 'ghost') { c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(cx, by + 1, e.w * 0.46, 2.2, 0, 0, TAU); c.fill(); }
   c.save(); c.translate(cx, by);
   if (e.dead) { c.translate(0, -e.h / 2); c.rotate(Math.sin(e.age * 0.6) * 0.15); c.translate(0, e.h / 2); }
   if (e.tele > 0) c.globalAlpha = Math.abs(Math.sin(e.age * 0.6)) * 0.6 + 0.2;

@@ -13,8 +13,13 @@ window.GAME_CONFIG = {
 
   // ===== رابط دعم اللاعبين (اختياري): Ko-fi / Patreon / PayPal.me / Buy Me a Coffee =====
   supportUrl: '',
+  // رابط سياسة الخصوصية (مطلوب لـ Google Play و AdSense)
+  privacyUrl: 'privacy.html',
   supportText: 'ادعم صانع اللعبة ☕',
 
   // دالة اختيارية تُستدعى بعد إنهاء كل مرحلة (مثلاً لعرض إعلان بيني من GameDistribution/Poki SDK)
-  onLevelEnd: function (levelNumber) {}
+  onLevelEnd: function (levelNumber) {
+    // في تطبيق أندرويد: يعرض إعلاناً بينياً (AdMob) كل 3 مراحل
+    if (window.AndroidBridge && AndroidBridge.levelEnd) AndroidBridge.levelEnd(levelNumber);
+  }
 };

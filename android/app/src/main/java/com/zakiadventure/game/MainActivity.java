@@ -12,9 +12,22 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.ump.ConsentInformation;
+import com.google.android.ump.ConsentRequestParameters;
+import com.google.android.ump.UserMessagingPlatform;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private InterstitialAd interstitial;
+    private final AtomicBoolean adsStarted = new AtomicBoolean(false);
 
     /** جسر بسيط لمشاركة اللعبة من داخل الصفحة */
     private class Bridge {
@@ -24,6 +37,20 @@ public class MainActivity extends Activity {
             i.setType("text/plain");
             i.putExtra(Intent.EXTRA_TEXT, text);
             startActivity(Intent.createChooser(i, null));
+        }
+
+        @JavascriptInterface
+        public void vibrate(int ms) {
+            try {
+                android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+                if (v != null) v.vibrate(android.os.VibrationEffect.createOneShot(Math.max(10, Math.min(ms, 300)), android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+            } catch (Exception ignored) {}
+        }
+
+        /** تُستدعى من اللعبة بعد إنهاء كل مرحلة؛ نعرض إعلاناً بينياً كل 3 مراحل */
+        @JavascriptInterface
+        public void levelEnd(int level) {
+            if (level % 3 == 0) runOnUiThread(MainActivity.this::showInterstitial);
         }
     }
 
@@ -48,6 +75,37 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
         web.loadUrl("file:///android_asset/www/index.html");
         hideSystemUi();
+        setupConsentAndAds();
+    }
+
+    /** نافذة الموافقة (UMP) أولاً، ثم تهيئة الإعلانات فقط إذا سُمح بها */
+    private void setupConsentAndAds() {
+        final ConsentInformation ci = UserMessagingPlatform.getConsentInformation(this);
+        ci.requestConsentInfoUpdate(this, new ConsentRequestParameters.Builder().build(),
+            () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, err -> { if (ci.canRequestAds()) startAds(); }),
+            err -> { if (ci.canRequestAds()) startAds(); });
+        if (ci.canRequestAds()) startAds();
+    }
+
+    private void startAds() {
+        if (!adsStarted.compareAndSet(false, true)) return;
+        MobileAds.initialize(this, status -> loadInterstitial());
+    }
+
+    private void loadInterstitial() {
+        InterstitialAd.load(this, BuildConfig.ADMOB_INTERSTITIAL_ID, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+            @Override public void onAdLoaded(InterstitialAd ad) { interstitial = ad; }
+            @Override public void onAdFailedToLoad(LoadAdError e) { interstitial = null; }
+        });
+    }
+
+    private void showInterstitial() {
+        if (interstitial == null) return;
+        interstitial.setFullScreenContentCallback(new FullScreenContentCallback() {
+            @Override public void onAdDismissedFullScreenContent() { interstitial = null; hideSystemUi(); loadInterstitial(); }
+            @Override public void onAdFailedToShowFullScreenContent(AdError e) { interstitial = null; loadInterstitial(); }
+        });
+        interstitial.show(this);
     }
 
     private void hideSystemUi() {

@@ -7,16 +7,31 @@ android {
         applicationId 'com.zakiadventure.game'
         minSdk 26
         targetSdk 34
-        versionCode 2
-        versionName '1.1'
+        versionCode 4
+        versionName '2.0'
+        // معرّفات AdMob: القيم الافتراضية هي معرّفات الاختبار الرسمية من Google (آمنة).
+        // للنشر الحقيقي مرّر معرّفاتك: gradle -PadmobAppId=ca-app-pub-XXXX~YYYY -PadmobInterstitialId=ca-app-pub-XXXX/ZZZZ
+        def appId = (project.findProperty('admobAppId') ?: 'ca-app-pub-3940256099942544~3347511713')
+        def interId = (project.findProperty('admobInterstitialId') ?: 'ca-app-pub-3940256099942544/1033173712')
+        manifestPlaceholders = [admobAppId: appId]
+        buildConfigField 'String', 'ADMOB_INTERSTITIAL_ID', "\"${interId}\""
     }
+    buildFeatures { buildConfig true }
     signingConfigs {
-        // مفتاح للتثبيت المباشر (Sideload). لنشر اللعبة في Google Play أنشئ مفتاحك الخاص (راجع android/README.md)
         release {
-            storeFile file('../sideload.keystore')
-            storePassword 'zakigame'
-            keyAlias 'zaki'
-            keyPassword 'zakigame'
+            if (project.hasProperty('playKeystore')) {
+                // إصدار Google Play: مفتاحك الخاص (مرّره عبر make-play-release.sh)
+                storeFile file(project.property('playKeystore'))
+                storePassword project.property('playStorePass')
+                keyAlias project.property('playKeyAlias')
+                keyPassword project.property('playKeyPass')
+            } else {
+                // مفتاح التثبيت المباشر (علني، لا تستخدمه في Google Play)
+                storeFile file('../sideload.keystore')
+                storePassword 'zakigame'
+                keyAlias 'zaki'
+                keyPassword 'zakigame'
+            }
         }
     }
     buildTypes {
@@ -28,9 +43,15 @@ android {
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 
+dependencies {
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    implementation 'com.google.android.ump:user-messaging-platform:3.1.0'
+}
+
 // نسخ ملفات اللعبة من مجلد game/ إلى أصول التطبيق (مصدر واحد للويب والأندرويد)
 tasks.register('copyWeb', Copy) {
-    from("${rootDir}/../game") { include 'index.html', 'game.js', 'config.js' }
+    doFirst { delete "${projectDir}/src/main/assets/www" }
+    from("${rootDir}/../game") { include 'index.html', 'config.js', 'privacy.html', 'js/**' }
     into "${projectDir}/src/main/assets/www"
 }
 preBuild.dependsOn 'copyWeb'

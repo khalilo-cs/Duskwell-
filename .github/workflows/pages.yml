@@ -22,6 +22,7 @@ jobs:
         run: |
           mkdir _site
           cp -r game _site/game
+          cp -r duskwell _site/duskwell
           cp android/zaki-adventure.apk _site/game/zaki-adventure.apk
           echo '<meta http-equiv="refresh" content="0;url=game/">' > _site/index.html
       - uses: actions/configure-pages@v5

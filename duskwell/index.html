@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ar" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>أرض الغسق - Duskwell</title>
+<meta name="description" content="Duskwell: a dark hand-inked Metroidvania with bosses, abilities, benches and a world to explore.">
+<meta name="theme-color" content="#05070d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one 16:9 stage centred on a near-black page; touch pads appear only on coarse pointers. */
+:root{
+  color-scheme:dark;
+  --ink:#05070d;        /* page ground */
+  --stage:#000;         /* canvas letterbox */
+  --pad:rgba(214,228,248,.14);
+  --pad-on:rgba(214,228,248,.42);
+  --pad-line:rgba(214,228,248,.5);
+  --text:#e6eefa;
+  --reserve:0px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:var(--ink);color:var(--text);overflow:hidden;font-family:"Cairo","Segoe UI",Tahoma,sans-serif}
+#app{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;padding-inline:8px}
+#wrap{position:relative;line-height:0}
+canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40px rgba(0,0,0,.6);
+  width:min(100vw - 16px,(100dvh - 16px - var(--reserve))*16/9);aspect-ratio:16/9;height:auto;outline:none}
+#touch{display:none;width:100%;max-width:760px;justify-content:space-between;align-items:flex-end;direction:ltr;padding-bottom:4px}
+.cluster{display:grid;gap:8px;align-items:center;justify-items:center}
+.dpad{grid-template-columns:repeat(3,auto);grid-template-areas:". up ." "left down right"}
+.face{grid-template-columns:repeat(3,auto);grid-template-areas:". cast ." "dash attack jump"}
+.b{width:58px;height:58px;border-radius:50%;background:var(--pad);border:2px solid var(--pad-line);color:var(--text);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 18px/1 "Cairo",sans-serif;backdrop-filter:blur(2px)}
+.b small{font:600 10px/1 "Cairo",sans-serif;opacity:.75;margin-top:2px}
+.b.on{background:var(--pad-on);transform:scale(.94)}
+.b.big{width:66px;height:66px}
+[data-act=up]{grid-area:up}[data-act=down]{grid-area:down}[data-act=left]{grid-area:left}[data-act=right]{grid-area:right}
+[data-act=jump]{grid-area:jump}[data-act=attack]{grid-area:attack}[data-act=dash]{grid-area:dash}[data-act=cast]{grid-area:cast}
+.sys{display:flex;gap:10px;align-self:flex-start}
+.sys .b{width:40px;height:40px;font-size:13px}
+@media (pointer:coarse){#touch{display:flex}:root{--reserve:170px}}
+@media (pointer:coarse) and (orientation:landscape){
+  :root{--reserve:0px}
+  #app{padding:0;gap:0}
+  #touch{position:fixed;inset:0;max-width:none;padding:0 calc(14px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));pointer-events:none}
+  #touch .b{pointer-events:auto}
+  #touch .sys{position:absolute;top:8px;right:calc(14px + env(safe-area-inset-right))}
+  .b{width:52px;height:52px}.b.big{width:60px;height:60px}
+}
+@media (prefers-reduced-motion:reduce){.b{backdrop-filter:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="wrap"><canvas id="c" tabindex="0" aria-label="Duskwell game"></canvas></div>
+  <div id="touch">
+    <div class="cluster dpad">
+      <div class="b" data-act="up">▲</div>
+      <div class="b big" data-act="left">◀</div>
+      <div class="b" data-act="down">▼</div>
+      <div class="b big" data-act="right">▶</div>
+    </div>
+    <div class="sys"><div class="b" data-act="map">M</div><div class="b" data-act="pause">II</div></div>
+    <div class="cluster face">
+      <div class="b" data-act="cast">F<small data-cap="cast"></small></div>
+      <div class="b" data-act="dash">C<small data-cap="dash"></small></div>
+      <div class="b big" data-act="attack">X<small data-cap="attack"></small></div>
+      <div class="b big" data-act="jump">Z<small data-cap="jump"></small></div>
+    </div>
+  </div>
+</div>
+<script src="js/util.js"></script>
+<script src="js/text.js"></script>
+<script src="js/input.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/art_world.js"></script>
+<script src="js/art_sprites.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/bosses.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

@@ -37,6 +37,7 @@ W.killEnemy = (e, pts, vx, silent) => {
   e.dead = true; e.vy = -4; e.vx = vx || (W.P.x < e.x ? 1.5 : -1.5); W.kills++; W.stats.kills++;
   W.S.score += pts; W.popText(e.x + e.w / 2, e.y, '' + pts); if (!silent) AU.sfx('stomp');
   F.burst(e.x + e.w / 2, e.y + e.h / 2, 8, ['#fff', '#ffd86a', '#ff9a6a'], 2.2, 2.4);
+  F.poof(e.x + e.w / 2, e.y + e.h / 2, 'white');
   if (Math.random() < 0.05) W.items.push({ t: 'heart', x: e.x, y: e.y, w: 12, h: 12, vx: 0, vy: -3, emerge: 0, onG: false });
 };
 const stompPts = () => { W.combo++; return [100, 200, 400, 800, 1000, 2000][Math.min(W.combo - 1, 5)]; };
@@ -190,7 +191,7 @@ function stomp(e) {
   const P = W.P, pts = stompPts(); AU.sfx('stomp'); F.burst(e.x + e.w / 2, e.y, 5, ['#fff', '#ffe6a0'], 1.6, 2);
   P.vy = Z.isDown('jump') ? -7.6 : -5; P.y = e.y - P.h; P.airJumps = 1; P.dashAir = false; P.jumpCut = false; P.springBoost = false; P.poundGo = false; P.sx = 0.85; P.sy = 1.2; W.hitstop = 2;
   switch (e.t) {
-    case 'blob': e.squash = 22; W.S.score += pts; W.popText(e.x + 7, e.y, '' + pts); W.kills++; W.stats.kills++; break;
+    case 'blob': e.squash = 22; W.S.score += pts; W.popText(e.x + 7, e.y, '' + pts); F.poof(e.x + 7, e.y + 6, 'white'); W.kills++; W.stats.kills++; break;
     case 'snail':
       if (e.state === 'walk') { e.state = 'shell'; e.vx = 0; e.h = 12; e.y += 1; W.S.score += pts; W.popText(e.x + 7, e.y, '' + pts); e.kickT = 10; }
       else if (e.state === 'slide') { e.state = 'shell'; e.vx = 0; e.kickT = 10; W.S.score += pts; }

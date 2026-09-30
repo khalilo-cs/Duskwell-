@@ -183,7 +183,7 @@ W.updatePlayer = () => {
 
   if (p.dashT > 0) {
     p.dashT--; p.vx = p.dashDir * 5.4; p.vy = 0;
-    if (p.dashT % 2 === 0) F.add({ x: p.x + 5 - p.dashDir * 3, y: p.y + 8 + Z.rnd(-4, 4), vx: -p.dashDir * 0.6, vy: 0, size: 2.2, color: 'rgba(255,255,255,.6)', life: 12 });
+    if (p.dashT % 2 === 0) F.add({ x: p.x + 5 - p.dashDir * 3, y: p.y + 8 + Z.rnd(-4, 4), vx: -p.dashDir * 0.6, vy: 0, size: 3.6, tex: 'spark', tint: 'white', rot: p.dashDir > 0 ? 0 : Math.PI, color: 'rgba(255,255,255,.6)', life: 12 });
     // كسر الطوب أمامه
     const ax = Math.floor((p.dashDir > 0 ? p.x + p.w + 8 : p.x - 8) / T);
     for (let ty = Math.floor((p.y + 2) / T); ty <= Math.floor((p.y + p.h - 2) / T); ty++) { const ch = tileAt(ax, ty); if (ch === 'B' || ch === 'X') { breakTile(ax, ty); p.dashT = Math.max(2, p.dashT - 2); } }

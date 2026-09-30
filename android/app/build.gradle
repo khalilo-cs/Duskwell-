@@ -7,8 +7,8 @@ android {
         applicationId 'com.zakiadventure.game'
         minSdk 26
         targetSdk 34
-        versionCode 5
-        versionName '2.1'
+        versionCode 6
+        versionName '2.2'
         // معرّفات AdMob: القيم الافتراضية هي معرّفات الاختبار الرسمية من Google (آمنة).
         // للنشر الحقيقي مرّر معرّفاتك: gradle -PadmobAppId=ca-app-pub-XXXX~YYYY -PadmobInterstitialId=ca-app-pub-XXXX/ZZZZ
         def appId = (project.findProperty('admobAppId') ?: 'ca-app-pub-3940256099942544~3347511713')
@@ -51,7 +51,7 @@ dependencies {
 // نسخ ملفات اللعبة من مجلد game/ إلى أصول التطبيق (مصدر واحد للويب والأندرويد)
 tasks.register('copyWeb', Copy) {
     doFirst { delete "${projectDir}/src/main/assets/www" }
-    from("${rootDir}/../game") { include 'index.html', 'config.js', 'privacy.html', 'js/**' }
+    from("${rootDir}/../game") { include 'index.html', 'config.js', 'privacy.html', 'js/**', 'assets/**' }
     into "${projectDir}/src/main/assets/www"
 }
 preBuild.dependsOn 'copyWeb'

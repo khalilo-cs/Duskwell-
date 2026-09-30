@@ -1,0 +1,4 @@
+Particle textures in this folder are from "Particle Pack" (v1.1) by Kenney Vleugels
+(www.kenney.nl), resized for this game.
+License: Creative Commons Zero (CC0) — http://creativecommons.org/publicdomain/zero/1.0/
+"You may use these assets in personal and commercial projects."

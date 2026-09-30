@@ -55,6 +55,28 @@ D.button = (c, x, y, w, h, label, sel, opts) => {
 
 /* ---------------- الجسيمات ---------------- */
 const F = Z.fx = { list: [] };
+/* خامات جسيمات من حزمة Kenney "Particle Pack" (ترخيص CC0) — انظر assets/particles/LICENSE.txt */
+const TEXN = ['smoke', 'puff', 'star', 'twinkle', 'glow', 'spark', 'twirl', 'soft'];
+const TINTS = { white: '#ffffff', warm: '#ffcf8a', gold: '#ffdf6a', fire: '#ff8a2e', blue: '#7ac8ff', pink: '#ff8ad8', green: '#8aff9a', gray: '#c8ccd8', purple: '#c08aff' };
+const TEX = F.tex = {};
+try {
+  for (const n of TEXN) {
+    const img = new Image();
+    img.onload = () => {
+      const set = {};
+      for (const k in TINTS) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 96; const c2 = cv.getContext('2d');
+        c2.drawImage(img, 0, 0, 96, 96);
+        c2.globalCompositeOperation = 'multiply'; c2.fillStyle = TINTS[k]; c2.fillRect(0, 0, 96, 96);
+        c2.globalCompositeOperation = 'destination-in'; c2.drawImage(img, 0, 0, 96, 96);
+        set[k] = cv;
+      }
+      TEX[n] = set;
+    };
+    img.src = 'assets/particles/' + n + '.png';
+  }
+} catch (e) {}
+
 F.add = p => { if (F.list.length < 700) { p.life = p.max = p.life || 30; F.list.push(p); } return p; };
 F.clear = () => { F.list.length = 0; };
 F.update = () => {
@@ -68,6 +90,7 @@ F.draw = c => {
   for (const p of F.list) {
     const k = p.life / p.max, a = p.fade === false ? 1 : k;
     c.globalAlpha = Math.max(0, Math.min(1, a * (p.alpha == null ? 1 : p.alpha)));
+    if (p.tex) { const set = TEX[p.tex], im = set && set[p.tint || 'white']; if (im) { const s2 = Math.max(0.2, p.size * (p.shrink === false ? 1 : (0.5 + 0.5 * k))) * 2.6; c.save(); c.translate(p.x, p.y); c.rotate(p.rot || 0); c.drawImage(im, -s2 / 2, -s2 / 2, s2, s2); c.restore(); continue; } }
     if (p.shape === 'rect') { c.save(); c.translate(p.x, p.y); c.rotate(p.rot || 0); c.fillStyle = p.color; c.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); c.restore(); }
     else if (p.shape === 'star') { D.star(c, p.x, p.y, p.size * (0.6 + 0.4 * k), p.color, null, p.rot || 0); }
     else if (p.shape === 'ring') { c.beginPath(); c.arc(p.x, p.y, Math.max(0.1, p.size), 0, TAU); c.lineWidth = p.lw || 1.5; c.strokeStyle = p.color; c.stroke(); }
@@ -76,12 +99,20 @@ F.draw = c => {
   }
   c.globalAlpha = 1;
 };
-F.dust = (x, y, n, dir) => { for (let i = 0; i < (n || 4); i++) F.add({ x: x + Z.rnd(-3, 3), y, vx: (dir || 0) * Z.rnd(0.2, 0.7) + Z.rnd(-0.4, 0.4), vy: Z.rnd(-0.5, -0.1), size: Z.rnd(1.6, 3), color: 'rgba(230,220,200,.75)', life: Z.rndi(14, 24), drag: 0.95, grow: 0.05 }); };
+F.dust = (x, y, n, dir) => { for (let i = 0; i < (n || 4); i++) F.add({ x: x + Z.rnd(-3, 3), y: y - 1, vx: (dir || 0) * Z.rnd(0.2, 0.8) + Z.rnd(-0.45, 0.45), vy: Z.rnd(-0.5, -0.1), size: Z.rnd(3, 5.2), tex: 'puff', tint: 'white', alpha: 0.7, rot: Z.rnd(0, 6.3), vr: Z.rnd(-0.06, 0.06), color: 'rgba(230,220,200,.75)', life: Z.rndi(16, 26), drag: 0.94, grow: 0.09 }); };
+F.poof = (x, y, tint) => {
+  for (let i = 0; i < 3; i++) F.add({ x: x + Z.rnd(-4, 4), y: y + Z.rnd(-4, 2), vx: Z.rnd(-0.5, 0.5), vy: Z.rnd(-0.7, -0.1), size: Z.rnd(4, 6.5), tex: 'puff', tint: tint || 'white', alpha: 0.9, rot: Z.rnd(0, 6.3), vr: Z.rnd(-0.07, 0.07), color: 'rgba(255,255,255,.8)', life: Z.rndi(18, 26), grow: 0.14 });
+  for (let i = 0; i < 2; i++) F.add({ x: x + Z.rnd(-6, 6), y: y + Z.rnd(-6, 4), vx: Z.rnd(-0.4, 0.4), vy: Z.rnd(-1, -0.3), size: Z.rnd(2.5, 3.5), tex: 'twinkle', tint: 'gold', shape: 'star', color: '#fff7a0', life: 22, vr: 0.12 });
+};
 F.burst = (x, y, n, colors, spd, size) => { for (let i = 0; i < n; i++) { const a = Z.rnd(0, TAU), s = Z.rnd(0.4, 1) * (spd || 2); F.add({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.6, g: 0.1, size: Z.rnd(1.2, size || 2.4), color: colors[i % colors.length], life: Z.rndi(18, 34), drag: 0.97 }); } };
-F.sparkle = (x, y, colors) => F.add({ x: x + Z.rnd(-5, 5), y: y + Z.rnd(-5, 5), vx: Z.rnd(-0.2, 0.2), vy: Z.rnd(-0.5, -0.1), size: Z.rnd(1.5, 3), color: (colors || ['#fff7a0', '#ffffff'])[Z.rndi(0, 1)], shape: 'star', life: Z.rndi(16, 28), vr: 0.1 });
+F.sparkle = (x, y, colors) => F.add({ x: x + Z.rnd(-5, 5), y: y + Z.rnd(-5, 5), vx: Z.rnd(-0.2, 0.2), vy: Z.rnd(-0.5, -0.1), size: Z.rnd(2.4, 4.2), tex: 'twinkle', tint: typeof colors === 'string' ? colors : 'gold', color: (Array.isArray(colors) ? colors : ['#fff7a0', '#ffffff'])[0], shape: 'star', life: Z.rndi(16, 28), vr: Z.rnd(-0.12, 0.12) });
 F.ring = (x, y, color, size, grow, life) => F.add({ x, y, vx: 0, vy: 0, size: size || 2, grow: grow || 1.4, color: color || 'rgba(255,255,255,.8)', shape: 'ring', life: life || 18, lw: 2 });
 F.debris = (x, y, color) => { for (let i = 0; i < 4; i++) F.add({ x: x + (i % 2) * 8 + 4, y: y + (i >> 1) * 8 + 4, vx: (i % 2 ? 1 : -1) * Z.rnd(0.6, 1.8), vy: Z.rnd(-4, -2), g: 0.32, size: 5, color, shape: 'rect', vr: Z.rnd(-0.3, 0.3), life: 50, fade: false }); };
-F.explode = (x, y, r) => { F.burst(x, y, 22, ['#fff2a0', '#ffb030', '#ff5a20', '#5a5a5a'], 3, 4); F.ring(x, y, 'rgba(255,220,120,.9)', 3, 2.4, 20); };
+F.explode = (x, y, r) => {
+  F.add({ x, y, vx: 0, vy: 0, size: 9, tex: 'glow', tint: 'fire', color: 'rgba(255,180,60,.8)', life: 14, shrink: false, grow: 0.5 });
+  for (let i = 0; i < 4; i++) F.add({ x: x + Z.rnd(-6, 6), y: y + Z.rnd(-6, 6), vx: Z.rnd(-0.5, 0.5), vy: Z.rnd(-1, -0.2), size: Z.rnd(4, 7), tex: 'smoke', tint: 'gray', alpha: 0.85, rot: Z.rnd(0, 6.3), vr: Z.rnd(-0.05, 0.05), color: 'rgba(120,120,120,.7)', life: 30, grow: 0.12 });
+  F.burst(x, y, 16, ['#fff2a0', '#ffb030', '#ff5a20'], 3, 3.5); F.ring(x, y, 'rgba(255,220,120,.9)', 3, 2.4, 20);
+};
 
 /* ---------------- الطقس والجوّ ---------------- */
 const W = Z.weather = { list: [], kind: null };

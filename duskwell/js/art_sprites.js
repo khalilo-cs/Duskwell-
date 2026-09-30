@@ -146,7 +146,7 @@ Art.enemy.flyer = function (g, e, t) {          // pale winged larva
   g.restore();
 };
 Art.enemy.hopper = function (g, e, t) {         // round masked hopper
-  const sq = e.tele > 0 ? 0.78 : (!e.onGround ? 1.15 : 1 + Math.sin(t * 3) * 0.03);
+  const sq = e.currentState === 'anticipation' ? 0.78 : (!e.onGround ? 1.15 : 1 + Math.sin(t * 3) * 0.03);
   g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face * (2 - sq), sq);
   g.strokeStyle = INK; g.lineWidth = 3; g.lineCap = 'round';
   g.beginPath(); g.moveTo(-7, -8); g.lineTo(-14, -2); g.lineTo(-9, 0); g.moveTo(7, -8); g.lineTo(14, -2); g.lineTo(9, 0); g.stroke();
@@ -183,9 +183,9 @@ Art.enemy.shard = function (g, e, t) {
   g.restore();
 };
 Art.enemy.sentinel = function (g, e, t) {       // carapace guard with tattered cloth
-  const wind = e.state === 'wind', charge = e.state === 'charge', w = wind ? 1 - e.timer / 0.55 : 0, fl = e.flash > 0;
+  const wind = e.currentState === 'anticipation', charge = e.currentState === 'attack', w = wind ? clamp(e.stateT / 0.45, 0, 1) : 0, fl = e.flash > 0;
   g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1); g.rotate(charge ? 0.12 : 0);
-  const walk = e.state === 'patrol' ? Math.sin(t * 6) * 2 : 0;
+  const walk = e.currentState === 'patrol' || e.currentState === 'chase' ? Math.sin(t * (e.currentState === 'chase' ? 12 : 6)) * 2 : 0;
   g.strokeStyle = INK; g.lineWidth = 3.5; g.lineCap = 'round';
   g.beginPath(); g.moveTo(-6, -14); g.lineTo(-7 + walk, 0); g.moveTo(8, -14); g.lineTo(9 - walk, 0); g.stroke();
   // cloth skirt

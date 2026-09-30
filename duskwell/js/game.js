@@ -7,7 +7,7 @@ const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
   level: null, player: new Player(), enemies: [], projs: [], geos: [], items: [], parts: [], fx: [],
-  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0,
+  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0,
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
@@ -119,14 +119,17 @@ function openGates() {
   G.gates = []; Sound.play('door');
 }
 function snapCamera() {
-  const c = cameraTarget(); G.cam.x = c.x; G.cam.y = c.y;
+  const c = cameraTarget(); G.cam.x = c.x; G.cam.y = c.y; G.camV = { x: 0, y: 0 };
+}
+// Camera bounds of the current room; a room smaller than the view is centred.
+function cameraBounds() {
+  const L = G.level;
+  const cxw = L.pw <= VW ? -(VW - L.pw) / 2 : null, cyh = L.ph <= VH ? -(VH - L.ph) / 2 : null;
+  return { x0: cxw ?? 0, x1: cxw ?? L.pw - VW, y0: cyh ?? 0, y1: cyh ?? L.ph - VH };
 }
 function cameraTarget() {
-  const L = G.level;
-  let x = P.cx - VW / 2 + P.face * 36, y = P.cy - VH / 2 - 24;
-  x = L.pw <= VW ? -(VW - L.pw) / 2 : clamp(x, 0, L.pw - VW);
-  y = L.ph <= VH ? -(VH - L.ph) / 2 : clamp(y, 0, L.ph - VH);
-  return { x, y };
+  const b = cameraBounds();
+  return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24, b.y0, b.y1) };
 }
 
 G.fadeTo = function (fn, out, hold, inn) {
@@ -282,10 +285,12 @@ function updatePlay(dt) {
   if (P.x + P.w > L.pw) { P.x = L.pw - P.w; P.vx = Math.min(0, P.vx); }
   if (P.y > L.ph + 200) { P.spikeHurt(); }
 
-  // camera
+  // camera: SmoothDamp toward the target, then clamp to the room bounds
   const c = cameraTarget();
-  G.cam.x += (c.x - G.cam.x) * Math.min(1, dt * 7);
-  G.cam.y += (c.y - G.cam.y) * Math.min(1, dt * (P.onGround ? 5 : 3.5));
+  [G.cam.x, G.camV.x] = smoothDamp(G.cam.x, c.x, G.camV.x, 0.16, dt);
+  [G.cam.y, G.camV.y] = smoothDamp(G.cam.y, c.y, G.camV.y, P.vy > 400 ? 0.1 : 0.24, dt);
+  const b = cameraBounds();
+  G.cam.x = clamp(G.cam.x, b.x0, b.x1); G.cam.y = clamp(G.cam.y, b.y0, b.y1);
 }
 
 function updateTrans(dt) {
@@ -576,18 +581,40 @@ function drawWorld(g) {
   }
   g.globalAlpha = 1;
   g.restore();
+  Art.drawLighting(g, G.k, L.def.theme, collectLights(cx, cy));
+  Art.drawFog(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawForeground(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawAmbient(g, STEP, L.def.theme, G.cam.x, G.cam.y, t);
-  // light and vignette
-  const px = P.cx - cx, py = P.cy - cy;
-  const lg = g.createRadialGradient(px, py, 60, px, py, 520);
-  lg.addColorStop(0, 'rgba(0,0,0,0)'); lg.addColorStop(1, L.def.theme === 'town' ? 'rgba(0,0,8,0.28)' : 'rgba(0,0,6,0.5)');
-  g.fillStyle = lg; g.fillRect(0, 0, VW, VH);
   const vg = g.createRadialGradient(VW / 2, VH / 2, VH * 0.45, VW / 2, VH / 2, VW * 0.62);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = vg; g.fillRect(0, 0, VW, VH);
   if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, G.flash) + ')'; g.fillRect(0, 0, VW, VH); }
   if (P.hp === 1 && P.hp < P.maxHp && G.state === 'play') { const a = 0.08 + 0.05 * Math.sin(G.t * 6); g.fillStyle = 'rgba(140,0,20,' + a + ')'; g.fillRect(0, 0, VW, VH); }
+}
+
+// light sources in screen space for the darkness map
+function collectLights(cx, cy) {
+  const L = G.level, th = THEMES[L.def.theme], out = [];
+  const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
+  if (!P.dead) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
+  for (const d of L.def.deco) {
+    if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
+    else if (d.type === 'light') add(d.x * TILE + 16, d.y * TILE + 16, d.r || 220, d.a || 0.8, d.c || th.glow);
+  }
+  for (const b of G.benches) add(b.px, b.py - 40, 200, 0.85, '#ffe2a8');
+  for (const n of G.npcs) add(n.px, n.py - 40, 170, 0.8, '#ffd98a');
+  for (const it of G.items) add(it.x, it.y, 190, 0.9, '#e6f3ff');
+  for (const c of G.geos) add(c.x, c.y, 50, 0.5, null);
+  for (const p of G.projs) {
+    if (p.kind === 'beam' || p.kind === 'pillar') { if (p.t >= p.tele) add(p.x, p.kind === 'beam' ? cy + VH / 2 : p.y - 100, 260, 0.9, p.color); }
+    else add(p.x, p.y, p.friendly ? 190 : 110, p.friendly ? 1 : 0.75, p.color);
+  }
+  for (const e of G.enemies) {
+    if (e.isBoss) add(e.cx, e.cy, e.bossKey === 'wraith' || e.bossKey === 'king' ? 300 : 230, 0.7, e.blood);
+    else if (e.glowR) add(e.cx, e.cy, e.glowR, 0.7, e.blood);
+  }
+  for (const d of L.def.doors) add((d.x + d.w / 2) * TILE, (d.y + d.h / 2) * TILE, 170, 0.55, th.fog);
+  return out;
 }
 
 function drawMap(g) {

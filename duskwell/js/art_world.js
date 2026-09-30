@@ -155,7 +155,11 @@ function drawSpikes(g, th, px, py, v) {
 }
 
 // ---------- parallax background ----------
-const LAYER_PERIOD = 2200;
+// Every layer has a depth z behind the play plane (negative = in front). Its screen speed is
+// CAM_DIST / (CAM_DIST + z): the ratio a perspective camera at distance CAM_DIST would produce.
+const LAYER_PERIOD = 2200, CAM_DIST = 10;
+const depthFactor = z => CAM_DIST / (CAM_DIST + z);
+const LAYER_Z = [70, 28, 11], CRITTER_Z = [12, 26], FOG_Z = [8, -1.3], FORE_Z = -2, VERTICAL_PARALLAX = 0.18;
 function makeLayers(th) {
   const rnd = mulberry32(th.name.length * 9973 + th.name.charCodeAt(0) * 131);
   const layers = [[], [], []];
@@ -167,7 +171,7 @@ function makeLayers(th) {
     }
   }
   th.critters = [];
-  for (let i = 0; i < 16; i++) th.critters.push({ x: rnd() * LAYER_PERIOD, y: 60 + rnd() * 380, r: 8 + rnd() * 26, p: rnd() * 7, jelly: rnd() < 0.3, par: 0.3 + rnd() * 0.25 });
+  for (let i = 0; i < 16; i++) th.critters.push({ x: rnd() * LAYER_PERIOD, y: 60 + rnd() * 380, r: 8 + rnd() * 26, p: rnd() * 7, jelly: rnd() < 0.3, par: depthFactor(lerp(CRITTER_Z[0], CRITTER_Z[1], rnd())) });
   return layers;
 }
 function drawShape(g, th, li, o) {
@@ -239,7 +243,7 @@ function drawCritters(g, th, camX, camY, t) {
   for (const c of th.critters) {
     const x = ((c.x - camX * c.par + Math.sin(t * 0.2 + c.p) * 40) % LAYER_PERIOD + LAYER_PERIOD) % LAYER_PERIOD - 200;
     if (x < -80 || x > VW + 80) continue;
-    const y = c.y - camY * 0.04 + Math.sin(t * 0.6 + c.p) * 14;
+    const y = c.y - camY * c.par * VERTICAL_PARALLAX + Math.sin(t * 0.6 + c.p) * 14;
     if (th.name === 'cave') {          // drifting lumafly lanterns
       if (!c.jelly) continue;
       bloom(g, x, y, 34, '#8fd8ff', 0.4 + 0.2 * Math.sin(t * 3 + c.p));
@@ -288,11 +292,11 @@ Art.drawBackground = function (g, L, camX, camY, t) {
       g.fillStyle = ray; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 70, 0); g.lineTo(x + 220, VH); g.lineTo(x + 80, VH); g.fill();
     }
   }
-  const par = [0.12, 0.26, 0.48], parY = [0.03, 0.05, 0.08];
   for (let li = 0; li < 3; li++) {
     g.save();
-    const off = -((camX * par[li]) % LAYER_PERIOD);
-    g.translate(0, -camY * parY[li] + 14 * (li - 1));
+    const f = depthFactor(LAYER_Z[li]);
+    const off = -((camX * f) % LAYER_PERIOD);
+    g.translate(0, -camY * f * VERTICAL_PARALLAX + 14 * (li - 1));
     for (const o of th.layers[li]) {
       for (let rep = -1; rep <= 1; rep++) {
         const x = o.x + off + rep * LAYER_PERIOD;
@@ -319,7 +323,7 @@ Art.drawForeground = function (g, theme, camX, camY, t) {
   const col = mix(th.edge, th.near, 0.35);
   g.save(); g.fillStyle = col; g.strokeStyle = col;
   for (const o of th.fg) {
-    const x = ((o.x - camX * 1.25) % 2600 + 2600) % 2600 - 200;
+    const x = ((o.x - camX * depthFactor(FORE_Z)) % 2600 + 2600) % 2600 - 200;
     if (x < -220 || x > VW + 220) continue;
     const sway = Math.sin(t * 0.8 + o.r * 6) * 4, s = o.s;
     const y0 = o.top ? -camY * 0.02 - 6 : VH + 6 - camY * 0.02 * 0;
@@ -423,4 +427,45 @@ Art.drawGate = function (g, x, y, th, t) {
   const gl = 0.5 + 0.4 * Math.sin(t * 3 + y);
   g.strokeStyle = rgba(th.glow, 0.4 + gl * 0.4); g.lineWidth = 2;
   g.beginPath(); g.arc(px + 16, py + 16, 7, 0, 7); g.moveTo(px + 16, py + 6); g.lineTo(px + 16, py + 26); g.stroke();
+};
+
+// ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
+let lightCanvas = null;
+const DARKNESS = { town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+Art.drawLighting = function (g, k, theme, lights) {
+  const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
+  if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }
+  const c = lightCanvas.getContext('2d');
+  c.setTransform(w / VW, 0, 0, h / VH, 0, 0);
+  c.globalCompositeOperation = 'source-over';
+  c.clearRect(0, 0, VW, VH);
+  const dk = DARKNESS[theme] == null ? 0.45 : DARKNESS[theme];
+  c.fillStyle = 'rgba(2,3,8,' + dk + ')'; c.fillRect(0, 0, VW, VH);
+  c.globalCompositeOperation = 'destination-out';
+  for (const L of lights) {
+    if (L.x < -L.r || L.y < -L.r || L.x > VW + L.r || L.y > VH + L.r) continue;
+    const gr = c.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+    gr.addColorStop(0, 'rgba(0,0,0,' + L.a + ')'); gr.addColorStop(0.45, 'rgba(0,0,0,' + (L.a * 0.62) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = gr; c.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
+  }
+  g.drawImage(lightCanvas, 0, 0, VW, VH);
+  // coloured light bleeding into the air
+  const o = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter';
+  for (const L of lights) {
+    if (!L.c || L.x < -L.r || L.y < -L.r || L.x > VW + L.r || L.y > VH + L.r) continue;
+    glow(g, L.x, L.y, L.r * 0.7, L.c, 0.07 * L.a);
+  }
+  g.globalCompositeOperation = o;
+};
+Art.drawFog = function (g, theme, camX, camY, t) {
+  const th = THEMES[theme];
+  for (let i = 0; i < 7; i++) {
+    const par = depthFactor(i < 3 ? FOG_Z[0] : FOG_Z[1]), span = VW + 700;
+    const x = ((i * 390 - camX * par + t * (8 + i * 3)) % span + span) % span - 350;
+    const y = VH * (0.45 + 0.08 * (i % 4)) - camY * 0.03 * par + Math.sin(t * 0.3 + i) * 18;
+    const r = 260 + (i % 3) * 90;
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, rgba(th.fog, 0.1)); gr.addColorStop(1, rgba(th.fog, 0));
+    g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
 };

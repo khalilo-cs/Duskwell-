@@ -36,3 +36,15 @@ function rgba(h, a) {
   const c = hexToRgb(h);
   return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
 }
+// Unity's Mathf.SmoothDamp: critically damped spring toward target. Returns [value, velocity].
+function smoothDamp(cur, target, vel, smoothTime, dt) {
+  smoothTime = Math.max(0.0001, smoothTime);
+  const omega = 2 / smoothTime, x = omega * dt;
+  const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = cur - target;
+  const temp = (vel + omega * change) * dt;
+  let nv = (vel - omega * temp) * exp;
+  let out = target + (change + temp) * exp;
+  if ((target - cur > 0) === (out > target)) { out = target; nv = 0; }
+  return [out, nv];
+}

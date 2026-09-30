@@ -16,6 +16,12 @@ class Level {
   solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE; }
   solidAtPx(x, y) { return this.solid(Math.floor(x / TILE), Math.floor(y / TILE)); }
   ground(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_ONEWAY; }
+  // 2D raycast through the tile grid, sampled every 8px
+  lineOfSight(x0, y0, x1, y1) {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 8);
+    for (let i = 1; i < n; i++) { const t = i / n; if (this.solidAtPx(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false; }
+    return true;
+  }
 }
 
 // Axis separated move with tile collision. Sets onGround / hitL / hitR / hitU.
@@ -51,7 +57,7 @@ function moveBody(b, dt, L) {
   }
 }
 
-const GRAV = 2200, MAXFALL = 900;
+const GRAV = 2200, MAXFALL = 900, FALL_MULT = 1.25;
 
 // ============================== PLAYER ==============================
 class Player {
@@ -150,7 +156,8 @@ class Player {
         else if (ix !== 0 && this.atkT > 0 && this.atkDir !== 'side') this.face = ix;
       }
       // ---- gravity ----
-      this.vy = Math.min(this.vy + GRAV * dt, MAXFALL);
+      // heavier gravity while falling removes the floaty feel
+      this.vy = Math.min(this.vy + GRAV * (this.vy > 0 ? FALL_MULT : 1) * dt, MAXFALL);
     }
 
     // ---- wall slide / wall jump ----
@@ -382,6 +389,8 @@ class Item {
 }
 
 // ============================== ENEMIES ==============================
+// Enemy brains mirror a PlayMaker FSM: each enemy runs one switch over this.currentState.
+const ST = { IDLE: 'idle', PATROL: 'patrol', CHASE: 'chase', ANTICIPATION: 'anticipation', ATTACK: 'attack', RECOIL: 'recoil' };
 class Enemy {
   constructor(def, w, h) {
     this.w = w; this.h = h;
@@ -389,11 +398,14 @@ class Enemy {
     this.vx = 0; this.vy = 0; this.face = def.face || (Math.random() < 0.5 ? -1 : 1);
     this.t = rand(0, 10); this.flash = 0; this.stun = 0; this.dead = false; this.dmg = 1; this.geo = 2;
     this.kb = 1; this.home = { x: this.x + w / 2, y: this.y + h / 2 }; this.onGround = false;
+    this.currentState = ST.IDLE; this.stateT = 0; this.lastSeen = -99;
   }
   get cx() { return this.x + this.w / 2; }
   get cy() { return this.y + this.h / 2; }
   hb() { return { x: this.x, y: this.y, w: this.w, h: this.h }; }
   body() { return this.hb(); }
+  setState(s) { this.currentState = s; this.stateT = 0; }
+  tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; }
   hurt(dmg, dir, how) {
     if (this.dead) return;
     this.hp -= dmg; this.flash = 0.12; Sound.play('hit'); G.hitstop(how === 'spell' ? 0.03 : 0.06);
@@ -403,16 +415,27 @@ class Enemy {
     this.onHurt(dir, how);
     if (this.hp <= 0) this.kill();
   }
-  onHurt(dir) { if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; } }
+  // knockback pushes the enemy away from the strike and puts it in the Recoil state
+  onHurt(dir) { if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15);
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
     G.burst(this.cx, this.cy, 8, { color: '#0a0d12', speed: 180, life: 0.6, size: 5 });
     G.dropGeo(this.cx, this.cy, this.geo);
   }
-  canSeePlayer(range) {
+  // distance check first, then a ray through the tiles so walls block the view
+  seesPlayer(range) {
     const p = G.player;
-    return !p.dead && Math.abs(p.cx - this.cx) < range && Math.abs(p.cy - this.cy) < range * 0.7;
+    if (p.dead) return false;
+    const dx = p.cx - this.cx, dy = p.cy - this.cy;
+    if (dx * dx + dy * dy > range * range) return false;
+    return G.level.lineOfSight(this.cx, this.y + 8, p.cx, p.cy);
+  }
+  canSeePlayer(range) { return this.seesPlayer(range); }
+  // ledge or wall directly ahead: ground walkers turn or stop instead of walking off
+  edgeAhead(dir) {
+    const L = G.level, fx = Math.floor((this.cx + dir * (this.w / 2 + 6)) / TILE), fy = Math.floor((this.y + this.h + 4) / TILE);
+    return !L.ground(fx, fy) || L.solid(fx, Math.floor((this.y + this.h - 4) / TILE));
   }
   physics(dt, grav) {
     if (grav !== false) this.vy = Math.min(this.vy + GRAV * dt, MAXFALL);
@@ -423,35 +446,46 @@ class Enemy {
 class Crawler extends Enemy {
   constructor(d) { super(d, 34, 22); this.hp = 10; this.geo = 2; this.speed = 52; this.blood = '#ffcf8a'; }
   update(dt) {
-    this.t += dt; this.flash -= dt; this.stun -= dt;
-    if (this.stun <= 0 && this.onGround) {
-      this.vx = this.face * this.speed;
-      const L = G.level, fx = Math.floor((this.cx + this.face * (this.w / 2 + 6)) / TILE), fy = Math.floor((this.y + this.h + 4) / TILE);
-      if (!L.ground(fx, fy) || L.solid(fx, Math.floor((this.y + this.h - 4) / TILE)) || this.hitL || this.hitR) this.face *= -1;
-    } else if (this.onGround) this.vx *= 0.9;
+    this.tick(dt);
+    switch (this.currentState) {
+      case ST.IDLE: this.setState(ST.PATROL); break;
+      case ST.PATROL:
+        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * this.speed; }
+        break;
+      case ST.RECOIL:
+        if (this.onGround) this.vx *= 0.85;
+        if (this.stateT > 0.18) this.setState(ST.PATROL);
+        break;
+    }
     this.physics(dt);
     if (this.hitL) this.face = 1; if (this.hitR) this.face = -1;
   }
 }
 
 class Flyer extends Enemy {
-  constructor(d) { super(d, 30, 26); this.hp = 10; this.geo = 3; this.state = 'idle'; this.kb = 1.2; this.blood = '#d9f0a0'; this.ph = rand(0, 6); }
+  constructor(d) { super(d, 30, 26); this.hp = 10; this.geo = 3; this.kb = 1.2; this.blood = '#e8f6ff'; this.ph = rand(0, 6); this.glowR = 110; }
+  steer(tx, ty, sp, acc, dt) {
+    const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1;
+    this.vx = approach(this.vx, dx / d * sp, acc * dt); this.vy = approach(this.vy, dy / d * sp, acc * dt);
+    if (Math.abs(this.vx) > 10) this.face = sign(this.vx);
+  }
   update(dt) {
-    this.t += dt; this.flash -= dt; this.stun -= dt;
-    const p = G.player;
-    if (this.stun > 0) { this.vx *= 0.94; this.vy *= 0.94; }
-    else {
-      let tx, ty, sp, acc;
-      if (this.state === 'idle') {
-        tx = this.home.x + Math.sin(this.t * 0.8 + this.ph) * 40; ty = this.home.y + Math.sin(this.t * 1.7 + this.ph) * 14; sp = 60; acc = 200;
-        if (this.canSeePlayer(280)) this.state = 'chase';
-      } else {
-        tx = p.cx; ty = p.cy - 6 + Math.sin(this.t * 4) * 18; sp = 135; acc = 420;
-        if (p.dead || Math.abs(p.cx - this.cx) > 480 || Math.abs(p.cy - this.cy) > 380) this.state = 'idle';
-      }
-      const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1;
-      this.vx = approach(this.vx, dx / d * sp, acc * dt); this.vy = approach(this.vy, dy / d * sp, acc * dt);
-      if (Math.abs(this.vx) > 10) this.face = sign(this.vx);
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(300);
+    if (sees) this.lastSeen = this.t;
+    switch (this.currentState) {
+      case ST.IDLE:        // drift around the nest
+        this.steer(this.home.x + Math.sin(this.t * 0.8 + this.ph) * 40, this.home.y + Math.sin(this.t * 1.7 + this.ph) * 14, 60, 200, dt);
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:
+        this.steer(p.cx, p.cy - 6 + Math.sin(this.t * 4) * 18, 135, 420, dt);
+        if (p.dead || this.t - this.lastSeen > 2) this.setState(ST.IDLE);
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.94; this.vy *= 0.94;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
     }
     this.physics(dt, false);
     if (this.hitL || this.hitR) this.vx = 0; if (this.hitU || this.onGround) this.vy = 0;
@@ -459,22 +493,26 @@ class Flyer extends Enemy {
 }
 
 class Hopper extends Enemy {
-  constructor(d) { super(d, 30, 30); this.hp = 14; this.geo = 4; this.wait = rand(0.6, 1.6); this.tele = 0; this.blood = '#b8e08a'; }
+  constructor(d) { super(d, 30, 30); this.hp = 14; this.geo = 4; this.wait = rand(0.6, 1.6); this.blood = '#b8e08a'; }
   update(dt) {
-    this.t += dt; this.flash -= dt; this.stun -= dt;
+    this.tick(dt);
     const p = G.player;
-    if (this.onGround) {
-      if (this.stun <= 0) this.vx *= 0.8;
-      if (this.tele > 0) {
-        this.tele -= dt;
-        if (this.tele <= 0) { this.vy = -540; this.vx = this.face * rand(140, 200); this.onGround = false; }
-      } else if (this.stun <= 0) {
-        this.wait -= dt;
-        if (this.wait <= 0) {
-          this.wait = rand(0.9, 1.8);
-          if (this.canSeePlayer(380)) { this.face = p.cx > this.cx ? 1 : -1; this.tele = 0.28; }
-        }
-      }
+    switch (this.currentState) {
+      case ST.IDLE:
+        if (this.onGround) this.vx *= 0.8;
+        if (this.onGround && this.stateT > this.wait && this.seesPlayer(380)) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); }
+        break;
+      case ST.ANTICIPATION:  // crouch before the leap
+        this.vx = 0;
+        if (this.stateT > 0.28) { this.vy = -540; this.vx = this.face * rand(140, 200); this.onGround = false; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK:
+        if (this.onGround && this.stateT > 0.1) { this.wait = rand(0.9, 1.8); this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        if (this.onGround) this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.IDLE);
+        break;
     }
     this.physics(dt);
     if (this.hitL || this.hitR) this.vx = 0;
@@ -506,7 +544,7 @@ class Spitter extends Enemy {
 }
 
 class Shard extends Enemy {     // crystal turret
-  constructor(d) { super(d, 30, 42); this.hp = 15; this.geo = 5; this.cool = rand(1, 2.4); this.tele = 0; this.kb = 0; this.blood = '#ff9bd6'; }
+  constructor(d) { super(d, 30, 42); this.hp = 15; this.geo = 5; this.cool = rand(1, 2.4); this.tele = 0; this.kb = 0; this.blood = '#ff9bd6'; this.glowR = 150; }
   update(dt) {
     this.t += dt; this.flash -= dt;
     const p = G.player;
@@ -526,29 +564,64 @@ class Shard extends Enemy {     // crystal turret
   }
 }
 
-class Sentinel extends Enemy {
-  constructor(d) { super(d, 40, 58); this.hp = 32; this.geo = 14; this.state = 'patrol'; this.timer = 0; this.kb = 0.35; this.dmg = 1; this.blood = '#d8c8a0'; }
+class Sentinel extends Enemy {   // Idle -> Patrol (waypoints) -> Chase -> Anticipation -> Attack, Recoil when struck
+  constructor(d) {
+    super(d, 40, 58); this.hp = 32; this.geo = 14; this.kb = 0.35; this.blood = '#d8c8a0';
+    this.range = (d.range || 5) * TILE; this.wp = null; this.wpi = 1; this.melee = null;
+  }
+  // walk the ground both ways from the spawn to find two waypoints before any ledge or wall
+  initWaypoints() {
+    const L = G.level, fy = Math.floor((this.y + this.h + 4) / TILE), wy = Math.floor((this.y + this.h - 6) / TILE);
+    const ok = x => { const tx = Math.floor(x / TILE); return L.ground(tx, fy) && !L.solid(tx, wy); };
+    let a = this.cx, b = this.cx;
+    for (let i = 0; i < this.range; i += 8) { if (!ok(this.cx - i - this.w / 2 - 4)) break; a = this.cx - i; }
+    for (let i = 0; i < this.range; i += 8) { if (!ok(this.cx + i + this.w / 2 + 4)) break; b = this.cx + i; }
+    this.wp = [a, b];
+  }
+  onHurt(dir) {
+    if (this.currentState === ST.ANTICIPATION || this.currentState === ST.ATTACK) { this.vx += dir * 60; return; }   // armour holds mid-swing
+    super.onHurt(dir);
+  }
   update(dt) {
-    this.t += dt; this.flash -= dt; this.stun -= dt;
-    const p = G.player, L = G.level;
-    if (this.stun > 0) { this.vx *= 0.9; this.physics(dt); return; }
-    if (this.state === 'patrol') {
-      this.vx = this.face * 42;
-      const fx = Math.floor((this.cx + this.face * (this.w / 2 + 6)) / TILE), fy = Math.floor((this.y + this.h + 4) / TILE);
-      if (this.onGround && (!L.ground(fx, fy) || L.solid(fx, Math.floor((this.y + this.h - 6) / TILE)))) this.face *= -1;
-      if (!p.dead && Math.abs(p.cx - this.cx) < 300 && Math.abs(p.cy - this.cy) < 90) { this.state = 'wind'; this.timer = 0.55; this.face = p.cx > this.cx ? 1 : -1; Sound.play('tele'); }
-    } else if (this.state === 'wind') {
-      this.vx = 0; this.timer -= dt;
-      if (this.timer <= 0) { this.state = 'charge'; this.timer = 1.0; }
-    } else if (this.state === 'charge') {
-      this.vx = this.face * 340; this.timer -= dt;
-      const fx = Math.floor((this.cx + this.face * (this.w / 2 + 6)) / TILE), fy = Math.floor((this.y + this.h + 4) / TILE);
-      if (this.hitL || this.hitR || this.timer <= 0 || !L.ground(fx, fy)) {
-        this.state = 'rest'; this.timer = 0.9; this.vx = 0;
-        if (this.hitL || this.hitR) { G.shake(3, 0.12); Sound.play('land'); }
+    this.tick(dt);
+    if (!this.wp && this.onGround) this.initWaypoints();
+    const p = G.player, sees = this.seesPlayer(320) && Math.abs(p.cy - this.cy) < 120;
+    if (sees) this.lastSeen = this.t;
+    this.melee = null;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees) this.setState(ST.CHASE);
+        else if (this.stateT > 0.8) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL: {
+        if (!this.wp) { this.vx = 0; break; }
+        const tx = this.wp[this.wpi];
+        this.face = tx > this.cx ? 1 : -1; this.vx = this.face * 42;
+        if (Math.abs(tx - this.cx) < 4 || this.edgeAhead(this.face)) { this.wpi ^= 1; this.setState(ST.IDLE); }
+        if (sees) this.setState(ST.CHASE);
+        break;
       }
-    } else if (this.state === 'rest') {
-      this.vx = 0; this.timer -= dt; if (this.timer <= 0) this.state = 'patrol';
+      case ST.CHASE:
+        this.face = p.cx > this.cx ? 1 : -1;
+        this.vx = this.edgeAhead(this.face) ? 0 : this.face * 150;
+        if (Math.abs(p.cx - this.cx) < 95 && Math.abs(p.cy - this.cy) < 70) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.t - this.lastSeen > 1.3) this.setState(ST.PATROL);
+        break;
+      case ST.ANTICIPATION:   // raise the blade, readable warning
+        this.vx = 0;
+        if (this.stateT >= 0.45) this.setState(ST.ATTACK);
+        break;
+      case ST.ATTACK:         // short lunge with a live hitbox
+        this.vx = this.edgeAhead(this.face) ? 0 : this.face * 380;
+        this.melee = { x: this.face > 0 ? this.x + this.w - 6 : this.x - 44, y: this.y + 10, w: 50, h: 40 };
+        if (!p.dead && overlap(p.hurtbox(), this.melee)) p.hurt(1, this.cx);
+        if (this.stateT >= 0.28) { this.vx = 0; this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
     }
     this.physics(dt);
   }

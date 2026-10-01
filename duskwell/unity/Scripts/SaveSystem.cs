@@ -5,9 +5,12 @@ using UnityEngine;
 [System.Serializable]
 public class SaveData
 {
+    public string benchScene;
     public string benchId;
     public float benchX, benchY;
     public int maxMasks = 5;
+    public bool hasDash;
+    public bool hasWallJump;
     public bool hasDoubleJump;
     public int deaths;
     public float playTime;

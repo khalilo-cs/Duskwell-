@@ -19,6 +19,12 @@ public class Bench : MonoBehaviour
     public Vector3 SitPosition => sitPoint != null ? sitPoint.position : transform.position;
     public bool IsOccupied { get; private set; }
 
+    // Benches register by id so the game manager can find one again after its scene reloads.
+    static readonly System.Collections.Generic.Dictionary<string, Bench> registry = new System.Collections.Generic.Dictionary<string, Bench>();
+    public static Bench Find(string id) { Bench b; return id != null && registry.TryGetValue(id, out b) ? b : null; }
+    void OnEnable() { registry[benchId] = this; }
+    void OnDisable() { Bench b; if (registry.TryGetValue(benchId, out b) && b == this) registry.Remove(benchId); }
+
     PlayerController2D playerInRange;
     bool upWasHeld = true;          // require a fresh press after entering
 

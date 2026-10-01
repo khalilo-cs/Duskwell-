@@ -47,8 +47,10 @@ public class PlayerController2D : MonoBehaviour
     public int Facing { get; private set; } = 1;
     public bool DoubleJumpAvailable { get; private set; }
     public Vector2 Velocity => rb.velocity;
-    // Set by abilities that root the player in place (focus healing, cutscenes).
+    // Set by abilities that root the player in place (focus healing, benches, room changes).
     public bool MovementLocked { get; set; }
+    public float MoveInput => moveInput;
+    public Rigidbody2D Body => rb;
     // Raised on landing and on pogo; a dash script subscribes to refill its air charge.
     public event System.Action AirActionsReset;
 
@@ -62,10 +64,14 @@ public class PlayerController2D : MonoBehaviour
     bool isJumping;             // rising because of a jump (jump cut only applies then)
     float controlLockTimer;     // recoil / knockback briefly overrides input
     Vector2 lockedVelocity;
+    PlayerDash dash;            // optional ability modules on the same object
+    PlayerWallJump wall;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        dash = GetComponent<PlayerDash>();
+        wall = GetComponent<PlayerWallJump>();
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;   // smooth rendering between physics steps
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.freezeRotation = true;
@@ -91,7 +97,9 @@ public class PlayerController2D : MonoBehaviour
     void Update()
     {
         ReadInput();
-        if (Mathf.Abs(moveInput) > 0.01f && controlLockTimer <= 0f && !MovementLocked) SetFacing(moveInput > 0 ? 1 : -1);
+        bool clinging = wall != null && wall.IsSliding;                 // a clinging player faces away from the wall
+        bool dashing = dash != null && dash.IsDashing;
+        if (Mathf.Abs(moveInput) > 0.01f && controlLockTimer <= 0f && !MovementLocked && !clinging && !dashing) SetFacing(moveInput > 0 ? 1 : -1);
 
         // timers run in Update so short taps between physics steps are never lost
         coyoteTimer -= Time.deltaTime;
@@ -109,6 +117,7 @@ public class PlayerController2D : MonoBehaviour
     void FixedUpdate()
     {
         CheckGround();
+        if (dash != null && dash.IsDashing) return;     // the dash owns velocity and gravity for its duration
         Vector2 v = rb.velocity;
 
         // ---- horizontal: instantaneous, no easing ----
@@ -122,6 +131,10 @@ public class PlayerController2D : MonoBehaviour
             if (IsGrounded || coyoteTimer > 0f)
             {
                 v.y = jumpVelocity;
+                ConsumeJump();
+            }
+            else if (wall != null && wall.TryWallJump(ref v))        // wall jump beats double jump
+            {
                 ConsumeJump();
             }
             else if (hasDoubleJump && DoubleJumpAvailable)
@@ -144,6 +157,7 @@ public class PlayerController2D : MonoBehaviour
 
         // ---- fall gravity scaling: heavier on the way down ----
         rb.gravityScale = v.y < 0f ? baseGravityScale * fallGravityMultiplier : baseGravityScale;
+        if (wall != null) wall.ApplySlide(ref v);        // clinging caps the fall to a slow slide
         if (v.y < -maxFallSpeed) v.y = -maxFallSpeed;
 
         rb.velocity = v;
@@ -172,6 +186,22 @@ public class PlayerController2D : MonoBehaviour
         {
             coyoteTimer = coyoteTime;   // just walked off a ledge: start the grace window
         }
+    }
+
+    public void FaceDirection(int dir) { if (dir != 0) SetFacing(dir > 0 ? 1 : -1); }
+
+    // Walk in a direction for a moment regardless of input (entering a room through a side door).
+    public void AutoWalk(int dir, float duration)
+    {
+        FaceDirection(dir);
+        ApplyRecoil(new Vector2(dir * runSpeed, 0f), duration);
+    }
+
+    // Replace the velocity outright (entering a room from below, launch pads).
+    public void Launch(Vector2 velocity)
+    {
+        rb.velocity = velocity;
+        isJumping = false;
     }
 
     void SetFacing(int dir)

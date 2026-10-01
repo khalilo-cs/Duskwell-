@@ -16,6 +16,7 @@ const PAL = {
   spore:    { sky: ['#120804', '#3a200e', '#7a4a1c'], far: '#4a2a12', mid: '#2e190b', near: '#1a0e06', hi: '#ffb870', fog: '#e89a4a', glow: '#ffb070', light: [0.5, -0.86] },
   aqueduct: { sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', hi: '#8fe0ff', fog: '#4fb0c8', glow: '#8fe0ff', light: [-0.3, -0.95] },
   webbed:   { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', hi: '#b8a8d8', fog: '#6a5a8a', glow: '#c8a8ff', light: [0.3, -0.95] },
+  foundry:  { sky: ['#0d0604', '#2a120a', '#6a3014'], far: '#4a2210', mid: '#2c140a', near: '#170a05', hi: '#ffb27a', fog: '#ff7a3a', glow: '#ffa050', light: [0.35, -0.94] },
   title:    { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#2a3466', hi: '#9cc4ff', fog: '#5a6aa8', glow: '#ffe9b0', light: [0.6, -0.8] },
   throne:   { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', hi: '#c6d6f4', fog: '#5e72a0', glow: '#ffe2a8', light: [0, -1] },
 };
@@ -620,6 +621,94 @@ SCENES.throne = th => {
 
 // Title screen: moonlit sky, a far kingdom of spires on a mountain, rolling hills with ruined
 // towers, and a near bank of drifting mist (the title draws its own foreground hill).
+// The Rustworks: furnace glow under smoke, chimney stacks and great wheels far off, iron trusses
+// with hanging chains in the middle distance, and pipes with valve wheels up close.
+function gearPath(g, cx, cy, r, teeth, hole, rot) {
+  g.beginPath();
+  for (let i = 0; i < teeth; i++) {
+    const a0 = rot + i / teeth * Math.PI * 2, a1 = a0 + Math.PI / teeth;
+    g.lineTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+    g.lineTo(cx + Math.cos(a0 + 0.06) * (r + r * 0.14), cy + Math.sin(a0 + 0.06) * (r + r * 0.14));
+    g.lineTo(cx + Math.cos(a1 - 0.06) * (r + r * 0.14), cy + Math.sin(a1 - 0.06) * (r + r * 0.14));
+    g.lineTo(cx + Math.cos(a1) * r, cy + Math.sin(a1) * r);
+  }
+  g.closePath();
+  if (hole) { g.moveTo(cx + r * hole, cy); g.arc(cx, cy, r * hole, 0, Math.PI * 2, true); }
+}
+SCENES.foundry = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (const dx of [-P, 0, P]) {                    // the furnace glow along the bottom
+      glowAt(g, P * 0.3 + dx, H - 40, 520, '#ff7a2a', 0.38); glowAt(g, P * 0.78 + dx, H - 60, 420, '#ffa050', 0.3);
+    }
+    for (let i = 0; i < 22; i++) {                    // drifting smoke banks
+      const x = R() * P, y = 60 + R() * 320, rx = 160 + R() * 260, ry = 40 + R() * 60;
+      g.fillStyle = rgba('#120604', 0.18 + R() * 0.18); g.filter = 'blur(' + 10 * S + 'px)';
+      for (const dx of [-P, 0, P]) { g.beginPath(); g.ellipse(x + dx, y, rx, ry, 0, 0, 7); g.fill(); }
+      g.filter = 'none';
+    }
+    for (let i = 0; i < 9; i++) {                     // faint stacks on the horizon
+      const x = R() * P, w = 22 + R() * 30, top = 160 + R() * 160;
+      for (const dx of [-P, 0, P]) { g.fillStyle = rgba('#2a120a', 0.6); g.fillRect(x + dx, top, w, H); glowAt(g, x + dx + w / 2, top, 50, '#ff9a50', 0.25); }
+    }
+    for (let i = 0; i < 260; i++) { const x = R() * P, y = R() * H; g.fillStyle = rgba('#ffc890', 0.2 + R() * 0.5); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, R() * 1.5 + 0.3, 0, 7); g.fill(); } }
+  });
+  const R = mulberry32(37), layers = [[], [], []];
+  // far: chimney stacks, two great wheels and a gantry crane
+  for (let i = 0; i < 7; i++) {
+    const x = i / 7 * P + R() * 90, w = 34 + R() * 26, top = 70 + R() * 150, s = i * 9;
+    layers[0].push({ x, reach: 160,
+      shape(g) { jagPath(g, [[x, H + 10], [x + w * 0.08, top + 20], [x - 6, top + 12], [x - 6, top], [x + w + 6, top], [x + w + 6, top + 12], [x + w * 0.92, top + 20], [x + w, H + 10]], 1.5, s); g.fill(); },
+      detail(g) { g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 2; for (let y = top + 40; y < H; y += 26) { g.beginPath(); g.moveTo(x + 2, y); g.lineTo(x + w - 2, y); g.stroke(); } },
+      glow(g) { glowAt(g, x + w / 2, top - 4, 46, '#ff9a50', 0.4); } });
+  }
+  for (const [x, y, r, rot] of [[420, 330, 150, 0.2], [1180, 260, 110, 0.5]]) {
+    layers[0].push({ x, reach: 300, shape(g) { gearPath(g, x, y, r, Math.round(r / 11), 0.18, rot); g.fill('evenodd'); },
+      detail(g) { g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 6; for (let k = 0; k < 6; k++) { const a = rot + k / 6 * Math.PI * 2; g.beginPath(); g.moveTo(x + Math.cos(a) * r * 0.22, y + Math.sin(a) * r * 0.22); g.lineTo(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9); g.stroke(); } g.beginPath(); g.arc(x, y, r * 0.86, 0, 7); g.stroke(); } });
+  }
+  layers[0].push({ x: 800, reach: 300, shape(g) {
+    g.lineWidth = 10; g.beginPath(); g.moveTo(700, H); g.lineTo(720, 120); g.moveTo(900, H); g.lineTo(880, 120); g.moveTo(640, 120); g.lineTo(1000, 120); g.stroke();
+    g.lineWidth = 4; for (let y = 160; y < H; y += 70) { g.beginPath(); g.moveTo(712, y); g.lineTo(888, y + 50); g.moveTo(888, y); g.lineTo(712, y + 50); g.stroke(); }
+    g.lineWidth = 3; g.beginPath(); g.moveTo(960, 120); g.lineTo(960, 260); g.stroke(); g.beginPath(); g.arc(960, 274, 12, -Math.PI * 0.5, Math.PI * 0.9); g.stroke();
+  } });
+  // mid: iron trusses with hanging chains and crates, and furnace windows
+  for (let i = 0; i < 2; i++) {
+    const y = 110 + i * 190, h = 34;
+    for (let x0 = 0; x0 < P; x0 += 200) {
+      layers[1].push({ x: x0 + 100, reach: 220, shape(g) {
+        g.fillRect(x0, y, 201, 7); g.fillRect(x0, y + h, 201, 7);
+        g.lineWidth = 5; g.beginPath(); for (let k = 0; k < 200; k += 40) { g.moveTo(x0 + k, y + 3); g.lineTo(x0 + k + 20, y + h + 3); g.lineTo(x0 + k + 40, y + 3); } g.stroke();
+      } });
+    }
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, top = R() < 0.5 ? 117 : 307, len = 80 + R() * 160, crate = R() < 0.45;
+    layers[1].push({ x, reach: 40, shape(g) {
+      g.lineWidth = 3; for (let y = top; y < top + len; y += 12) { g.beginPath(); g.ellipse(x, y, 3, 6, 0, 0, 7); g.stroke(); }
+      if (crate) { g.fillRect(x - 22, top + len, 44, 34); } else { g.lineWidth = 6; g.beginPath(); g.arc(x, top + len + 12, 11, -Math.PI * 0.5, Math.PI * 0.9); g.stroke(); }
+    } });
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = 120 + i * 400 + R() * 80, top = 470 + R() * 60, w = 150 + R() * 60;
+    layers[1].push({ x, reach: 260, shape(g) { g.fillRect(x - w / 2, top, w, H - top); g.beginPath(); g.moveTo(x - w / 2 - 10, top); g.lineTo(x, top - 50); g.lineTo(x + w / 2 + 10, top); g.fill(); },
+      glow(g) { for (const k of [-0.25, 0.25]) { const wx = x + k * w; g.fillStyle = 'rgba(255,150,70,0.55)'; g.beginPath(); g.arc(wx, top + 50, 13, Math.PI, 0); g.rect(wx - 13, top + 50, 26, 26); g.fill(); glowAt(g, wx, top + 60, 60, '#ff8a3a', 0.35); } } });
+  }
+  // near: pipes with flanges and valve wheels, and a heap of cogs
+  for (let i = 0; i < 3; i++) {
+    const x = i / 3 * P + 120 + R() * 260, w = 26 + R() * 12, top = -20;
+    layers[2].push({ x, reach: 80, shape(g) {
+      g.fillRect(x, top, w, H + 40);
+      for (const fy of [70 + R() * 40, 300 + R() * 80, 560]) g.fillRect(x - 6, fy, w + 12, 12);
+    }, detail(g) { g.fillStyle = rgba(th.hi, 0.12); g.fillRect(x + w * 0.22, top, 4, H + 40); } });
+    const vx = x + w / 2, vy = 120 + R() * 60;
+    layers[2].push({ x: vx, reach: 60, shape(g) { g.lineWidth = 5; g.beginPath(); g.arc(vx + w, vy, 20, 0, 7); g.stroke(); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.3; g.beginPath(); g.moveTo(vx + w, vy); g.lineTo(vx + w + Math.cos(a) * 20, vy + Math.sin(a) * 20); g.stroke(); } } });
+  }
+  for (let i = 0; i < 5; i++) {
+    const x = R() * P, r = 50 + R() * 50, rot = R();
+    layers[2].push({ x, reach: 140, shape(g) { gearPath(g, x, H + 10, r, Math.round(r / 9), 0.25, rot); g.fill('evenodd'); } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { haze: [1.2, 0.9, 1][li] })) };
+};
+
 SCENES.title = th => {
   const sky = paintSky(th, (g, R) => {
     for (let i = 0; i < 260; i++) { const x = R() * P, y = R() * 420, r = R() * 1.4 + 0.3; g.fillStyle = rgba('#ffffff', 0.2 + R() * 0.6); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, r, 0, 7); g.fill(); } }

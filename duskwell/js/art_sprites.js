@@ -46,59 +46,181 @@ function shell(g, x, y, rx, ry, bands, base, light, dark, fl) {
 }
 
 // ---------------------------------------------------------------- the Wanderer
+// The hero's sword: pommel, wrapped grip, crescent guard and a long slim blade, drawn along +x
+// from the guard at (x, y) with the given angle; the grip extends behind the guard.
+function heroSword(g, x, y, ang, len, plain) {
+  g.save(); g.translate(x, y); g.rotate(ang); g.lineJoin = 'round';
+  // grip, wrapped in teal cord
+  g.beginPath(); g.rect(-10, -2.3, 10, 4.6); fs(g, plain || '#3a2418', INK, 2.2);
+  if (!plain) { g.strokeStyle = '#36cfc2'; g.lineWidth = 1.4; for (let k = -9; k < 0; k += 3) { g.beginPath(); g.moveTo(k, -2); g.lineTo(k + 2, 2); g.stroke(); } }
+  g.beginPath(); g.arc(-12.5, 0, 2.8, 0, 7); fs(g, plain || BONE, INK, 2);                  // pommel
+  // blade
+  g.beginPath(); g.moveTo(1, -2.6); g.lineTo(len - 9, -2.1); g.lineTo(len, 0); g.lineTo(len - 9, 2.1); g.lineTo(1, 2.6); g.closePath();
+  if (plain) fs(g, plain, INK, 2.4);
+  else {
+    const gr = g.createLinearGradient(0, -3, 0, 3); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, '#d6dde8'); gr.addColorStop(1, '#8a96a8');
+    fs(g, gr, INK, 2.4);
+    g.strokeStyle = 'rgba(70,85,110,0.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(4, 0); g.lineTo(len - 12, 0); g.stroke();   // fuller
+    g.fillStyle = 'rgba(60,150,150,0.7)';                                                                                    // engraved diamonds
+    for (let d = 6; d < len - 12; d += 6) { g.beginPath(); g.moveTo(d - 1.3, 0); g.lineTo(d, -1); g.lineTo(d + 1.3, 0); g.lineTo(d, 1); g.closePath(); g.fill(); }
+    g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(3, -1.7); g.lineTo(len - 10, -1.4); g.stroke();
+  }
+  // crescent guard sweeping toward the blade
+  g.beginPath(); g.moveTo(-1, -8); g.quadraticCurveTo(4, -6, 3.5, -2.5); g.lineTo(3.5, 2.5); g.quadraticCurveTo(4, 6, -1, 8); g.quadraticCurveTo(1.5, 0, -1, -8); g.closePath();
+  fs(g, plain || BONE, INK, 2.2);
+  g.restore();
+}
+
+// ---------------------------------------------------------------- the Wanderer (the hero)
+// Drawn facing +x with the feet at the origin. o carries the pose: run, air, dash, wall, atk,
+// charge, sdGo, turn, landT, hurt, sit, dive; o.scale enlarges the whole figure (title screen).
+// A tint draws a flat silhouette (dash ghosts, the shade).
+const HERO_SCALE = 1.1;
 function wanderer(g, fx, fy, face, o, alpha, tint) {
   g.save(); g.translate(fx, fy); g.globalAlpha = alpha;
-  let sx = 1, sy = 1, lean = 0;
+  let sx = 1, sy = 1, lean = 0, ox = 0;
   if (o.air) { sy = 1 + clamp(-o.vy / 2600, -0.05, 0.1); sx = 1 / sy; }
   if (o.landT > 0) { sy = 0.88; sx = 1.1; }
-  if (o.dash) { sx = 1.35; sy = 0.8; }
+  if (o.run) lean = 0.1 + Math.sin(o.t * 16) * 0.025;
+  if (o.turn) { sx *= 0.8; lean = -0.06; }                       // a quick pivot when changing direction
+  if (o.atk === 'side') { lean = 0.17; ox = 3; }                 // lunge into the swing
+  else if (o.atk === 'up') { sy *= 1.07; lean = -0.05; }
+  else if (o.atk === 'down') { sy *= 0.92; sx *= 1.05; }
+  if (o.wall) { lean = 0.08; ox = -3; }                          // pressed against the wall behind
+  if (o.dash) { sx = 1.35; sy = 0.8; lean = 0.22; }
+  if (o.charge > 0) { sy = 1 - 0.13 * o.charge; sx = 1 + 0.1 * o.charge; lean = -0.1 * o.charge; }
+  if (o.sdGo) { sx = 1.55; sy = 0.72; lean = 0.3; }
   if (o.dive) { sx = 0.78; sy = 1.22; }
   if (o.sit) sy = 0.84;
-  if (o.run) lean = 0.1;
   if (o.hurt) lean = -0.25;
-  g.scale(face * sx, sy);
+  const k = HERO_SCALE * (o.scale || 1);
+  g.scale(face * sx * k, sy * k);
+  g.translate(ox, 0);
   g.rotate(lean);
-  const t = o.t, bob = o.run ? Math.abs(Math.sin(t * 16)) * 2.2 : Math.sin(t * 2.4) * 0.9;
-  const cloak = tint || '#11151f', scarf = tint || '#36cfc2';
-  // scarf tails
-  g.strokeStyle = INK; g.lineCap = 'round';
-  const len = 12 + Math.min(16, Math.abs(o.vx) * 0.045) + (o.air ? 5 : 0), w1 = Math.sin(t * 9) * 3, w2 = Math.sin(t * 9 + 1.3) * 3;
-  const tail = (lw, col, yo, k, ww) => {
+  const t = o.t, plain = tint || null;
+  const bob = o.run ? Math.abs(Math.sin(t * 16)) * 2.2 : Math.sin(t * 2.4) * 0.9;
+  const scarf = plain || '#36cfc2', scarfDk = plain || '#1f8c84';
+  g.lineCap = 'round'; g.lineJoin = 'round';
+
+  // --- scarf tails streaming behind
+  const len = 13 + Math.min(16, Math.abs(o.vx) * 0.045) + (o.air ? 5 : 0), w1 = Math.sin(t * 9) * 3, w2 = Math.sin(t * 9 + 1.3) * 3;
+  const tail = (lw, col, yo, kk, ww) => {
     g.strokeStyle = col; g.lineWidth = lw;
-    g.beginPath(); g.moveTo(-5, -19 - bob + yo); g.quadraticCurveTo(-len * 0.55 * k, -21 - bob + yo + ww, -len * k, -18 - bob + yo + w2 + (o.air ? o.vy * 0.009 : 0)); g.stroke();
+    g.beginPath(); g.moveTo(-5, -19 - bob + yo); g.quadraticCurveTo(-len * 0.55 * kk, -21 - bob + yo + ww, -len * kk, -18 - bob + yo + w2 + (o.air ? o.vy * 0.009 : 0)); g.stroke();
   };
-  tail(7.5, INK, 0, 1, w1); tail(4.5, scarf, 0, 1, w1);
-  tail(6, INK, 4, 0.8, w2); tail(3.2, scarf, 4, 0.8, w2);
-  // cloak
-  g.beginPath(); g.moveTo(-6, -21 - bob); g.quadraticCurveTo(-13.5, -11, -12.5, -2.5);
-  g.lineTo(-8.5, -4.8); g.lineTo(-4.5, -0.8); g.lineTo(0, -4.8); g.lineTo(4.5, -0.8); g.lineTo(8.5, -4.8); g.lineTo(12.5, -2.5);
-  g.quadraticCurveTo(13.5, -11, 6, -21 - bob); g.closePath();
-  fs(g, cloak, INK, 3);
-  if (!tint) { g.fillStyle = 'rgba(140,170,215,0.16)'; g.beginPath(); g.moveTo(-5, -20 - bob); g.quadraticCurveTo(-10.5, -11, -9.5, -6); g.lineTo(-6.5, -6); g.quadraticCurveTo(-6.5, -13, -3, -20 - bob); g.fill(); }
-  // feet
-  const leg = o.run ? Math.sin(t * 16) * 3 : 0;
-  g.fillStyle = INK; ellipse(g, -4 + leg, -1.5, 3.8, 2.6); g.fill(); ellipse(g, 5 - leg, -1.5, 3.8, 2.6); g.fill();
-  // horns (short, swept back and outward)
-  const hy = -30 - bob, horn = tint || BONE;
-  g.beginPath(); g.moveTo(-8, hy - 7); g.bezierCurveTo(-15, hy - 12, -15, hy - 20, -9.5, hy - 25); g.bezierCurveTo(-10, hy - 18, -7, hy - 13, -2.5, hy - 10); g.closePath(); fs(g, horn, INK, 2.6);
-  g.beginPath(); g.moveTo(8, hy - 7); g.bezierCurveTo(15, hy - 12, 15, hy - 20, 9.5, hy - 25); g.bezierCurveTo(10, hy - 18, 7, hy - 13, 2.5, hy - 10); g.closePath(); fs(g, horn, INK, 2.6);
-  // mask
-  if (tint) { ellipse(g, 0, hy, 12, 11); fs(g, tint, INK, 2.6); }
-  else mask(g, 0, hy, 12, 11, 1.05, 1);
-  // scarf wrap
-  g.strokeStyle = INK; g.lineWidth = 7; g.beginPath(); g.moveTo(-7.5, -20 - bob); g.quadraticCurveTo(0, -15.5 - bob, 7.5, -20 - bob); g.stroke();
-  g.strokeStyle = scarf; g.lineWidth = 4; g.beginPath(); g.moveTo(-7, -20 - bob); g.quadraticCurveTo(0, -16 - bob, 7, -20 - bob); g.stroke();
+  tail(8, INK, 0, 1, w1); tail(5, scarf, 0, 1, w1);
+  tail(6.5, INK, 4, 0.8, w2); tail(3.6, scarfDk, 4, 0.8, w2);
+  if (!plain) {                                              // frayed tips
+    g.strokeStyle = scarf; g.lineWidth = 1.2;
+    const tx = -len, ty = -18 - bob + w2 + (o.air ? o.vy * 0.009 : 0);
+    for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(tx + 1, ty + i * 1.6); g.lineTo(tx - 3, ty + i * 2.2 + w1 * 0.3); g.stroke(); }
+  }
+
+  // --- the sword, carried across the back unless it is in the hand
+  if (!o.atk) heroSword(g, -9, -23 - bob, 2.02, 28, plain);
+
+  // --- legs and feet
+  const leg = o.run ? Math.sin(t * 16) * 3 : 0, tuck = o.air && !o.dash ? 1.5 : 0;
+  const footY = i => -1.5 - tuck - (o.run ? Math.max(0, i * Math.sin(t * 16)) * 2 : 0);
+  g.strokeStyle = INK; g.lineWidth = 3.4;
+  g.beginPath(); g.moveTo(-3.5, -6); g.lineTo(-4 + leg, footY(1)); g.moveTo(4.5, -6); g.lineTo(5 - leg, footY(-1)); g.stroke();
+  g.fillStyle = INK; ellipse(g, -4 + leg, footY(1), 3.9, 2.6); g.fill(); ellipse(g, 5 - leg, footY(-1), 3.9, 2.6); g.fill();
+
+  // --- cloak: the hem flares while falling and streams back while running
+  const fl = o.air ? clamp(o.vy / 800, -0.25, 1) : 0, sw = o.run ? Math.sin(t * 16) * 1.2 : 0, back = o.run || o.dash || o.sdGo ? 2.5 : 0;
+  const cloakPath = () => {
+    g.beginPath(); g.moveTo(-6, -21 - bob); g.quadraticCurveTo(-13.5 - fl * 3 - back, -11, -12.5 - fl * 5 - back, -2.5 - fl * 7);
+    g.lineTo(-8.5 - fl * 2, -4.8 - fl * 3 + sw); g.lineTo(-4.5, -0.8 - fl * 1.5); g.lineTo(0, -4.8 - fl * 2 - sw); g.lineTo(4.5, -0.8 - fl * 1.5); g.lineTo(8.5 + fl * 2, -4.8 - fl * 3 + sw); g.lineTo(12.5 + fl * 5, -2.5 - fl * 7);
+    g.quadraticCurveTo(13.5 + fl * 3, -11, 6, -21 - bob); g.closePath();
+  };
+  if (plain) { cloakPath(); fs(g, plain, INK, 3); }
+  else {
+    cloakPath();
+    const cg = g.createLinearGradient(0, -22, 0, 0); cg.addColorStop(0, '#26304a'); cg.addColorStop(0.55, '#141a28'); cg.addColorStop(1, '#0a0d16');
+    fs(g, cg, INK, 3);
+    g.save(); cloakPath(); g.clip();
+    g.fillStyle = '#0d3a40'; g.beginPath(); g.moveTo(-14, -6 - fl * 6); g.lineTo(14, -6 - fl * 6); g.lineTo(14, 2); g.lineTo(-14, 2); g.fill();   // teal lining at the hem
+    g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 1.4;                                                                    // folds
+    g.beginPath(); g.moveTo(-3, -18 - bob); g.quadraticCurveTo(-6, -11, -5.5, -3); g.moveTo(3.5, -18 - bob); g.quadraticCurveTo(5, -11, 4, -3); g.moveTo(0.5, -16 - bob); g.lineTo(0, -6); g.stroke();
+    g.strokeStyle = 'rgba(150,180,230,0.28)'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-2, -17 - bob); g.quadraticCurveTo(-4.5, -11, -4, -5); g.stroke();
+    g.strokeStyle = 'rgba(120,150,200,0.08)'; g.lineWidth = 0.8;                                                             // woven texture
+    for (let k = -16; k < 16; k += 2.2) { g.beginPath(); g.moveTo(k, -22); g.lineTo(k + 8, 2); g.stroke(); }
+    g.restore();
+    g.strokeStyle = 'rgba(170,200,255,0.4)'; g.lineWidth = 1.3;                                                              // rim light up the front edge
+    g.beginPath(); g.moveTo(6.5, -20 - bob); g.quadraticCurveTo(12.6, -12, 11.8, -4); g.stroke();
+  }
+
+  // --- the free hand, peeking out at the front of the cloak
+  if (!o.atk && !o.sit) { g.fillStyle = INK; ellipse(g, 10.5, -11 - bob * 0.5 + (o.run ? Math.sin(t * 16) * 1.5 : 0), 2.6, 2.2); g.fill(); }
+  if (o.wall) { g.fillStyle = INK; ellipse(g, -12, -16 - bob, 3.5, 2.6, 0.4); g.fill(); ellipse(g, -12.5, -7, 3.5, 2.6, -0.3); g.fill(); }   // claws gripping the wall
+
+  // --- horns, swept back and outward
+  const hy = -30 - bob, horn = plain || BONE;
+  const hornPath = sgn => { g.beginPath(); g.moveTo(sgn * 8, hy - 7); g.bezierCurveTo(sgn * 15, hy - 12, sgn * 15.5, hy - 20, sgn * 9.5, hy - 26); g.bezierCurveTo(sgn * 10, hy - 18, sgn * 7, hy - 13, sgn * 2.5, hy - 10); g.closePath(); };
+  for (const sgn of [-1, 1]) {
+    hornPath(sgn); fs(g, horn, INK, 2.6);
+    if (!plain) { g.strokeStyle = 'rgba(120,135,160,0.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(sgn * 6, hy - 9); g.bezierCurveTo(sgn * 11, hy - 13, sgn * 12, hy - 18, sgn * 9.5, hy - 23); g.stroke(); }
+  }
+
+  // --- the mask: shaded bone, a hairline crack, two deep eyes that blink
+  const maskPath = () => { g.beginPath(); g.moveTo(0, hy - 11.5); g.bezierCurveTo(8, hy - 11.5, 12.6, hy - 6, 12.4, hy + 0.5); g.bezierCurveTo(12.2, hy + 7, 7, hy + 11.5, 0, hy + 12); g.bezierCurveTo(-7, hy + 11.5, -12.2, hy + 7, -12.4, hy + 0.5); g.bezierCurveTo(-12.6, hy - 6, -8, hy - 11.5, 0, hy - 11.5); g.closePath(); };
+  if (plain) { maskPath(); fs(g, plain, INK, 2.6); }
+  else {
+    maskPath();
+    const mg = g.createRadialGradient(4, hy - 6, 1, 0, hy, 15); mg.addColorStop(0, '#ffffff'); mg.addColorStop(0.55, '#eef2f6'); mg.addColorStop(1, '#b8c4d2');
+    fs(g, mg, INK, 2.6);
+    g.save(); maskPath(); g.clip();
+    g.fillStyle = 'rgba(70,90,125,0.18)'; ellipse(g, -3, hy + 7, 13, 7); g.fill();
+    g.restore();
+    // the crack glows faintly with soul light
+    const crack = () => { g.beginPath(); g.moveTo(6.5, hy - 10.4); g.lineTo(5.2, hy - 7.5); g.lineTo(6.6, hy - 5.6); g.lineTo(5.8, hy - 3.8); };
+    const pulse = 0.35 + 0.2 * Math.sin(t * 2.2);
+    g.strokeStyle = 'rgba(120,240,225,' + pulse + ')'; g.lineWidth = 2.4; crack(); g.stroke();
+    g.strokeStyle = 'rgba(30,60,80,0.75)'; g.lineWidth = 0.9; crack(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 1.4;                      // gloss along the brow
+    g.beginPath(); g.moveTo(-3, hy - 9.6); g.quadraticCurveTo(3, hy - 11, 8.4, hy - 7.6); g.stroke();
+  }
+  const blink = (t % 3.7) < 0.12 && !o.atk ? 0.15 : 1;
+  const eye = (x, rx, ry, rot) => {
+    g.fillStyle = INK; ellipse(g, x, hy + 1.2, rx, ry * blink, rot); g.fill();
+    if (!plain && blink === 1) { g.fillStyle = 'rgba(200,225,255,0.85)'; g.beginPath(); g.arc(x + rx * 0.35, hy - ry * 0.45, 0.9, 0, 7); g.fill(); }
+  };
+  eye(-4.2, 3.3, 5.3, 0.12); eye(5.0, 3.5, 5.5, -0.1);
+
+  // --- the scarf wrapped at the neck, with knitted bands
+  g.strokeStyle = INK; g.lineWidth = 7.5; g.beginPath(); g.moveTo(-7.5, -20 - bob); g.quadraticCurveTo(0, -15.5 - bob, 7.5, -20 - bob); g.stroke();
+  g.strokeStyle = scarf; g.lineWidth = 4.4; g.beginPath(); g.moveTo(-7, -20 - bob); g.quadraticCurveTo(0, -16 - bob, 7, -20 - bob); g.stroke();
+  if (!plain) {
+    g.strokeStyle = scarfDk; g.lineWidth = 1.1;
+    for (const x of [-4.5, -1.5, 1.5, 4.5]) { const y = -18.2 - bob + Math.abs(x) * 0.18; g.beginPath(); g.moveTo(x - 0.6, y - 1.6); g.lineTo(x + 0.6, y + 1.6); g.stroke(); }
+    g.strokeStyle = 'rgba(220,255,250,0.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-5, -20 - bob); g.quadraticCurveTo(0, -17.6 - bob, 5, -20 - bob); g.stroke();
+  }
   g.restore();
 }
 Art.drawPlayer = function (g, p, t) {
   for (const gh of p.ghost) {
-    const a = 0.45 * (1 - (t - gh.t) / 0.22);
-    if (a > 0) wanderer(g, gh.x + p.w / 2, gh.y + p.h, gh.face, { t, vx: 0, vy: 0, dash: true }, a, '#2a3a5a');
+    const life = gh.sd ? 0.26 : 0.22, a = (gh.sd ? 0.55 : 0.45) * (1 - (t - gh.t) / life);
+    if (a > 0) wanderer(g, gh.x + p.w / 2, gh.y + p.h, gh.face, { t, vx: 0, vy: 0, dash: !gh.sd, sdGo: gh.sd }, a, gh.sd ? '#a8642a' : '#2a3a5a');
+  }
+  const charge = p.sd && p.sd.state === 'charge' ? clamp(p.sd.t / SD_CHARGE, 0, 1) : 0, sdGo = !!(p.sd && p.sd.state === 'go');
+  if (charge > 0) {               // the Comet Heart gathering light
+    const ready = p.sd.ready, pulse = ready ? 0.75 + 0.25 * Math.sin(t * 30) : charge;
+    bloom(g, p.cx, p.cy, 30 + 50 * pulse, '#ffc070', 0.25 + 0.4 * pulse);
+    g.strokeStyle = rgba('#ffe6a8', 0.3 + 0.5 * pulse); g.lineWidth = 2;
+    g.beginPath(); g.arc(p.cx, p.cy, 40 - 18 * charge, 0, 7); g.stroke();
+  }
+  if (sdGo) {                     // a blazing streak behind the comet
+    const d = p.sd.dir, x0 = p.cx - d * 150, gr = g.createLinearGradient(x0, 0, p.cx, 0);
+    gr.addColorStop(0, 'rgba(255,190,110,0)'); gr.addColorStop(1, 'rgba(255,225,170,0.75)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x0, p.cy - 4); g.lineTo(p.cx, p.cy - 16); g.lineTo(p.cx, p.cy + 12); g.lineTo(x0, p.cy + 4); g.fill();
+    bloom(g, p.cx + d * 10, p.cy, 70, '#ffc070', 0.55);
   }
   if (p.dead) return;
   let alpha = 1;
   if (p.invuln > 0 && Math.floor(t * 24) % 2 === 0) alpha = 0.4;
-  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving, run: p.onGround && Math.abs(p.vx) > 30, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving };
+  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving && !sdGo, run: p.onGround && Math.abs(p.vx) > 30 && !sdGo, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving,
+    turn: p.turnT > 0 && p.onGround, wall: p.sliding, atk: p.atkT > 0 ? p.atkDir : null, charge, sdGo };
   if (p.diving) {
     const tr = g.createLinearGradient(0, p.y - 120, 0, p.y + p.h);
     tr.addColorStop(0, 'rgba(220,240,255,0)'); tr.addColorStop(1, 'rgba(220,240,255,0.75)');
@@ -110,6 +232,7 @@ Art.drawPlayer = function (g, p, t) {
     bloom(g, p.cx, p.cy - 6, 40 + k * 50, '#dff3ff', 0.2 + k * 0.4);
     g.strokeStyle = rgba('#e8f6ff', 0.75); g.lineWidth = 2.5; ellipse(g, p.cx, p.cy - 4, 28 - k * 12, 36 - k * 14); g.stroke();
   }
+  bloom(g, p.cx, p.cy - 8, 46, '#9cc4ff', 0.08);
   wanderer(g, p.cx, p.y + p.h + (p.sitting ? 4 : 0), p.face, o, alpha, null);
   if (p.atkT > 0) {
     const pr = 1 - clamp(p.atkT / 0.16, 0, 1), a = 1 - pr * 0.7, f = p.face, m = p.atkAlt ? 1 : -1;
@@ -123,6 +246,11 @@ Art.drawPlayer = function (g, p, t) {
     const grd = g.createRadialGradient(cx, cy, 24, cx, cy, 60); grd.addColorStop(0, 'rgba(255,255,255,0)'); grd.addColorStop(0.55, 'rgba(236,246,255,0.9)'); grd.addColorStop(1, '#ffffff');
     g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, 58, sweep - span, sweep, ccw); g.arc(cx, cy, 34, sweep, sweep - span * 0.85, !ccw); g.closePath(); g.fill();
     g.restore();
+    // the sword in the hand, at the leading edge of the swing
+    // the hand sits in front of the chest so the blade never crosses the mask
+    const hx = p.cx + f * 14, hy = p.cy + (p.atkDir === 'up' ? -6 : p.atkDir === 'down' ? 6 : 0);
+    heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE, null);
+    g.fillStyle = INK; ellipse(g, hx, hy, 3.2, 2.8); g.fill();
   }
 };
 

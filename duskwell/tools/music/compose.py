@@ -28,7 +28,7 @@ VIOLIN, VIOLA, CELLO, CONTRABASS, TREMOLO, PIZZ, HARP, TIMPANI = 40, 41, 42, 43,
 STRINGS, SLOW_STRINGS, CHOIR, OOHS = 48, 49, 52, 53
 TRUMPET, TROMBONE, HORN, BRASS = 56, 57, 60, 61
 OBOE, ENGLISH_HORN, BASSOON, CLARINET, FLUTE = 68, 69, 70, 71, 73
-TAIKO, REVERSE_CYMBAL = 116, 119
+AGOGO, WOODBLOCK, TAIKO, REVERSE_CYMBAL = 113, 115, 116, 119
 
 
 def pitch(s):
@@ -446,7 +446,49 @@ def king():
     return s, len(prog)
 
 
-PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, boss, king]
+def foundry():
+    """The Rustworks: a clockwork ostinato in G minor, woodblock ticks, an anvil on the off-bar
+    and a brooding horn tune that the bassoon answers."""
+    s = Song('foundry', 96, seed=22)
+    s.track('low', CELLO, vol=100, pan=56, reverb=55)
+    s.track('bass', CONTRABASS, vol=90, pan=60, reverb=45)
+    s.track('tick', WOODBLOCK, vol=72, pan=82, reverb=40)
+    s.track('anvil', AGOGO, vol=58, pan=40, reverb=75)
+    s.track('celesta', CELESTA, vol=62, pan=86, reverb=85)
+    s.track('horn', HORN, vol=94, pan=48, reverb=80)
+    s.track('bassoon', BASSOON, vol=88, pan=68, reverb=70)
+    s.track('strings', SLOW_STRINGS, vol=60, pan=64, reverb=90)
+    s.track('timpani', TIMPANI, vol=92, pan=64, reverb=60)
+    A = ['Gm', 'Gm', 'Eb', 'D', 'Gm', 'Cm', 'Ab', 'D7']
+    B = ['Cm', 'Gm', 'Ab', 'Eb', 'Cm', 'Gm', 'Eb', 'D7']
+    prog = A + A + B + A
+    for b, c in enumerate(prog):
+        root = bass_note(c, 43)
+        for k in range(8):                                    # the machine: staccato eighths, octave kicks
+            s.note('low', s.bar(b) + k * 0.5, 0.26, root + (12 if k in (3, 7) else 0), 80 if k in (0, 3, 6) else 56)
+        s.bass('bass', b, c, low=31, rhythm=((0, 0.4), (1.5, 0.4), (3, 0.4)), vel=70)
+        s.hits('tick', b, 76, (0.5, 1.5, 2.5, 3.5), dur=0.1, vel=58)
+        if b % 2 == 1:
+            s.note('anvil', s.bar(b) + 3, 0.4, 72, 60)
+        if b % 2 == 0:
+            s.note('timpani', s.bar(b), 1.2, bass_note(c, 38), 84)
+        if b >= 8:
+            s.pad('strings', b, c, low=55, count=3, vel=40)
+        if b >= 16:
+            s.arp('celesta', b, c, [0, 1, 2, 1, 3, 2, 1, 2], step=0.25, low=79, vel=34, bars=0.5, dur=0.2)
+    mel_a = ('G3:1.5 A3:0.5 Bb3:1 D4:1  C4:1.5 Bb3:0.5 A3:2  G3:1 Bb3:1 Eb4:1 D4:1  D4:3 r:1 '
+             'G4:1.5 F4:0.5 Eb4:1 D4:1  C4:1 Eb4:1 G4:2  F4:1 Eb4:1 C4:1 Eb4:1  D4:3 F#3:1')
+    mel_b = ('Eb4:2 D4:1 C4:1  Bb3:2 G3:2  C4:1 Eb4:1 Ab4:2  G4:3 Eb4:1  '
+             'F4:2 Eb4:1 C4:1  D4:2 Bb3:2  G3:1 Bb3:1 Eb4:1 G4:1  F#4:3 r:1')
+    s.melody('bassoon', 0, mel_a, vel=80, shift=-12, legato=0.9)
+    s.melody('horn', 8, mel_a, vel=88)
+    s.melody('bassoon', 16, mel_b, vel=82, legato=0.9)
+    s.melody('horn', 16, mel_b, vel=70, shift=-12)
+    s.melody('horn', 24, mel_a, vel=92)
+    return s, len(prog)
+
+
+PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, boss, king]
 
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'build'

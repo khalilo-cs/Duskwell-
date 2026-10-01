@@ -9,9 +9,9 @@ const Sound = (() => {
   let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
-  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed' };
+  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry' };
   const MUSIC_DIR = 'audio/music/';
   const MUSIC_VOL = 0.8;
   const MASTER_VOL = 0.55;
@@ -189,6 +189,13 @@ const Sound = (() => {
     break() { noise({ f: 900, f2: 200, d: 0.3, v: 0.3 }); },
     bounce() { tone({ f: 180, f2: 620, d: 0.22, v: 0.16, type: 'triangle' }); noise({ f: 400, d: 0.1, v: 0.1 }); },
     shade() { tone({ f: 150, f2: 100, d: 0.6, v: 0.15, type: 'triangle' }); },
+    creak() { tone({ f: 120, f2: 90, d: 0.4, v: 0.1, type: 'sawtooth' }); noise({ f: 700, f2: 300, d: 0.35, v: 0.08, type: 'bandpass', q: 3 }); },
+    clunk() { tone({ f: 90, f2: 55, d: 0.18, v: 0.16, type: 'square' }); noise({ f: 500, d: 0.12, v: 0.1 }); },
+    clank() { tone({ f: 1250, f2: 900, d: 0.18, v: 0.08, type: 'triangle' }); tone({ f: 1870, d: 0.12, v: 0.05, type: 'sine' }); noise({ f: 4000, d: 0.06, v: 0.08, type: 'highpass' }); },
+    lever() { tone({ f: 180, f2: 120, d: 0.25, v: 0.16, type: 'square' }); tone({ f: 900, d: 0.12, v: 0.08, type: 'triangle', delay: 0.12 }); noise({ f: 800, d: 0.2, v: 0.12 }); },
+    sdcharge() { tone({ f: 160, f2: 640, d: 0.8, v: 0.08, a: 0.2, type: 'sawtooth' }); noise({ f: 600, f2: 2400, d: 0.8, v: 0.05, type: 'bandpass', q: 2 }); },
+    sdready() { tone({ f: 1320, d: 0.25, v: 0.1, type: 'triangle' }); tone({ f: 1980, d: 0.3, v: 0.06, type: 'sine', delay: 0.04 }); },
+    sdlaunch() { noise({ f: 300, f2: 3000, d: 0.35, v: 0.22, type: 'bandpass', q: 0.8 }); tone({ f: 110, f2: 55, d: 0.4, v: 0.22, type: 'sawtooth' }); },
   };
 
   function note(semi, dur, vol, oct) {

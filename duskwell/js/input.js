@@ -9,6 +9,7 @@ const Input = (() => {
     KeyX: 'attack', KeyJ: 'attack',
     KeyC: 'dash', KeyL: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash',
     KeyF: 'cast', KeyV: 'cast', KeyI: 'cast',
+    KeyQ: 'superdash', KeyE: 'superdash', KeyU: 'superdash',
     Tab: 'map', KeyM: 'map',
     Escape: 'pause', KeyP: 'pause',
     Enter: 'confirm', KeyN: 'mute',
@@ -86,10 +87,10 @@ const Input = (() => {
       const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
       now.left = ax < -0.4 || b(14); now.right = ax > 0.4 || b(15);
       now.up = ay < -0.5 || b(12); now.down = ay > 0.5 || b(13);
-      now.jump = b(0); now.attack = b(2) || b(1); now.dash = b(5) || b(7) || b(4);
+      now.jump = b(0); now.attack = b(2) || b(1); now.dash = b(5) || b(7); now.superdash = b(4);
       now.cast = b(3) || b(6); now.map = b(8); now.pause = b(9); now.confirm = b(0);
     }
-    for (const a of ['left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'cast', 'map', 'pause', 'confirm']) {
+    for (const a of ['left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'superdash', 'cast', 'map', 'pause', 'confirm']) {
       const was = !!padPrev[a], on = !!now[a];
       if (a !== 'confirm') setHeld(pad, a, on);
       else if (on && !was) q.confirm = true;

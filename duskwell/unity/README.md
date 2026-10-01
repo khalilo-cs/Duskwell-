@@ -47,3 +47,32 @@ They compile cleanly against stand-in UnityEngine types; they have not been run 
 11. **Boss**: build the arena with gate objects (inactive, solid when active), a `BossArena` trigger a few tiles past the entrance, the `StoneGuardianBoss` with its slam hitbox, ground check, arena edge markers and the `Shockwave` / `FallingRock` prefabs, and a `BossHealthBar` on the canvas.
 
 Tuning notes are in each field's `[Tooltip]`, visible in the Inspector.
+
+
+## PlayerController.cs — البطل في ملف واحد (على بنية مشروع DanielDFY)
+
+ملف مستقل يمكن وضعه بدل `PlayerController.cs` في مشروع **DanielDFY / Hollow-Knight-Imitation**، أو استعماله هنا بدل الملفات المنفصلة (`PlayerController2D` و`PlayerCombat` و`PlayerDash` و`PlayerWallJump`). الكود مكتوب من جديد، لكنه يتبع بنية ذلك المشروع وقيمه:
+- **الحركة:** `Rigidbody2D` بالسرعة المباشرة. القيم: مشي 5، قفز 7، قفزتان، قفز الجدار (8,10)، وترك الزر يجعل السقوط 5. الاندفاع 10 لمدة 0.15 ثانية ثم انتظار 0.4.
+- **الضربات:** 0.3 ثانية بينها.
+- **لمس الأرض:** `CircleCast` نحو طبقة `Platform`.
+- **الجدار:** يُعرف بوسم `Wall`.
+- **الضربة:** `CircleCastAll` نحو الأعلى أو الأمام أو الأسفل في الهواء، مع ارتداد لكل اتجاه.
+- **الـ Animator:** يحمل أسماء معاملات المشروع نفسها: `IsGround` و`IsDown` و`IsJump` و`IsJumpFirst` و`IsJumpSecond` و`IsRun` و`IsRotate` و`stopTrigger` و`IsClimb` و`IsClimbJump` و`IsSprint` و`IsAttack` و`IsAttackUp` و`IsAttackDown` و`IsHurt` و`IsDead`.
+
+**الإضافات:**
+- زمن الذئب، وتخزين القفز، وجاذبية أثقل في السقوط.
+- توقف لحظي واهتزاز للشاشة عند الضرب والإصابة (`HeroFeel`).
+- الارتداد للأعلى بضربة سفلية على عدو أو فخ، ويعيد القفزة والاندفاع.
+- جزيئات وأصوات، وأحداث `UnityEvent`.
+- مشغّل إطارات يحمّل الرسوم من `Resources/Hero/<الحالة>/1.png, 2.png ...`.
+
+**الإعداد:**
+1. على البطل: `Rigidbody2D` و`BoxCollider2D` و`SpriteRenderer` (و`Animator` إن أردت أن يتولى الرسوم بدل الإطارات).
+2. الطبقات: `Platform` للأرض، و`Enemy` و`Trap` و`Switch` و`Projectile` لما يُضرب، و`PlayerInvulnerable` للحصانة المؤقتة. ضع الوسم `Wall` على الجدران.
+3. الرسوم: مجلد لكل حالة داخل `Assets/Resources/Hero/`: Idle, Run, Turn, Jump, DoubleJump, Fall, Land, WallCling, WallJump, Dash, AttackForward, AttackUp, AttackDown, Hurt, Dead.
+4. المؤثرات الاختيارية في `Assets/Resources/Hero/FX/`: DashTrail, LandDust, WallDust, HitSpark, DoubleJumpPuff.
+5. الأزرار: القفز Space/Z، والضرب J/X، والاندفاع K/C.
+
+**ملاحظات:**
+- صور مشروع DanielDFY مأخوذة من Hollow Knight وحقوقها لشركة Team Cherry، فلا تضعها في لعبة تنشرها. ارسم إطاراتك أنت. وصف تصميم البطل مكتوب في أعلى الملف.
+- إن استعملته داخل هذا المشروع، أطفئ الملفات الأربعة التي يحل محلها. ولكي تؤذيه سكربتات `Hazard` و`FallingRock`، أضف `IDamageable` إلى تعريف الصنف؛ الدالة `TakeDamage` موجودة فيه.

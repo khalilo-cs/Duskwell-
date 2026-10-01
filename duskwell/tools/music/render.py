@@ -3,7 +3,7 @@
 
 needs: python3 + mido + numpy, fluidsynth, sox, lame and the FluidR3 GM SoundFont (MIT licence)
     apt-get install fluidsynth fluid-soundfont-gm sox lame && pip install mido numpy
-usage: python3 render.py [output dir]        (default: ../../audio/music)
+usage: python3 render.py [output dir] [piece ...]   (default dir: ../../audio/music; default: every piece)
 
 The MIDI holds the loop twice. After the mastering chain we keep the second pass, which opens
 with the first pass's reverb tail, and crossfade its last 60 ms with the end of the first pass:
@@ -66,8 +66,14 @@ def main():
     with tempfile.TemporaryDirectory() as work:
         run(sys.executable, os.path.join(HERE, 'compose.py'), work)
         loops = json.load(open(os.path.join(work, 'loops.json')))
-        meta = {name: render(name, sec, work, out) for name, sec in sorted(loops.items())}
-    with open(os.path.join(out, 'music.json'), 'w') as f:
+        only = set(sys.argv[2:])
+        meta_path = os.path.join(out, 'music.json')
+        meta = json.load(open(meta_path)) if only and os.path.exists(meta_path) else {}
+        for name, sec in sorted(loops.items()):
+            if not only or name in only:
+                meta[name] = render(name, sec, work, out)
+        meta = dict(sorted(meta.items()))
+    with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=1)
 
 

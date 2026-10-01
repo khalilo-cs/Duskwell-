@@ -2,7 +2,7 @@
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff' };
+const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
@@ -85,6 +85,7 @@ function enterRoom(id, spawn) {
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.get(x, y); if ((v === T_BREAK || v === T_CRACK) && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR); }
   for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; G.enemies.push(en); }
   for (const it of def.items) if (!G.flags[it.id]) G.items.push(new Item(it));
+  Mech.init(def);
   if (G.shade && G.shade.room === id) {
     const s = new ShadeEnemy({ x: 0, y: 0 }, G.shade.geo); s.kind = 'shade';
     s.x = G.shade.x - s.w / 2; s.y = G.shade.y - s.h / 2; s.home = { x: G.shade.x, y: G.shade.y };
@@ -117,7 +118,7 @@ function enterRoom(id, spawn) {
     P.place(spawn.pos.x, spawn.pos.y, 1);
   }
   G.visited[id] = true;
-  Sound.setTheme(def.theme); Sound.boss(false);
+  Sound.setTheme(def.theme); Sound.boss(false); syncAbilityButtons();
   // painted backdrops for this area, then for the areas behind its doors so they are ready in time
   Art.loadPainted(def.theme);
   for (const d of def.doors) { const n = WORLD.rooms[d.to]; if (n && n.theme !== def.theme) Art.loadPainted(n.theme); }
@@ -182,6 +183,7 @@ G.collectItem = function (it) {
     P.ab[d.ability] = true;
     G.banner = { title: tr('abil_' + d.ability), desc: tr('abil_' + d.ability + '_d'), t: 0, big: true };
   }
+  syncAbilityButtons();
   Sound.play('ability'); G.ring(it.x, it.y, '#ffffff'); G.flash = 0.6;
   G.burst(it.x, it.y, 30, { color: '#e6f3ff', speed: 240, life: 1, size: 3, grav: -60 });
   G.state = 'banner';
@@ -204,7 +206,7 @@ function startGame(useSave) {
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
-    P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = s.ab; P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
+    P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = Object.assign(P.ab, s.ab); P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
     G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0;
     room = s.room; spawn = { bench: true };
   } else {
@@ -256,6 +258,7 @@ function updatePlay(dt) {
   if (Input.pressed('pause')) { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; Input.consume('pause'); return; }
   if (Input.pressed('map')) { G.state = 'map'; Input.consume('map'); Sound.play('select'); return; }
   G.time += dt;
+  Mech.update(dt);
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
   if (Input.pressed('up') && !P.sitting && P.onGround && P.hurtT <= 0 && P.atkT <= 0) interact();
@@ -575,8 +578,13 @@ function drawWorld(g) {
   if (G.shakeT > 0) { const a = G.shakeA * Math.min(1, G.shakeT * 3); sx = rand(-a, a); sy = rand(-a, a); }
   const cx = Math.round(G.cam.x + sx), cy = Math.round(G.cam.y + sy);
   g.save(); g.translate(-cx, -cy);
-  for (const d of L.def.deco) if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(g, d, t, th);
+  for (const d of L.def.deco) {
+    if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(g, d, t, th);
+    else if (d.type === 'gear') Art.drawGear(g, d, t, th);
+    else if (d.type === 'chimney') Art.drawChimney(g, d, t, th);
+  }
   // tile layer
+  Art.mechBack(g, t);
   const s = Math.min(G.k, 1.5);
   if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.renderLevel(L, s); G.tileScale = s; G.tileRoom = L.id; }
   const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW, L.pw - vx), vh = Math.min(VH, L.ph - vy);
@@ -591,6 +599,7 @@ function drawWorld(g) {
     else if (v === T_CRACK) Art.drawCrack(g, x, y, th, t);
     else if (v === T_ACID) Art.drawAcid(g, x, y, L.get(x, y - 1) !== T_ACID, t);
   }
+  Art.mechFront(g, t, th);
   for (const b of G.benches) Art.drawBench(g, b, t, P.sitting === b);
   for (const n of G.npcs) Art.drawNPC(g, n, t);
   for (const s2 of G.signs) Art.drawSign(g, s2, t);
@@ -642,6 +651,7 @@ function collectLights(cx, cy) {
     else if (e.glowR) add(e.cx, e.cy, e.glowR, 0.7, e.blood);
   }
   for (const d of L.def.doors) add((d.x + d.w / 2) * TILE, (d.y + d.h / 2) * TILE, 170, 0.55, th.fog);
+  Mech.lights(add, th);
   return out;
 }
 
@@ -700,8 +710,8 @@ function drawTitle(g) {
     g.fillStyle = 'rgba(255,214,130,0.6)'; g.fillRect(x + 12, 420 - h + 30, 8, 12);
   }
   // the wanderer on the hill
-  wanderer(g, 300, 452, 1, { t, vx: 0, vy: 0 }, 1, null);
-  glow(g, 300, 430, 90, '#9cc4ff', 0.12);
+  glow(g, 300, 400, 150, '#9cc4ff', 0.16);
+  wanderer(g, 300, 458, 1, { t, vx: 0, vy: 0, scale: 2.1 }, 1, null);
   Art.drawAmbient(g, STEP, 'town', 0, 0, t);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
   g.font = font(LANG.cur === 'ar' ? 92 : 78, '700');
@@ -824,8 +834,13 @@ function boot() {
   const fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
   fontsReady.then(() => { /* canvas text uses fallbacks until web fonts arrive, which is fine */ });
 }
+// the Comet Heart button only appears once the ability is found
+function syncAbilityButtons() {
+  const b = document.querySelector('[data-act=superdash]');
+  if (b) b.hidden = !P.ab.superdash;
+}
 function refreshTouchLabels() {
-  const caps = { cast: ['روح', 'Soul'], dash: ['اندفاع', 'Dash'], attack: ['ضرب', 'Strike'], jump: ['قفز', 'Jump'] };
+  const caps = { cast: ['روح', 'Soul'], dash: ['اندفاع', 'Dash'], attack: ['ضرب', 'Strike'], jump: ['قفز', 'Jump'], superdash: ['شهاب', 'Comet'] };
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;

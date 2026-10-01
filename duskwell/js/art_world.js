@@ -10,6 +10,7 @@ const THEMES = {
   spore:   { sky: ['#120804', '#3a200e', '#7a4a1c'], far: '#4a2a12', mid: '#2e190b', near: '#1a0e06', tile: '#221409', hi: '#ffb870', edge: '#060301', fog: '#e89a4a', part: '#ffd890', glow: '#ffb070', leaf: ['#e8742a', '#ffb070', '#d8a040', '#9e2f18'], name: 'spore' },
   aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
+  foundry: { sky: ['#0d0604', '#2a120a', '#5a2a12'], far: '#3a1a0e', mid: '#26120a', near: '#160a06', tile: '#24140e', hi: '#ffb27a', edge: '#060201', fog: '#ff7a3a', part: '#ffc890', glow: '#ff9a50', name: 'foundry' },
   title:   { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#060a18', tile: '#0e1430', hi: '#9cc4ff', edge: '#020308', fog: '#5a6aa8', part: '#dfe8ff', glow: '#ffe9b0', name: 'title' },
   throne:  { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', tile: '#0e121e', hi: '#c6d6f4', edge: '#010203', fog: '#5e72a0', part: '#eef4ff', glow: '#ffe2a8', name: 'throne' },
 };
@@ -145,6 +146,11 @@ function themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS) {
       if (v < 0.3) { g.fillStyle = '#2f7a6a'; ellipse(g, px + 16, py + 1, 12, 3); g.fill(); }
     } else if (n === 'webbed') {
       if (v < 0.2) { g.strokeStyle = 'rgba(220,215,240,0.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 1); g.quadraticCurveTo(px + 16, py - 14, px + 32, py - 1); g.moveTo(px + 16, py - 7); g.lineTo(px + 16, py); g.stroke(); }
+    } else if (n === 'foundry') {
+      // riveted iron trim along the edge, and the odd pipe running over it
+      g.fillStyle = 'rgba(255,190,140,0.5)'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(px + 6 + i * 10, py + 6, 1.8, 0, 7); g.fill(); }
+      if (v < 0.22) { g.strokeStyle = th.edge; g.lineWidth = 9; g.beginPath(); g.moveTo(px - 2, py - 5); g.lineTo(px + TILE + 2, py - 5); g.stroke(); g.strokeStyle = '#6a4632'; g.lineWidth = 5; g.stroke(); g.fillStyle = '#8a5a3c'; g.fillRect(px + 12, py - 11, 6, 12); }
+      if (v > 0.94) { bloom(g, px + 16, py - 4, 22, '#ff9a50', 0.5); g.fillStyle = '#ffd0a0'; g.beginPath(); g.arc(px + 16, py - 3, 2.5, 0, 7); g.fill(); }
     } else if (n === 'throne') {
       g.strokeStyle = 'rgba(210,225,255,0.35)'; g.lineWidth = 1.2;
       g.beginPath(); g.moveTo(px, py + 5); g.lineTo(px + TILE, py + 5); g.stroke();
@@ -185,7 +191,7 @@ function drawShroomCap(g, th, px, py, w, v) {
   g.fillStyle = 'rgba(255,255,255,0.25)'; ellipse(g, cx - w * 0.2, py - 10, w * 0.18, 3, -0.2); g.fill();
 }
 function drawSpikes(g, th, px, py, v) {
-  const n = th.name, cols = { cave: '#e4ebf2', moss: '#2c7d4a', crystal: '#e8a8ff', throne: '#eef4ff', town: '#4a2414' };
+  const n = th.name, cols = { foundry: '#b8b0a8', cave: '#e4ebf2', moss: '#2c7d4a', crystal: '#e8a8ff', throne: '#eef4ff', town: '#4a2414' };
   for (let i = 0; i < 4; i++) {
     const bx = px + i * 8, h = 15 + hash2(px + i, py, 4) * 6;
     g.beginPath(); g.moveTo(bx, py + TILE); g.lineTo(bx + 4, py + TILE - h); g.lineTo(bx + 8, py + TILE); g.closePath();
@@ -275,6 +281,14 @@ function drawShape(g, th, li, o) {
       g.strokeStyle = col; g.lineWidth = 22 * s; const py = 90 + o.r2 * 300;
       g.beginPath(); g.moveTo(o.x - 200, py); g.lineTo(o.x + 200, py); g.stroke();
       g.lineWidth = 34 * s; for (const k of [-120, 40, 160]) { g.beginPath(); g.moveTo(o.x + k, py - 1); g.lineTo(o.x + k + 16, py - 1); g.stroke(); }
+    }
+  } else if (n === 'foundry') {         // gears, chimneys and girders
+    if (li === 0 || o.r3 < 0.4) {
+      const w = (40 + o.r1 * 30) * s, top = 120 + o.r2 * 200;
+      g.fillRect(o.x, top, w, VH + 40 - top); g.fillRect(o.x - 8, top, w + 16, 14);
+    } else {
+      const r = (50 + o.r1 * 70) * s, cy = o.top ? 40 + o.r2 * 120 : VH - 60 - o.r2 * 120;
+      g.beginPath(); for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; g.lineTo(o.x + Math.cos(a) * r, cy + Math.sin(a) * r); g.lineTo(o.x + Math.cos(a + 0.22) * (r + 10), cy + Math.sin(a + 0.22) * (r + 10)); } g.closePath(); g.fill();
     }
   } else if (n === 'webbed') {          // webs, roots and hanging cocoons
     g.strokeStyle = col; g.lineWidth = 2;
@@ -374,7 +388,7 @@ function drawRays(g, th, camX) {
   for (let i = 0; i < 5; i++) {
     const x = ((i * 280 - camX * 0.1) % (VW + 300) + VW + 300) % (VW + 300) - 120;
     const ray = g.createLinearGradient(x, 0, x + 120, VH);
-    const rc = n === 'town' ? '255,200,130' : n === 'moss' ? '190,255,225' : '255,170,230';
+    const rc = n === 'town' ? '255,200,130' : n === 'moss' ? '190,255,225' : n === 'foundry' ? '255,170,110' : '255,170,230';
     ray.addColorStop(0, 'rgba(' + rc + ',0.13)'); ray.addColorStop(1, 'rgba(' + rc + ',0)');
     g.fillStyle = ray; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 70, 0); g.lineTo(x + 220, VH); g.lineTo(x + 80, VH); g.fill();
   }
@@ -465,6 +479,17 @@ Art.drawForeground = function (g, theme, camX, camY, t) {
       for (let rr = 24; rr < r; rr += 26) { g.beginPath(); g.arc(x, cy0, rr, o.top ? 0 : Math.PI, o.top ? Math.PI : Math.PI * 2); g.stroke(); }
     } else if (theme === 'crystal') {
       for (let k = 0; k < 3; k++) { const w = (18 + k * 6) * s, h = (50 + k * 30) * s * (k === 1 ? 1.4 : 1), kx = x + k * 20 * s; g.beginPath(); g.moveTo(kx - w / 2, y0); g.lineTo(kx, y0 + dir * h); g.lineTo(kx + w / 2, y0); g.fill(); }
+    } else if (theme === 'foundry') {
+      if (o.top) {                         // a crane hook on a chain
+        g.lineWidth = 4; const len = 70 * s;
+        for (let k = 0; k < len; k += 13) { g.beginPath(); g.ellipse(x + sway * k / len, k, 4, 7, 0, 0, 7); g.stroke(); }
+        g.lineWidth = 7; g.beginPath(); g.arc(x + sway, len + 14, 12, -Math.PI * 0.5, Math.PI * 0.9); g.stroke();
+      } else {                              // a heap of scrap cogs
+        for (let k = 0; k < 3; k++) {
+          const r = (34 + k * 12) * s, cx2 = x + (k - 1) * 46 * s, cy2 = VH + 10 - k * 6 * s;
+          g.beginPath(); for (let q = 0; q < 12; q++) { const a = q / 12 * Math.PI * 2 + k; g.lineTo(cx2 + Math.cos(a) * r, cy2 + Math.sin(a) * r); g.lineTo(cx2 + Math.cos(a + 0.26) * (r + 9), cy2 + Math.sin(a + 0.26) * (r + 9)); } g.closePath(); g.fill();
+        }
+      }
     } else if (theme === 'throne') {
       if (o.top) { g.lineWidth = 4; g.beginPath(); g.moveTo(x, -4); g.lineTo(x + sway, 60 * s); g.stroke(); for (let k = 0; k < 60 * s; k += 14) { g.beginPath(); g.ellipse(x + sway * k / 60, k, 5, 8, 0, 0, 7); g.stroke(); } }
       else { g.fillRect(x, VH - 70 * s, 40 * s, 80 * s); g.fillRect(x - 6, VH - 70 * s, 52 * s, 12); }
@@ -486,7 +511,7 @@ Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
     const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4;
-    const fall = leafy ? 34 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
+    const fall = leafy ? 34 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : theme === 'foundry' ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
     m.x += (Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
     m.y += (fall - rise) * dt * m.z;
     m.rot += dt * (leafy ? 2 : 0);
@@ -498,7 +523,7 @@ Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
       g.fillStyle = th.leaf[Math.floor(m.kind * 6.6) % th.leaf.length]; ellipse(g, 0, 0, 5 * m.z + 2, 2.6 * m.z + 1); g.fill(); g.restore();
     } else if (bubble) {
       g.strokeStyle = 'rgba(210,255,245,' + (0.25 + 0.3 * m.z) + ')'; g.lineWidth = 1.2; ellipse(g, m.x, m.y, m.s * 2.2 * m.z + 1.5, m.s * 2.2 * m.z + 1.5); g.stroke();
-    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || (theme === 'town' && m.kind > 0.85)) {
+    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || theme === 'foundry' || (theme === 'town' && m.kind > 0.85)) {
       bloom(g, m.x, m.y, 10 * m.z + 4, theme === 'town' ? '#ffb0d8' : th.part, a * 0.6);
       g.fillStyle = rgba('#ffffff', Math.min(0.9, a)); g.beginPath(); g.arc(m.x, m.y, m.s * m.z * 0.8, 0, 7); g.fill();
     } else {
@@ -586,7 +611,7 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
-const DARKNESS = { town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+const DARKNESS = { foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }

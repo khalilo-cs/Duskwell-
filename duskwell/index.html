@@ -30,14 +30,15 @@ canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40
 #touch{display:none;width:100%;max-width:760px;justify-content:space-between;align-items:flex-end;direction:ltr;padding-bottom:4px}
 .cluster{display:grid;gap:8px;align-items:center;justify-items:center}
 .dpad{grid-template-columns:repeat(3,auto);grid-template-areas:". up ." "left down right"}
-.face{grid-template-columns:repeat(3,auto);grid-template-areas:". cast ." "dash attack jump"}
+.face{grid-template-columns:repeat(3,auto);grid-template-areas:". cast superdash" "dash attack jump"}
 .b{width:58px;height:58px;border-radius:50%;background:var(--pad);border:2px solid var(--pad-line);color:var(--text);
   display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 18px/1 "Cairo",sans-serif;backdrop-filter:blur(2px)}
 .b small{font:600 10px/1 "Cairo",sans-serif;opacity:.75;margin-top:2px}
 .b.on{background:var(--pad-on);transform:scale(.94)}
 .b.big{width:66px;height:66px}
 [data-act=up]{grid-area:up}[data-act=down]{grid-area:down}[data-act=left]{grid-area:left}[data-act=right]{grid-area:right}
-[data-act=jump]{grid-area:jump}[data-act=attack]{grid-area:attack}[data-act=dash]{grid-area:dash}[data-act=cast]{grid-area:cast}
+[data-act=jump]{grid-area:jump}[data-act=attack]{grid-area:attack}[data-act=dash]{grid-area:dash}[data-act=cast]{grid-area:cast}[data-act=superdash]{grid-area:superdash}
+.b[hidden]{display:none}
 .sys{display:flex;gap:10px;align-self:flex-start}
 .sys .b{width:40px;height:40px;font-size:13px}
 @media (pointer:coarse){#touch{display:flex}:root{--reserve:170px}}
@@ -72,6 +73,7 @@ canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40
     <div class="sys"><div class="b" data-act="map">M</div><div class="b" data-act="pause">II</div></div>
     <div class="cluster face">
       <div class="b" data-act="cast">F<small data-cap="cast"></small></div>
+      <div class="b" data-act="superdash" hidden>Q<small data-cap="superdash"></small></div>
       <div class="b" data-act="dash">C<small data-cap="dash"></small></div>
       <div class="b big" data-act="attack">X<small data-cap="attack"></small></div>
       <div class="b big" data-act="jump">Z<small data-cap="jump"></small></div>
@@ -85,7 +87,9 @@ canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40
 <script src="js/world.js"></script>
 <script src="js/art_world.js"></script>
 <script src="js/art_sprites.js"></script>
+<script src="js/art_mech.js"></script>
 <script src="js/entities.js"></script>
+<script src="js/mechanics.js"></script>
 <script src="js/bosses.js"></script>
 <script src="js/game.js"></script>
 </body>

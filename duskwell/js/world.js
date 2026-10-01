@@ -1,7 +1,7 @@
 'use strict';
 // World data: rooms are built from tile rectangles. All coordinates are in tiles, y grows downward.
 // Entities are placed by the tile their feet stand in (flyers by their centre tile).
-const T_AIR = 0, T_SOLID = 1, T_ONEWAY = 2, T_HAZARD = 3, T_BREAK = 4, T_GATE = 5, T_BOUNCE = 6, T_CRACK = 7, T_ACID = 8;
+const T_AIR = 0, T_SOLID = 1, T_ONEWAY = 2, T_HAZARD = 3, T_BREAK = 4, T_GATE = 5, T_BOUNCE = 6, T_CRACK = 7, T_ACID = 8, T_CRUMBLE = 9;
 // bosses whose seals open the throne gate
 const SEAL_FLAGS = ['boss_guardian', 'boss_spore', 'boss_weaver', 'boss_drowned', 'boss_wraith', 'boss_brood'];
 
@@ -11,7 +11,7 @@ class RoomBuilder {
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
     this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = [];
-    this.signs = []; this.arena = null; this.start = null; this.sealGate = null;
+    this.signs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
   fill(x, y, w, h, v) {
@@ -28,6 +28,12 @@ class RoomBuilder {
   bounce(x, y, w) { return this.fill(x, y, w, 1, T_BOUNCE); }          // mushroom cap: launches the player
   crack(x, y, w, h) { return this.fill(x, y, w, h || 1, T_CRACK); }    // only a dive breaks it
   acid(x, y, w, h) { return this.fill(x, y, w, h || 1, T_ACID); }
+  crumble(x, y, w) { return this.fill(x, y, w, 1, T_CRUMBLE); }          // gives way soon after it is stood on
+  // machinery (see mechanics.js): coordinates in tiles; saws are placed by their centre
+  mover(x, y, w, tx, ty, o) { this.mech.push(Object.assign({ type: 'mover', x, y, w, to: { x: tx, y: ty } }, o || {})); return this; }
+  saw(x, y, o) { this.mech.push(Object.assign({ type: 'saw', x, y }, o || {})); return this; }
+  drip(x, y, o) { this.mech.push(Object.assign({ type: 'drip', x, y }, o || {})); return this; }
+  lever(id, x, y, gates) { this.mech.push({ type: 'lever', id, x, y, gates }); this.leverGates.push(...gates); return this; }
   door(id, x, y, w, h, to, toDoor) { this.doors.push({ id, x, y, w, h, to, toDoor }); return this; }
   enemy(type, x, y, o) { this.enemies.push(Object.assign({ type, x, y }, o || {})); return this; }
   item(id, x, y, kind, o) { this.items.push(Object.assign({ id, x, y, kind }, o || {})); return this; }
@@ -39,6 +45,8 @@ class RoomBuilder {
   finish() {
     // doors are cut last so they always open the frame
     for (const d of this.doors) this.air(d.x, d.y, d.w, d.h);
+    // lever gates may stand in a doorway, so they go in after the doors are cut
+    for (const gt of this.leverGates) this.fill(gt.x, gt.y, gt.w, gt.h, T_GATE);
     return this;
   }
 }
@@ -221,6 +229,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   cx5.solid(1, 10, 6, 7).air(1, 14, 5, 3).breakable(6, 14, 1, 3);
   cx5.solid(22, 1, 6, 9).solid(34, 1, 5, 11);
   cx5.door('e', 47, 14, 1, 3, 'cx4', 'w');
+  cx5.door('w', 0, 14, 1, 3, 'fd1', 'e');                    // behind the breakable wall: the Rustworks
   cx5.item('seed_cx5', 11, 11, 'seed');
   cx5.item('cache_cx5', 3, 16, 'cache', { amount: 80 });
   cx5.enemy('sentinel', 18, 16).enemy('sentinel', 32, 16).enemy('diver', 26, 13).enemy('diver', 40, 6).enemy('crawler', 42, 16);
@@ -392,6 +401,66 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   ht3.sign(22, 22, 'seal_gate');
   ht3.bench(8, 22);
   ht3.decor('pillar', 14, 22, { h: 18 }).decor('pillar', 34, 22, { h: 18 });
+
+  // ===================== THE RUSTWORKS (optional, behind the secret wall in cx5) =====================
+  // fd1: crumbling plates over a saw pit, then a lever that wakes a moving platform
+  const fd1 = room('fd1', 72, 24, { area: 'rustworks', theme: 'foundry', map: { x: 0, y: 12 } });
+  fd1.solid(0, 21, 72, 3);
+  fd1.air(36, 21, 20, 2).hazard(36, 22, 20, 1);                 // pit under the plates
+  fd1.crumble(51, 19, 2).crumble(45, 18, 2).crumble(39, 19, 2);
+  fd1.saw(43, 13, { to: { x: 43, y: 21 }, r: 22, speed: 130 });
+  fd1.air(8, 21, 22, 2).hazard(8, 22, 22, 1);                   // the long pit
+  fd1.mover(26, 19, 3, 9, 19, { speed: 120, wait: 0.7, needs: 'lever_fd1' });
+  fd1.saw(12, 14, { to: { x: 25, y: 14 }, r: 20, speed: 100, phase: 0.5 });
+  fd1.lever('fd1', 33, 20, [{ x: 0, y: 18, w: 1, h: 3 }]);
+  fd1.door('e', 71, 18, 1, 3, 'cx5', 'w');
+  fd1.door('w', 0, 18, 1, 3, 'fd2', 'e');
+  fd1.bench(64, 20);
+  fd1.sign(59, 20, 'sign_rust').sign(31, 20, 'sign_lever');
+  fd1.decor('gear', 60, 9, { r: 4 }).decor('gear', 47, 6, { r: 2.5, dir: -1 }).decor('gear', 20, 8, { r: 5 });
+  fd1.decor('chimney', 66, 20, { h: 12 }).decor('chimney', 3, 20, { h: 10 });
+  fd1.enemy('crawler', 61, 20).enemy('crawler', 32, 20).enemy('flyer', 44, 10).enemy('flyer', 18, 11);
+
+  // fd2: the foundry shaft. An elevator, a crumbling stair under stalactites, and the Comet Heart.
+  // The way on is across the top, too far for any jump.
+  const fd2 = room('fd2', 40, 44, { area: 'rustworks', theme: 'foundry', map: { x: -5, y: 9 } });
+  fd2.solid(0, 41, 40, 3);
+  fd2.mover(28, 39, 4, 28, 22, { speed: 110, wait: 1 });
+  fd2.solid(21, 22, 6, 1);                                       // ledge at the top of the lift
+  fd2.crumble(16, 19, 3).crumble(11, 16, 3).crumble(6, 13, 3);
+  fd2.saw(10, 9, { to: { x: 10, y: 18 }, r: 20, speed: 120 });
+  fd2.solid(9, 3, 14, 2);                                        // overhang that the stalactites hang from
+  fd2.drip(12, 5).drip(18, 5);
+  fd2.solid(1, 10, 4, 1);                                        // the Comet Heart's ledge
+  fd2.item('ability_superdash', 2, 9, 'ability', { ability: 'superdash' });
+  fd2.solid(34, 10, 5, 1);                                       // far ledge by the way on
+  fd2.bench(36, 9);
+  fd2.door('e', 39, 38, 1, 3, 'fd1', 'w');
+  fd2.door('ne', 39, 7, 1, 3, 'fd3', 'w');
+  fd2.decor('gear', 8, 30, { r: 5 }).decor('gear', 20, 36, { r: 3, dir: -1 }).decor('gear', 33, 26, { r: 2.5 });
+  fd2.decor('chimney', 3, 40, { h: 14 });
+  fd2.enemy('crawler', 12, 40).enemy('flyer', 20, 30).enemy('flyer', 6, 22);
+
+  // fd3: a Comet Heart gauntlet. Each island ends in a step that stops the dash; the way back
+  // is one long dash above them all.
+  const fd3 = room('fd3', 72, 24, { area: 'rustworks', theme: 'foundry', map: { x: 0, y: 9 } });
+  fd3.solid(0, 18, 8, 6);
+  fd3.solid(22, 18, 8, 6).solid(28, 16, 2, 2);
+  fd3.solid(46, 16, 8, 8).solid(52, 14, 2, 2);
+  fd3.solid(64, 14, 8, 10).solid(68, 12, 4, 2);                   // landing lip, then the raised reward ledge
+  fd3.hazard(8, 22, 14, 1).hazard(30, 22, 16, 1).hazard(54, 22, 10, 1);
+  // the saws sweep the outward flight lines; the high return line from the reward ledge clears them all
+  fd3.saw(15, 13.5, { to: { x: 15, y: 21 }, r: 24, speed: 150 });
+  fd3.saw(38, 15, { orbit: 2, r: 22, speed: 130 });
+  fd3.saw(57, 13.5, { to: { x: 57, y: 19.5 }, r: 22, speed: 140, phase: 0.3 });
+  fd3.saw(61, 13.5, { to: { x: 61, y: 19.5 }, r: 22, speed: 170, phase: 0.75 });
+  fd3.solid(43, 1, 14, 4).drip(48, 5).drip(51, 5);
+  fd3.door('w', 0, 15, 1, 3, 'fd2', 'ne');
+  fd3.sign(5, 17, 'sign_comet');
+  fd3.item('seed_fd3', 69, 11, 'seed');
+  fd3.item('cache_fd3', 70, 11, 'cache', { amount: 160 });
+  fd3.decor('gear', 36, 6, { r: 4, dir: -1 }).decor('gear', 64, 5, { r: 3 }).decor('chimney', 25, 17, { h: 9 });
+  fd3.enemy('crawler', 26, 17).enemy('flyer', 67, 6);
 
   WORLD.order = Object.keys(WORLD.rooms);
   for (const id of WORLD.order) WORLD.rooms[id].finish();

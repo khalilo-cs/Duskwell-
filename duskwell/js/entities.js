@@ -13,10 +13,10 @@ class Level {
     return this.t[ty * this.w + tx];
   }
   set(tx, ty, v) { if (tx >= 0 && ty >= 0 && tx < this.w && ty < this.h) this.t[ty * this.w + tx] = v; }
-  solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK; }
+  solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK || v === T_CRUMBLE; }
   hazard(tx, ty) { const v = this.get(tx, ty); return v === T_HAZARD || v === T_ACID; }
   solidAtPx(x, y) { return this.solid(Math.floor(x / TILE), Math.floor(y / TILE)); }
-  ground(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_ONEWAY || v === T_CRACK || v === T_BOUNCE; }
+  ground(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_ONEWAY || v === T_CRACK || v === T_BOUNCE || v === T_CRUMBLE; }
   // 2D raycast through the tile grid, sampled every 8px
   lineOfSight(x0, y0, x1, y1) {
     const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 8);
@@ -49,7 +49,7 @@ function moveBody(b, dt, L) {
     for (let tx = l; tx <= r; tx++) {
       const v = L.get(tx, by);
       const top = (v === T_ONEWAY || v === T_BOUNCE) && prevBottom <= by * TILE + 0.5 && !b.noOneway;
-      if (v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK || top) {
+      if (L.solid(tx, by) || top) {
         b.y = by * TILE - b.h; b.vy = 0; b.onGround = true;
         if (v === T_BOUNCE) b.bounced = true;
         break;
@@ -62,12 +62,14 @@ function moveBody(b, dt, L) {
 }
 
 const GRAV = 2200, MAXFALL = 900, FALL_MULT = 1.25;
+// Comet Heart (super dash): seconds of charge, top speed, and the damage it does on contact
+const SD_CHARGE = 0.8, SD_SPEED = 1050, SD_DMG = 13;
 
 // ============================== PLAYER ==============================
 class Player {
   constructor() {
     this.w = 22; this.h = 38;
-    this.ab = { dash: false, wall: false, double: false, dive: false };
+    this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false };
     this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = 99; this.geo = 0;
     this.nail = 5; this.soulGain = 11;
     this.place(0, 0, 1);
@@ -83,6 +85,7 @@ class Player {
     this.invuln = 0; this.hurtT = 0; this.focusT = 0; this.castHold = 0; this.castDone = false; this.castT = 0;
     this.sitting = null; this.dead = false; this.safe = { x: fx, y: fy }; this.safeT = 0;
     this.t = 0; this.landT = 0; this.ghost = []; this.recoil = 0; this.diving = false; this.bounced = false;
+    this.sd = null; this.riding = null; this.turnT = 0; this.airT = 0;
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
@@ -97,7 +100,8 @@ class Player {
     this.t += dt;
     this.invuln = Math.max(0, this.invuln - dt); this.hurtT = Math.max(0, this.hurtT - dt);
     this.dashCD -= dt; this.atkCD -= dt; this.atkT -= dt; this.lockX -= dt; this.jumpBuf -= dt; this.atkBuf -= dt;
-    this.wallCoyote -= dt; this.castT -= dt; this.landT -= dt; this.recoil -= dt;
+    this.wallCoyote -= dt; this.castT -= dt; this.landT -= dt; this.recoil -= dt; this.turnT -= dt;
+    this.airT = this.onGround ? 0 : this.airT + dt;
 
     if (this.sitting) {
       if (Input.pressed('left') || Input.pressed('right') || Input.pressed('jump') || Input.pressed('down') || Input.pressed('attack') || Input.pressed('dash')) {
@@ -106,8 +110,10 @@ class Player {
       return;
     }
     if (this.diving) { this.updateDive(dt); return; }
+    if (this.sd && this.updateSuperdash(dt)) return;
     const ix = Input.axisX(), iy = Input.axisY();
     const stunned = this.hurtT > 0;
+    const faceBefore = this.face;
 
     if (Input.pressed('jump')) this.jumpBuf = 0.12;
     if (Input.pressed('attack')) this.atkBuf = 0.12;
@@ -136,6 +142,14 @@ class Player {
       this.castHold = 0;
     }
     const focusing = this.focusT > 0;
+
+    // ---- Comet Heart: hold on the ground or on a wall to charge ----
+    if (Input.pressed('superdash') && this.ab.superdash && !stunned && !focusing && this.dashT <= 0 && (this.onGround || this.sliding)) {
+      this.sd = { state: 'charge', t: 0, wall: this.sliding ? this.wallDir : 0, ready: false, hits: new Set() };
+      this.atkT = 0; this.focusT = 0;
+      Sound.play('sdcharge');
+      return;
+    }
 
     // ---- dash ----
     if (Input.pressed('dash') && this.ab.dash && this.dashCD <= 0 && (this.onGround || this.airDash) && !stunned && !focusing) {
@@ -213,8 +227,10 @@ class Player {
     if (this.atkT > 0) this.attackHits();
 
     // ---- move ----
-    const wasGround = this.onGround, fallV = this.vy;
+    const wasGround = this.onGround, fallV = this.vy, prevBottom = this.y + this.h;
     moveBody(this, dt, L);
+    Mech.land(this, prevBottom);
+    if (this.onGround && this.face !== faceBefore && this.atkT <= 0) this.turnT = 0.1;
     if (this.onGround && !wasGround && fallV > 300) { Sound.play('land'); this.landT = 0.12; G.burst(this.cx, this.y + this.h, 6, { color: '#8d9aa8', speed: 80, life: 0.3, size: 2 }); }
     if (this.onGround) { this.airDash = true; this.djAvail = true; this.wallDir = 0; }
     if (this.bounced) {             // mushroom cap
@@ -228,13 +244,17 @@ class Player {
       if (this.safeT > 0.25) {
         const tl = Math.floor((this.x - 6) / TILE), tr = Math.floor((this.x + this.w + 6) / TILE), ty = Math.floor((this.y + this.h + 2) / TILE);
         const hz = (t, y) => L.hazard(t, y);
-        if (!hz(tl, ty - 1) && !hz(tr, ty - 1) && L.ground(tl, ty) && L.ground(tr, ty) && !L.hazard(Math.floor(this.cx / TILE), ty - 1)) {
+        if (!this.riding && !hz(tl, ty - 1) && !hz(tr, ty - 1) && L.ground(tl, ty) && L.ground(tr, ty) && !L.hazard(Math.floor(this.cx / TILE), ty - 1) && !Mech.unsafe(tl, ty) && !Mech.unsafe(tr, ty)) {
           this.safe = { x: this.cx, y: this.y + this.h };
         }
       }
     } else this.safeT = 0;
 
-    // ---- spikes ----
+    this.checkSpikes();
+  }
+
+  checkSpikes() {
+    const L = G.level;
     {
       const hb = this.hurtbox();
       const x0 = Math.floor(hb.x / TILE), x1 = Math.floor((hb.x + hb.w) / TILE), y0 = Math.floor(hb.y / TILE), y1 = Math.floor((hb.y + hb.h) / TILE);
@@ -278,6 +298,9 @@ class Player {
       else if (v === T_HAZARD && this.atkDir === 'down') spikeHit = true;
       else if (v === T_SOLID && this.atkDir === 'side' && !this.hits.has('wall')) wallHit = true;
     }
+    const mh = Mech.attack(hb, this);
+    if (mh.pogo) spikeHit = true;
+    if (mh.clank && this.atkDir === 'side' && !this.hits.has('wall')) wallHit = true;
     if (wallHit) { this.hits.add('wall'); this.vx = -this.face * 140; this.recoil = 0.08; Sound.play('hit'); G.burst(this.face > 0 ? hb.x + hb.w : hb.x, hb.y + hb.h / 2, 6, { color: '#fff3c4', speed: 160, life: 0.25, size: 2 }); }
     if (connected && this.atkDir === 'down' || spikeHit && !this.hits.has('spike')) {
       this.hits.add('spike');
@@ -302,7 +325,9 @@ class Player {
   }
   updateDive(dt) {
     this.vx = 0; this.vy = 1250;
+    const prevBottom = this.y + this.h;
     moveBody(this, dt, G.level);
+    Mech.land(this, prevBottom);
     if (Math.random() < 0.8) G.burst(this.cx + rand(-8, 8), this.y, 1, { color: '#dff3ff', speed: 20, life: 0.35, size: 3, grav: -200 });
     if (!this.onGround) return;
     // a cracked floor gives way and the dive keeps going
@@ -320,7 +345,7 @@ class Player {
 
   hurt(dmg, srcX) {
     if (this.invuln > 0 || this.dead || this.diving || G.state !== 'play') return false;
-    this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0;
+    this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300; this.vy = -320; this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
@@ -330,10 +355,69 @@ class Player {
     return true;
   }
   spikeHurt() {
-    this.hp -= 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0;
+    this.hp -= 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
     Sound.play('hurt'); G.hitstop(0.12); G.shake(8, 0.3);
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return; }
     G.respawnFade(this.safe.x, this.safe.y);
+  }
+  // Returns true while the Comet Heart owns the frame (charging or flying).
+  updateSuperdash(dt) {
+    const s = this.sd, L = G.level;
+    s.t += dt;
+    if (s.state === 'charge') {
+      this.vx = 0;
+      if (this.hurtT > 0) { this.sd = null; return false; }
+      if (s.wall) {
+        this.vy = 0; this.face = -s.wall; this.sliding = true;
+        if (!this.touchWall(s.wall)) { this.sd = null; return false; }
+      } else {
+        this.vy = Math.min(this.vy + GRAV * dt, MAXFALL);
+        const pb = this.y + this.h;
+        moveBody(this, dt, L); Mech.land(this, pb);
+        if (!this.onGround) { this.sd = null; return false; }      // the floor gave way
+        const ix = Input.axisX(); if (ix) this.face = ix;
+      }
+      // light gathers toward the chest while charging
+      if (Math.random() < 0.7) {
+        const a = rand(0, Math.PI * 2), r = rand(40, 70);
+        G.parts.push({ x: this.cx + Math.cos(a) * r, y: this.cy + Math.sin(a) * r, vx: -Math.cos(a) * r * 2.6, vy: -Math.sin(a) * r * 2.6, life: 0.35, t: 0, size: rand(2, 3.5), color: s.ready ? '#ffe6a8' : '#ffc070', grav: 0 });
+      }
+      if (!s.ready && s.t >= SD_CHARGE) { s.ready = true; Sound.play('sdready'); G.ring(this.cx, this.cy, '#ffe6a8'); }
+      if (!Input.down('superdash')) {
+        if (!s.ready) { this.sd = null; return false; }
+        s.state = 'go'; s.t = 0; s.dir = s.wall ? -s.wall : this.face; this.face = s.dir;
+        this.sliding = false; this.wallDir = 0;
+        Sound.play('sdlaunch'); G.shake(6, 0.2);
+        G.burst(this.cx - s.dir * 10, this.cy, 16, { color: '#ffd890', speed: 260, life: 0.45, size: 3 });
+      }
+      return true;
+    }
+    // flying: straight and level until a wall, a jump or a hit stops it
+    if (Input.pressed('jump') || Input.pressed('dash') || Input.pressed('superdash') || Input.pressed('cast')) {
+      this.sd = null; this.vx = s.dir * 260; this.vy = 0; this.jumpBuf = 0; Input.consume('jump');
+      Sound.play('land'); return false;
+    }
+    this.vy = 0; this.vx = s.dir * Math.min(SD_SPEED, 520 + s.t * 5200);
+    const pb = this.y + this.h;
+    moveBody(this, dt, L);
+    Mech.land(this, pb);
+    if (this.ghost.length === 0 || this.t - this.ghost[this.ghost.length - 1].t > 0.025) this.ghost.push({ x: this.x, y: this.y, face: this.face, t: this.t, sd: true });
+    this.ghost = this.ghost.filter(g => this.t - g.t < 0.26);
+    if (Math.random() < 0.9) G.burst(this.cx - s.dir * 16, this.cy + rand(-10, 10), 1, { color: '#ffd890', speed: 40, life: 0.3, size: 3, grav: 0, vy: 0 });
+    const hb = this.hurtbox();
+    for (const e of G.enemies) {
+      if (e.dead || e.ghostly || s.hits.has(e) || !overlap(hb, e.hb())) continue;
+      s.hits.add(e); e.hurt(SD_DMG, s.dir, 'spell'); G.hitstop(0.05);
+      this.soul = Math.min(this.maxSoul, this.soul + 6);
+    }
+    if (this.hitL || this.hitR) {
+      this.sd = null; this.vx = -s.dir * 170; this.vy = -240; this.recoil = 0.15;
+      Sound.play('slam'); G.shake(9, 0.3); G.hitstop(0.06);
+      G.burst(s.dir > 0 ? this.x + this.w : this.x, this.cy, 18, { color: '#ffe0b0', speed: 280, life: 0.45, size: 3 });
+      return true;
+    }
+    this.checkSpikes();
+    return true;
   }
   sit(bench) {
     this.sitting = bench; this.vx = 0; this.vy = 0; this.x = bench.px - this.w / 2; this.y = bench.py - this.h;

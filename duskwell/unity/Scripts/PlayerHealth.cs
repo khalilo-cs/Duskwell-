@@ -88,8 +88,8 @@ public class PlayerHealth : MonoBehaviour, IDamageable
         if (IsDead || respawning || IsInvulnerable || amount <= 0) return;
         CurrentMasks = Mathf.Max(0, CurrentMasks - amount);
         if (Damaged != null) Damaged(CurrentMasks);
+        if (CurrentMasks == 0) { Die(); return; }       // the death sequence owns time from here
         HitStop.Freeze(damageHitStop);
-        if (CurrentMasks == 0) { Die(); return; }
 
         // push away from the source; straight above or below pushes against the facing direction
         float dx = transform.position.x - sourcePosition.x;
@@ -104,8 +104,8 @@ public class PlayerHealth : MonoBehaviour, IDamageable
         if (IsDead || respawning) return;
         CurrentMasks = Mathf.Max(0, CurrentMasks - hazardDamage);
         if (Damaged != null) Damaged(CurrentMasks);
-        HitStop.Freeze(damageHitStop);
         if (CurrentMasks == 0) { Die(); return; }
+        HitStop.Freeze(damageHitStop);
         StartCoroutine(RespawnOnSafeGround());
     }
 

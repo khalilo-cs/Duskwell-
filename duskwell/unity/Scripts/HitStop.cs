@@ -21,6 +21,12 @@ public class HitStop : MonoBehaviour
         instance.Begin(seconds);
     }
 
+    // Drop any pending freeze without touching Time.timeScale (the caller takes over time, e.g. death slow motion).
+    public static void Cancel()
+    {
+        if (instance != null) { instance.frozen = false; instance.resumeAt = 0f; }
+    }
+
     void Begin(float seconds)
     {
         if (!frozen)

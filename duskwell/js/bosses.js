@@ -375,4 +375,193 @@ class King extends Boss {
   }
 }
 
-const BOSS_TYPES = { guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King };
+// ---------------------------------------------------------------- Sporecap Matriarch
+class Sporecap extends Boss {
+  constructor(d) { super(d, 110, 104, { key: 'spore', hp: 150, geo: 150, phases: [0.5], blood: '#ffb070' }); this.last = ''; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
+    const opts = ['hop', 'sporeRain', 'clouds', 'burrow'].filter(o => o !== this.last);
+    this.last = pick(opts);
+    yield* this[this.last]();
+  }
+  spit(n, spread) {
+    Sound.play('shoot');
+    for (let i = 0; i < n; i++) {
+      const vx = (i - (n - 1) / 2) * spread + rand(-20, 20);
+      G.projs.push(new Proj({ kind: 'glob', x: this.cx, y: this.y + 10, vx, vy: rand(-720, -560), grav: 900, r: 9, dmg: 1, life: 4, color: '#ffb070' }));
+    }
+  }
+  *hop() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.45 * this.spd);
+    this.tele = 0;
+    const T = 0.74; this.vy = -820; this.vx = clamp((G.player.cx - this.cx) / T, -460, 460); this.onGround = false;
+    yield; yield;
+    yield* this.until(() => this.onGround, 2);
+    this.vx = 0; Sound.play('slam'); G.shake(9, 0.3);
+    spawnShock(this.cx - 40, this.y + this.h, -1, 360, '#ffb070'); spawnShock(this.cx + 40, this.y + this.h, 1, 360, '#ffb070');
+    this.spit(this.phase >= 2 ? 5 : 3, 90);
+    yield* this.wait(0.55 * this.spd);
+  }
+  *sporeRain() {
+    this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.5 * this.spd);
+    this.tele = 0; this.spit(this.phase >= 2 ? 9 : 6, 70);
+    yield* this.wait(1.0 * this.spd);
+  }
+  *clouds() {
+    this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.4 * this.spd);
+    this.tele = 0; Sound.play('dash');
+    const n = this.phase >= 2 ? 4 : 3;
+    for (let i = 0; i < n; i++) {
+      const x = clamp(G.player.cx + (i - (n - 1) / 2) * 140, 3 * TILE, G.level.pw - 3 * TILE);
+      G.projs.push(new Proj({ kind: 'cloud', x, y: this.floorY - 40, w: 96, h: 80, vx: 0, vy: -10, dmg: 1, life: 1.8, pierce: true, passWalls: true, color: '#e8d070' }));
+      yield* this.wait(0.15);
+    }
+    yield* this.wait(0.9 * this.spd);
+  }
+  *burrow() {
+    this.ghostly = true;
+    for (let a = 1; a > 0; a -= 0.08) { this.alpha = a; yield; }
+    this.alpha = 0;
+    let t = 0.9 * this.spd;
+    while (t > 0) {
+      this.x = clamp(G.player.cx, 3 * TILE, G.level.pw - 3 * TILE) - this.w / 2; t -= this.dt;
+      if (Math.random() < 0.5) G.burst(this.cx + rand(-40, 40), this.floorY, 1, { color: '#b08050', speed: 120, life: 0.5, size: 4, vy: -120 });
+      yield;
+    }
+    Sound.play('slam'); G.shake(8, 0.3);
+    this.alpha = 1; this.ghostly = false; this.vy = -900; this.onGround = false;
+    this.doMelee(-this.w / 2 - 10, -30, this.w + 20, this.h + 30, 1, 0.3);
+    yield* this.until(() => this.onGround && this.vy === 0, 2);
+    spawnShock(this.cx - 40, this.y + this.h, -1, 320, '#ffb070'); spawnShock(this.cx + 40, this.y + this.h, 1, 320, '#ffb070');
+    yield* this.wait(0.6 * this.spd);
+  }
+}
+
+// ---------------------------------------------------------------- Drowned Colossus
+class Drowned extends Boss {
+  constructor(d) { super(d, 96, 128, { key: 'drowned', hp: 180, geo: 180, phases: [0.5], blood: '#8fe0ff' }); this.last = ''; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
+    const opts = ['charge', 'geysers', 'bubbles', 'slam'].filter(o => o !== this.last);
+    this.last = pick(opts);
+    yield* this[this.last]();
+  }
+  *charge() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.55 * this.spd);
+    this.tele = 0;
+    let t = 1.5, k = 0;
+    while (t > 0) {
+      this.vx = this.face * (this.phase >= 2 ? 560 : 470); this.doMelee(0, 20, 70, 100, 1, 0.05); t -= this.dt; k++;
+      if (k % 10 === 0) G.burst(this.cx, this.y + this.h, 6, { color: '#8fe0ff', speed: 140, life: 0.5, size: 3, vy: -120 });
+      if (this.hitL || this.hitR) break;
+      yield;
+    }
+    this.vx = 0; Sound.play('slam'); G.shake(8, 0.3); this.stunned = true;
+    spawnShock(this.cx - this.face * 50, this.y + this.h, -this.face, 400, '#8fe0ff');
+    yield* this.wait(0.9);
+    this.stunned = false;
+  }
+  *geysers() {
+    this.tele = 1; Sound.play('roar');
+    const rounds = this.phase >= 2 ? 2 : 1;
+    for (let r = 0; r < rounds; r++) {
+      for (let i = 0; i < 4; i++) {
+        const x = clamp(G.player.cx + (i - 1.5) * 130 + rand(-30, 30), 3 * TILE, G.level.pw - 3 * TILE);
+        G.projs.push(new Proj({ kind: 'pillar', x, y: this.floorY, bw: 50, ph: 300, tele: 0.8, dur: 0.45, dmg: 1, life: 5, color: '#8fe0ff', pierce: true, passWalls: true }));
+      }
+      Sound.play('tele');
+      yield* this.wait(1.1);
+    }
+    this.tele = 0;
+    yield* this.wait(0.3);
+  }
+  *bubbles() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.5 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    const a0 = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx), n = this.phase >= 2 ? 7 : 5;
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i - (n - 1) / 2) * 0.22;
+      G.projs.push(new Proj({ kind: 'orb', x: this.cx + this.face * 40, y: this.cy - 20, vx: Math.cos(a) * 210, vy: Math.sin(a) * 210, r: 12, dmg: 1, life: 3.2, color: '#8fe0ff' }));
+    }
+    yield* this.wait(0.8 * this.spd);
+  }
+  *slam() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.5 * this.spd);
+    this.tele = 0;
+    const T = 0.8; this.vy = -880; this.vx = clamp((G.player.cx - this.cx) / T, -430, 430); this.onGround = false;
+    yield; yield;
+    yield* this.until(() => this.onGround, 2);
+    this.vx = 0; Sound.play('slam'); G.shake(10, 0.35);
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 50, this.y + this.h, d, 420, '#8fe0ff');
+    for (let i = 0; i < (this.phase >= 2 ? 5 : 3); i++) spawnRock(clamp(G.player.cx + rand(-240, 240), 3 * TILE, G.level.pw - 3 * TILE), 0.7 + i * 0.1);
+    yield* this.wait(0.6 * this.spd);
+  }
+}
+
+// ---------------------------------------------------------------- Brood Mother
+class Brood extends Boss {
+  constructor(d) { super(d, 128, 80, { key: 'brood', hp: 170, geo: 170, phases: [0.5], blood: '#c8a8ff' }); this.last = ''; this.onCeil = false; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.6 : 0.4);
+    const opts = ['pounce', 'webShot', 'spawnBrood', 'ceilingDrop'].filter(o => o !== this.last);
+    this.last = pick(opts);
+    yield* this[this.last]();
+  }
+  *pounce() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.42 * this.spd);
+    this.tele = 0;
+    const T = 0.6; this.vy = -660; this.vx = clamp((G.player.cx - this.cx) / T, -520, 520); this.onGround = false;
+    yield; yield;
+    yield* this.until(() => this.onGround, 2);
+    this.vx = 0; Sound.play('slam'); G.shake(6, 0.2);
+    this.doMelee(-this.w / 2, 20, this.w, 60, 1, 0.15);
+    if (this.phase >= 2) { spawnShock(this.cx - 50, this.y + this.h, -1, 360, '#c8a8ff'); spawnShock(this.cx + 50, this.y + this.h, 1, 360, '#c8a8ff'); }
+    yield* this.wait(0.5 * this.spd);
+  }
+  *webShot() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.45 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    const a0 = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx), n = this.phase >= 2 ? 5 : 3;
+    for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * 0.2; G.projs.push(new Proj({ kind: 'web', x: this.cx + this.face * 50, y: this.cy - 10, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, r: 10, dmg: 1, life: 2.5, color: '#e6e0ff' })); }
+    yield* this.wait(0.6 * this.spd);
+  }
+  *spawnBrood() {
+    const alive = G.enemies.filter(e => e.kind === 'brood_child' && !e.dead).length;
+    if (alive >= 4) { yield* this.pounce(); return; }
+    this.tele = 1; Sound.play('roar');
+    yield* this.wait(0.6);
+    this.tele = 0;
+    for (const d of [-1, 1]) {
+      const s = new Spider({ x: 0, y: 0, ground: true }); s.kind = 'brood_child'; s.geo = 0; s.hp = 8;
+      s.x = this.cx + d * 50 - s.w / 2; s.y = this.y + this.h - s.h - 10; s.vx = d * 200; s.vy = -300;
+      G.enemies.push(s);
+    }
+    yield* this.wait(0.8 * this.spd);
+  }
+  *ceilingDrop() {
+    this.vy = -1100; this.onGround = false;
+    yield; yield;
+    yield* this.until(() => this.hitU || this.vy >= 0, 1.2);
+    this.grav = false; this.vy = 0; this.onCeil = true; this.tele = 1; Sound.play('tele');
+    let t = 0.8 * this.spd;
+    while (t > 0) { this.vx = clamp((G.player.cx - this.cx) * 5, -420, 420); this.vy = -20; t -= this.dt; yield; }
+    this.vx = 0; this.tele = 0; this.onCeil = false; this.grav = true; this.vy = 1100;
+    yield* this.until(() => this.onGround, 2);
+    Sound.play('slam'); G.shake(10, 0.35);
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 50, this.y + this.h, d, 400, '#c8a8ff');
+    yield* this.wait(0.6 * this.spd);
+  }
+}
+
+const BOSS_TYPES = { guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };

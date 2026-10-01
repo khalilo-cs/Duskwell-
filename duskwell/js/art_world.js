@@ -7,6 +7,9 @@ const THEMES = {
   cave:    { sky: ['#04070e', '#0c1a2e', '#1c3656'], far: '#15283f', mid: '#0e1b2c', near: '#081120', tile: '#131c2a', hi: '#8fb4de', edge: '#020407', fog: '#4f7cb0', part: '#8fd8ff', glow: '#8fd8ff', name: 'cave' },
   moss:    { sky: ['#03100f', '#0b3934', '#1f7064'], far: '#0f4a43', mid: '#0a3530', near: '#062320', tile: '#0c2420', hi: '#7fe8b8', edge: '#010605', fog: '#5fd0b8', part: '#c6fff0', glow: '#9dffd8', name: 'moss' },
   crystal: { sky: ['#0f0a20', '#2a1446', '#4a246e'], far: '#2e1856', mid: '#1f103c', near: '#130a28', tile: '#1c1333', hi: '#e39cff', edge: '#040210', fog: '#9f60e8', part: '#ffb0e0', glow: '#ff9bd6', name: 'crystal' },
+  spore:   { sky: ['#120804', '#3a200e', '#7a4a1c'], far: '#4a2a12', mid: '#2e190b', near: '#1a0e06', tile: '#221409', hi: '#ffb870', edge: '#060301', fog: '#e89a4a', part: '#ffd890', glow: '#ffb070', leaf: ['#e8742a', '#ffb070', '#d8a040', '#9e2f18'], name: 'spore' },
+  aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
+  webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
   throne:  { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', tile: '#0e121e', hi: '#c6d6f4', edge: '#010203', fog: '#5e72a0', part: '#eef4ff', glow: '#ffe2a8', name: 'throne' },
 };
 
@@ -17,7 +20,7 @@ Art.renderLevel = function (L, s) {
   c.width = Math.ceil(L.pw * s); c.height = Math.ceil(L.ph * s);
   const g = c.getContext('2d');
   g.scale(s, s);
-  const isS = (x, y) => { const v = L.get(x, y); return v === T_SOLID || v === T_BREAK || v === T_GATE; };
+  const isS = (x, y) => { const v = L.get(x, y); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK; };
   const seed = L.id.length * 77;
   const rim = mix(th.tile, th.hi, 0.2), rimHi = mix(th.tile, th.hi, 0.62);
 
@@ -75,6 +78,10 @@ Art.renderLevel = function (L, s) {
       if (th.name === 'moss' && v > 0.55) { g.strokeStyle = '#3aa070'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(px + 16, py + 9); g.quadraticCurveTo(px + 21, py + 22, px + 15, py + 32); g.stroke(); }
       if (th.name === 'town' && v > 0.6) { g.fillStyle = pick(th.leaf); ellipse(g, px + 10 + v * 12, py - 1, 4, 2, v); g.fill(); }
     } else if (t === T_HAZARD) drawSpikes(g, th, px, py, v);
+    else if (t === T_BOUNCE && L.get(x - 1, y) !== T_BOUNCE) {
+      let n = 1; while (L.get(x + n, y) === T_BOUNCE) n++;
+      drawShroomCap(g, th, px, py, n * TILE, v);
+    }
   }
 
   for (const d of L.def.doors) {
@@ -123,6 +130,20 @@ function themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS) {
     } else if (n === 'cave') {
       if (v < 0.35) { ellipse(g, px + 8 + v * 50, py + 1, 5 + v * 10, 4 + v * 6); g.save(); g.clip(); g.fillStyle = mix(th.tile, th.hi, 0.35); g.fillRect(px - 10, py - 20, 60, 21); g.restore(); ellipse(g, px + 8 + v * 50, py + 1, 5 + v * 10, 4 + v * 6); fs(g, null, th.edge, 2); }
       if (v > 0.93) { bloom(g, px + 16, py - 6, 18, '#8fd8ff', 0.5); ellipse(g, px + 16, py - 5, 3, 4); fs(g, '#d8f4ff', th.edge, 1.5); }
+    } else if (n === 'spore') {
+      if (v < 0.35) {
+        const mx = px + 6 + v * 50, h = 6 + v * 16;
+        g.strokeStyle = th.edge; g.lineWidth = 3; g.beginPath(); g.moveTo(mx, py); g.lineTo(mx, py - h); g.stroke();
+        g.strokeStyle = '#eadfc4'; g.lineWidth = 1.5; g.stroke();
+        g.beginPath(); g.arc(mx, py - h, 4 + v * 8, Math.PI, 0); g.closePath(); fs(g, v < 0.15 ? '#ff8a4a' : '#d8a040', th.edge, 2);
+        if (v < 0.08) bloom(g, mx, py - h, 20, '#ffb070', 0.4);
+      }
+    } else if (n === 'aqueduct') {
+      g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(px, py + 14); g.lineTo(px + TILE, py + 14); g.moveTo(px + (y % 2 ? 8 : 22), py + 14); g.lineTo(px + (y % 2 ? 8 : 22), py + TILE); g.stroke();
+      if (v < 0.3) { g.fillStyle = '#2f7a6a'; ellipse(g, px + 16, py + 1, 12, 3); g.fill(); }
+    } else if (n === 'webbed') {
+      if (v < 0.2) { g.strokeStyle = 'rgba(220,215,240,0.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 1); g.quadraticCurveTo(px + 16, py - 14, px + 32, py - 1); g.moveTo(px + 16, py - 7); g.lineTo(px + 16, py); g.stroke(); }
     } else if (n === 'throne') {
       g.strokeStyle = 'rgba(210,225,255,0.35)'; g.lineWidth = 1.2;
       g.beginPath(); g.moveTo(px, py + 5); g.lineTo(px + TILE, py + 5); g.stroke();
@@ -136,6 +157,11 @@ function themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS) {
       g.beginPath(); g.moveTo(bx - 6, py + TILE - 1); g.lineTo(bx, py + TILE + len); g.lineTo(bx + 6, py + TILE - 1); g.closePath();
       fs(g, n === 'crystal' ? mix(th.tile, th.hi, 0.55) : mix(th.tile, th.hi, 0.16), th.edge, 2.5);
     }
+    if (n === 'webbed' && k > 0.55) {
+      g.strokeStyle = 'rgba(225,220,245,0.4)'; g.lineWidth = 1.2; const bx = px + 4 + (k - 0.5) * 40, len = 20 + k * 40;
+      g.beginPath(); g.moveTo(bx - 10, py + TILE); g.lineTo(bx, py + TILE + len); g.lineTo(bx + 12, py + TILE); g.moveTo(bx - 5, py + TILE + len * 0.45); g.lineTo(bx + 6, py + TILE + len * 0.45); g.stroke();
+    }
+    if (n === 'aqueduct' && k > 0.8) { g.fillStyle = 'rgba(160,230,255,0.6)'; ellipse(g, px + 16, py + TILE + 6 + k * 10, 2, 3.5); g.fill(); }
     if ((n === 'moss' || n === 'town') && k > 0.62) {
       const bx = px + 6 + (k - 0.6) * 60, len = 26 + k * 60;
       g.strokeStyle = th.edge; g.lineWidth = 5; g.beginPath(); g.moveTo(bx, py + TILE); g.bezierCurveTo(bx + 8, py + TILE + len * 0.4, bx - 8, py + TILE + len * 0.7, bx + 3, py + TILE + len); g.stroke();
@@ -143,6 +169,19 @@ function themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS) {
       g.fillStyle = n === 'moss' ? '#5fd09a' : th.leaf[0]; ellipse(g, bx + 4, py + TILE + len * 0.55, 5, 2.6, 0.6); g.fill(); ellipse(g, bx - 3, py + TILE + len * 0.85, 5, 2.6, -0.6); g.fill();
     }
   }
+}
+function drawShroomCap(g, th, px, py, w, v) {
+  const cx = px + w / 2;
+  // stem
+  g.beginPath(); g.moveTo(cx - 9, py + 8); g.quadraticCurveTo(cx - 13, py + 40, cx - 8, py + 70); g.lineTo(cx + 8, py + 70); g.quadraticCurveTo(cx + 13, py + 40, cx + 9, py + 8); g.closePath();
+  fs(g, '#e8dcc0', th.edge, 3);
+  g.strokeStyle = 'rgba(120,90,60,0.4)'; g.lineWidth = 1.5; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(cx - 6 + i * 6, py + 14); g.lineTo(cx - 7 + i * 6, py + 64); g.stroke(); }
+  // cap
+  g.beginPath(); g.moveTo(px - 4, py + 12); g.quadraticCurveTo(px - 2, py - 16, cx, py - 18); g.quadraticCurveTo(px + w + 2, py - 16, px + w + 4, py + 12); g.quadraticCurveTo(cx, py + 4, px - 4, py + 12); g.closePath();
+  const gr = g.createLinearGradient(0, py - 18, 0, py + 12); gr.addColorStop(0, '#ff8a4a'); gr.addColorStop(1, '#b8341e');
+  fs(g, gr, th.edge, 3.5);
+  g.fillStyle = '#fff1d8'; for (let i = 0; i < Math.max(2, w / 22); i++) { ellipse(g, px + 8 + hash2(i, px, 7) * (w - 16), py - 8 + hash2(i, px, 9) * 10, 3 + hash2(i, px, 3) * 3, 2.2 + hash2(i, px, 5) * 2); g.fill(); }
+  g.fillStyle = 'rgba(255,255,255,0.25)'; ellipse(g, cx - w * 0.2, py - 10, w * 0.18, 3, -0.2); g.fill();
 }
 function drawSpikes(g, th, px, py, v) {
   const n = th.name, cols = { cave: '#e4ebf2', moss: '#2c7d4a', crystal: '#e8a8ff', throne: '#eef4ff', town: '#4a2414' };
@@ -220,6 +259,34 @@ function drawShape(g, th, li, o) {
       for (let k = 0; k < len; k += 16) { g.beginPath(); g.ellipse(o.x, k, 5, 8, 0, 0, 7); g.stroke(); }
       g.beginPath(); g.moveTo(o.x - 14, len); g.lineTo(o.x, len + 28); g.lineTo(o.x + 14, len); g.fill();
     }
+  } else if (n === 'spore') {           // a forest of giant mushrooms
+    const sw = (16 + o.r1 * 30) * s, cw = (70 + o.r2 * 120) * s, top = (o.top ? 60 : 180) + o.r3 * 160;
+    g.fillRect(o.x - sw / 2, top, sw, VH + 40 - top);
+    g.beginPath(); g.moveTo(o.x - cw, top + 14); g.quadraticCurveTo(o.x - cw, top - cw * 0.55, o.x, top - cw * 0.6); g.quadraticCurveTo(o.x + cw, top - cw * 0.55, o.x + cw, top + 14); g.closePath(); g.fill();
+    if (li < 2) { g.fillStyle = rgba(th.hi, 0.06 + li * 0.04); for (let k = 0; k < 4; k++) { ellipse(g, o.x + (hash2(k, Math.floor(o.x), 2) - 0.5) * cw * 1.2, top - hash2(k, Math.floor(o.x), 3) * cw * 0.4, 6 * s, 4 * s); g.fill(); } }
+  } else if (n === 'aqueduct') {        // arches and pipes
+    const w = (120 + o.r1 * 120) * s, top = 120 + o.r2 * 160;
+    if (li < 2 || o.r3 < 0.5) {
+      g.fillRect(o.x, top, 34 * s, VH + 40 - top); g.fillRect(o.x + w, top, 34 * s, VH + 40 - top);
+      g.strokeStyle = col; g.lineWidth = 30 * s; g.beginPath(); g.arc(o.x + w / 2 + 17 * s, top + 10, w / 2, Math.PI, 0); g.stroke();
+      g.fillRect(o.x - 20, top - w / 2 - 20, w + 74 * s, 26 * s);
+    } else {
+      g.strokeStyle = col; g.lineWidth = 22 * s; const py = 90 + o.r2 * 300;
+      g.beginPath(); g.moveTo(o.x - 200, py); g.lineTo(o.x + 200, py); g.stroke();
+      g.lineWidth = 34 * s; for (const k of [-120, 40, 160]) { g.beginPath(); g.moveTo(o.x + k, py - 1); g.lineTo(o.x + k + 16, py - 1); g.stroke(); }
+    }
+  } else if (n === 'webbed') {          // webs, roots and hanging cocoons
+    g.strokeStyle = col; g.lineWidth = 2;
+    if (o.top) {
+      const cx = o.x, cy = -10, r = (140 + o.r1 * 160) * s;
+      for (let k = 0; k < 7; k++) { const a = Math.PI * (0.1 + k * 0.13); g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.stroke(); }
+      for (let rr = 30; rr < r; rr += 34) { g.beginPath(); g.arc(cx, cy, rr, Math.PI * 0.1, Math.PI * 0.88); g.stroke(); }
+      const len = 80 + o.r2 * 200; g.beginPath(); g.moveTo(o.x + 60, -10); g.lineTo(o.x + 60, len); g.stroke();
+      ellipse(g, o.x + 60, len + 22, 12 * s, 26 * s); g.fill();
+    } else {
+      g.lineWidth = 8 * s + 4;
+      for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(o.x + k * 30, VH + 10); g.bezierCurveTo(o.x + k * 30 + 40, VH - 120, o.x - 30 + k * 20, VH - 200, o.x + 20 + k * 10, VH - 260 * (0.5 + o.r2 * 0.5)); g.stroke(); }
+    }
   } else { // town: an autumn wood around the village
     if (li === 1) {
       const w = (50 + o.r1 * 80) * s, h = (80 + o.r2 * 150) * s, top = VH - h;
@@ -239,14 +306,14 @@ function drawShape(g, th, li, o) {
   }
 }
 function drawCritters(g, th, camX, camY, t) {
-  if (th.name !== 'moss' && th.name !== 'cave') return;
+  if (!['moss', 'cave', 'aqueduct', 'spore'].includes(th.name)) return;
   for (const c of th.critters) {
     const x = ((c.x - camX * c.par + Math.sin(t * 0.2 + c.p) * 40) % LAYER_PERIOD + LAYER_PERIOD) % LAYER_PERIOD - 200;
     if (x < -80 || x > VW + 80) continue;
     const y = c.y - camY * c.par * VERTICAL_PARALLAX + Math.sin(t * 0.6 + c.p) * 14;
-    if (th.name === 'cave') {          // drifting lumafly lanterns
+    if (th.name === 'cave' || th.name === 'spore') {          // drifting lumafly lanterns / glowing spores
       if (!c.jelly) continue;
-      bloom(g, x, y, 34, '#8fd8ff', 0.4 + 0.2 * Math.sin(t * 3 + c.p));
+      bloom(g, x, y, 34, th.glow, 0.4 + 0.2 * Math.sin(t * 3 + c.p));
       g.fillStyle = '#e6f8ff'; ellipse(g, x, y, 3, 3); g.fill();
       continue;
     }
@@ -336,6 +403,15 @@ Art.drawForeground = function (g, theme, camX, camY, t) {
         g.restore();
       }
       if (!o.top) { g.lineWidth = 3; for (let k = 0; k < 9; k++) { g.beginPath(); g.moveTo(x + k * 7, VH + 4); g.quadraticCurveTo(x + k * 7 + 6, VH - 20 * s, x + k * 7 + sway + 10, VH - (30 + (k % 3) * 14) * s); g.stroke(); } }
+    } else if (theme === 'spore') {
+      const cw = 60 * s, sy = o.top ? 30 * s : VH - 50 * s;
+      if (o.top) { g.fillRect(x - 6, -4, 12, 40 * s); } else { g.fillRect(x - 8, sy, 16, 70 * s); }
+      g.beginPath(); g.moveTo(x - cw, sy + 10); g.quadraticCurveTo(x - cw, sy - cw * 0.6, x, sy - cw * 0.62); g.quadraticCurveTo(x + cw, sy - cw * 0.6, x + cw, sy + 10); g.closePath(); g.fill();
+    } else if (theme === 'webbed') {
+      g.lineWidth = 2; g.strokeStyle = col;
+      const r = 120 * s, cy0 = o.top ? -4 : VH + 4, d = o.top ? 1 : -1;
+      for (let k = 0; k < 6; k++) { const a = (k / 5) * Math.PI; g.beginPath(); g.moveTo(x, cy0); g.lineTo(x + Math.cos(a) * r, cy0 + d * Math.sin(a) * r); g.stroke(); }
+      for (let rr = 24; rr < r; rr += 26) { g.beginPath(); g.arc(x, cy0, rr, o.top ? 0 : Math.PI, o.top ? Math.PI : Math.PI * 2); g.stroke(); }
     } else if (theme === 'crystal') {
       for (let k = 0; k < 3; k++) { const w = (18 + k * 6) * s, h = (50 + k * 30) * s * (k === 1 ? 1.4 : 1), kx = x + k * 20 * s; g.beginPath(); g.moveTo(kx - w / 2, y0); g.lineTo(kx, y0 + dir * h); g.lineTo(kx + w / 2, y0); g.fill(); }
     } else if (theme === 'throne') {
@@ -358,8 +434,8 @@ Art.ambientInit = function () {
 Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
-    const leafy = theme === 'town' && m.kind < 0.6, bubble = theme === 'moss' && m.kind < 0.35;
-    const fall = leafy ? 34 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'crystal' || theme === 'cave') ? 8 : 4;
+    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4;
+    const fall = leafy ? 34 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
     m.x += (Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
     m.y += (fall - rise) * dt * m.z;
     m.rot += dt * (leafy ? 2 : 0);
@@ -371,7 +447,7 @@ Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
       g.fillStyle = th.leaf[Math.floor(m.kind * 6.6) % th.leaf.length]; ellipse(g, 0, 0, 5 * m.z + 2, 2.6 * m.z + 1); g.fill(); g.restore();
     } else if (bubble) {
       g.strokeStyle = 'rgba(210,255,245,' + (0.25 + 0.3 * m.z) + ')'; g.lineWidth = 1.2; ellipse(g, m.x, m.y, m.s * 2.2 * m.z + 1.5, m.s * 2.2 * m.z + 1.5); g.stroke();
-    } else if (theme === 'cave' || theme === 'moss' || (theme === 'town' && m.kind > 0.85)) {
+    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || (theme === 'town' && m.kind > 0.85)) {
       bloom(g, m.x, m.y, 10 * m.z + 4, theme === 'town' ? '#ffb0d8' : th.part, a * 0.6);
       g.fillStyle = rgba('#ffffff', Math.min(0.9, a)); g.beginPath(); g.arc(m.x, m.y, m.s * m.z * 0.8, 0, 7); g.fill();
     } else {
@@ -418,6 +494,34 @@ Art.drawBreak = function (g, x, y, th, t) {
   g.strokeStyle = th.edge; g.lineWidth = 3.5; g.strokeRect(px + 1.5, py + 1.5, TILE - 3, TILE - 3);
   g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 1.6;
   g.beginPath(); g.moveTo(px + 6 + v * 8, py + 4); g.lineTo(px + 14, py + 14); g.lineTo(px + 9, py + 22); g.lineTo(px + 18 + v * 6, py + 30); g.moveTo(px + 14, py + 14); g.lineTo(px + 26, py + 12); g.stroke();
+};
+Art.drawCrack = function (g, x, y, th, t) {
+  const px = x * TILE, py = y * TILE, v = hash2(x, y, 51);
+  g.fillStyle = mix(th.tile, th.hi, 0.18); g.fillRect(px - 0.5, py - 0.5, TILE + 1, TILE + 1);
+  g.strokeStyle = th.edge; g.lineWidth = 3; g.strokeRect(px + 1.5, py + 1.5, TILE - 3, TILE - 3);
+  g.strokeStyle = rgba(th.glow, 0.45 + 0.25 * Math.sin(t * 2 + x)); g.lineWidth = 2;
+  g.beginPath(); g.moveTo(px + 2, py + 10 + v * 8); g.lineTo(px + 12, py + 16); g.lineTo(px + 20, py + 8 + v * 6); g.lineTo(px + 30, py + 18); g.moveTo(px + 12, py + 16); g.lineTo(px + 14, py + 30); g.stroke();
+};
+Art.drawAcid = function (g, x, y, surface, t) {
+  const px = x * TILE, py = y * TILE;
+  g.fillStyle = 'rgba(70,200,80,0.55)'; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
+  if (!surface) return;
+  bloom(g, px + 16, py + 10, 30, '#9dff6a', 0.18);
+  g.beginPath(); g.moveTo(px, py + 10);
+  for (let i = 0; i <= 4; i++) g.lineTo(px + i * 8, py + 8 + Math.sin(t * 3 + (x * 4 + i) * 0.9) * 2.5);
+  g.lineTo(px + TILE, py + 14); g.lineTo(px, py + 14); g.closePath();
+  g.fillStyle = 'rgba(190,255,150,0.85)'; g.fill();
+  if (Math.sin(t * 2 + x * 7) > 0.96) { g.strokeStyle = 'rgba(210,255,190,0.8)'; g.lineWidth = 1.5; ellipse(g, px + 16, py + 6, 3, 3); g.stroke(); }
+};
+Art.drawSeals = function (g, d, t, lit) {
+  const px = d.x * TILE + 16, py = d.y * TILE + 16;
+  lit.forEach((on, i) => {
+    const a = -Math.PI * 0.85 + i * (Math.PI * 0.7 / (lit.length - 1)), r = 110;
+    const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r * 0.9;
+    if (on) bloom(g, x, y, 34, '#ffe2a8', 0.6 + 0.2 * Math.sin(t * 3 + i));
+    ellipse(g, x, y, 11, 11); fs(g, on ? '#fff4d6' : '#1a1e2a', INK, 3);
+    if (on) { g.fillStyle = INK; ellipse(g, x - 3.5, y, 1.6, 3); g.fill(); ellipse(g, x + 3.5, y, 1.6, 3); g.fill(); }
+  });
 };
 Art.drawGate = function (g, x, y, th, t) {
   const px = x * TILE, py = y * TILE;

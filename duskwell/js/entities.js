@@ -13,9 +13,10 @@ class Level {
     return this.t[ty * this.w + tx];
   }
   set(tx, ty, v) { if (tx >= 0 && ty >= 0 && tx < this.w && ty < this.h) this.t[ty * this.w + tx] = v; }
-  solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE; }
+  solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK; }
+  hazard(tx, ty) { const v = this.get(tx, ty); return v === T_HAZARD || v === T_ACID; }
   solidAtPx(x, y) { return this.solid(Math.floor(x / TILE), Math.floor(y / TILE)); }
-  ground(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_ONEWAY; }
+  ground(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_ONEWAY || v === T_CRACK || v === T_BOUNCE; }
   // 2D raycast through the tile grid, sampled every 8px
   lineOfSight(x0, y0, x1, y1) {
     const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 8);
@@ -47,8 +48,11 @@ function moveBody(b, dt, L) {
     const by = Math.floor((b.y + b.h) / TILE);
     for (let tx = l; tx <= r; tx++) {
       const v = L.get(tx, by);
-      if (v === T_SOLID || v === T_BREAK || v === T_GATE || (v === T_ONEWAY && prevBottom <= by * TILE + 0.5 && !b.noOneway)) {
-        b.y = by * TILE - b.h; b.vy = 0; b.onGround = true; break;
+      const top = (v === T_ONEWAY || v === T_BOUNCE) && prevBottom <= by * TILE + 0.5 && !b.noOneway;
+      if (v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK || top) {
+        b.y = by * TILE - b.h; b.vy = 0; b.onGround = true;
+        if (v === T_BOUNCE) b.bounced = true;
+        break;
       }
     }
   } else {
@@ -63,7 +67,7 @@ const GRAV = 2200, MAXFALL = 900, FALL_MULT = 1.25;
 class Player {
   constructor() {
     this.w = 22; this.h = 38;
-    this.ab = { dash: false, wall: false, double: false };
+    this.ab = { dash: false, wall: false, double: false, dive: false };
     this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = 99; this.geo = 0;
     this.nail = 5; this.soulGain = 11;
     this.place(0, 0, 1);
@@ -78,7 +82,7 @@ class Player {
     this.atkT = 0; this.atkCD = 0; this.atkBuf = 0; this.atkDir = 'side'; this.atkAlt = 0; this.hits = new Set();
     this.invuln = 0; this.hurtT = 0; this.focusT = 0; this.castHold = 0; this.castDone = false; this.castT = 0;
     this.sitting = null; this.dead = false; this.safe = { x: fx, y: fy }; this.safeT = 0;
-    this.t = 0; this.landT = 0; this.ghost = []; this.recoil = 0;
+    this.t = 0; this.landT = 0; this.ghost = []; this.recoil = 0; this.diving = false; this.bounced = false;
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
@@ -101,6 +105,7 @@ class Player {
       }
       return;
     }
+    if (this.diving) { this.updateDive(dt); return; }
     const ix = Input.axisX(), iy = Input.axisY();
     const stunned = this.hurtT > 0;
 
@@ -109,6 +114,10 @@ class Player {
 
     // ---- cast / focus ----
     if (Input.pressed('cast')) { this.castHold = 0; this.castDone = false; }
+    // Down + cast plunges at once, so it never waits for the key to be released
+    if (Input.pressed('cast') && this.ab.dive && Input.down('down') && this.soul >= 33 && !stunned && this.dashT <= 0) {
+      this.castDone = true; this.startDive(); return;
+    }
     if (Input.down('cast')) this.castHold += dt;
     const canFocus = this.onGround && this.soul >= 33 && this.hp < this.maxHp && ix === 0 && this.dashT <= 0 && !stunned && this.atkT <= 0;
     if (Input.down('cast') && canFocus && this.castHold > 0.22 && !this.castDone) {
@@ -121,7 +130,9 @@ class Player {
       if (Math.random() < 0.5) G.burst(this.cx + rand(-18, 18), this.y + this.h, 1, { color: '#bfe8ff', speed: 30, life: 0.8, size: 2, grav: -160, vy: -60 });
     } else if (this.focusT > 0) { this.focusT = 0; this.castDone = true; }
     if (Input.released('cast')) {
-      if (!this.castDone && this.castHold < 0.3 && this.soul >= 33 && !stunned && this.dashT <= 0) this.castBolt();
+      if (!this.castDone && this.castHold < 0.3 && this.soul >= 33 && !stunned && this.dashT <= 0) {
+        this.castBolt();
+      }
       this.castHold = 0;
     }
     const focusing = this.focusT > 0;
@@ -206,14 +217,18 @@ class Player {
     moveBody(this, dt, L);
     if (this.onGround && !wasGround && fallV > 300) { Sound.play('land'); this.landT = 0.12; G.burst(this.cx, this.y + this.h, 6, { color: '#8d9aa8', speed: 80, life: 0.3, size: 2 }); }
     if (this.onGround) { this.airDash = true; this.djAvail = true; this.wallDir = 0; }
+    if (this.bounced) {             // mushroom cap
+      this.bounced = false; this.onGround = false; this.vy = -1000; this.jumping = false;
+      Sound.play('bounce'); G.burst(this.cx, this.y + this.h, 10, { color: '#ffb070', speed: 160, life: 0.5, size: 3, vy: -60 });
+    }
 
     // ---- remember a safe place to come back to after spikes ----
     if (this.onGround && this.dashT <= 0) {
       this.safeT += dt;
       if (this.safeT > 0.25) {
         const tl = Math.floor((this.x - 6) / TILE), tr = Math.floor((this.x + this.w + 6) / TILE), ty = Math.floor((this.y + this.h + 2) / TILE);
-        const hz = (t, y) => L.get(t, y) === T_HAZARD;
-        if (!hz(tl, ty - 1) && !hz(tr, ty - 1) && L.ground(tl, ty) && L.ground(tr, ty) && L.get(Math.floor(this.cx / TILE), ty - 1) !== T_HAZARD) {
+        const hz = (t, y) => L.hazard(t, y);
+        if (!hz(tl, ty - 1) && !hz(tr, ty - 1) && L.ground(tl, ty) && L.ground(tr, ty) && !L.hazard(Math.floor(this.cx / TILE), ty - 1)) {
           this.safe = { x: this.cx, y: this.y + this.h };
         }
       }
@@ -225,8 +240,8 @@ class Player {
       const x0 = Math.floor(hb.x / TILE), x1 = Math.floor((hb.x + hb.w) / TILE), y0 = Math.floor(hb.y / TILE), y1 = Math.floor((hb.y + hb.h) / TILE);
       let spiked = false;
       for (let ty = y0; ty <= y1 && !spiked; ty++) for (let tx = x0; tx <= x1; tx++) {
-        if (L.get(tx, ty) === T_HAZARD) {
-          // spikes are the lower half of their tile
+        if (L.hazard(tx, ty)) {
+          // spikes are the lower half of their tile; acid starts just under its surface
           const sb = { x: tx * TILE + 3, y: ty * TILE + 10, w: TILE - 6, h: TILE - 10 };
           if (overlap(hb, sb)) { spiked = true; break; }
         }
@@ -281,8 +296,30 @@ class Player {
     G.shake(3, 0.12);
   }
 
+  startDive() {
+    this.soul -= 33; this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
+    Sound.play('cast'); G.burst(this.cx, this.cy, 12, { color: '#dff3ff', speed: 160, life: 0.4, size: 3 });
+  }
+  updateDive(dt) {
+    this.vx = 0; this.vy = 1250;
+    moveBody(this, dt, G.level);
+    if (Math.random() < 0.8) G.burst(this.cx + rand(-8, 8), this.y, 1, { color: '#dff3ff', speed: 20, life: 0.35, size: 3, grav: -200 });
+    if (!this.onGround) return;
+    // a cracked floor gives way and the dive keeps going
+    const L = G.level, row = Math.floor((this.y + this.h + 2) / TILE);
+    let broke = false;
+    for (let tx = Math.floor(this.x / TILE); tx <= Math.floor((this.x + this.w) / TILE); tx++) if (L.get(tx, row) === T_CRACK) { G.breakCrack(tx, row); broke = true; }
+    if (broke) { this.onGround = false; return; }
+    this.diving = false; this.invuln = Math.max(this.invuln, 0.35); this.landT = 0.15;
+    Sound.play('slam'); G.shake(10, 0.35); G.ring(this.cx, this.y + this.h - 6, '#dff3ff', 0.35);
+    G.burst(this.cx, this.y + this.h, 24, { color: '#dff3ff', speed: 300, life: 0.5, size: 3, vy: -120 });
+    const blast = { x: this.cx - 120, y: this.y + this.h - 80, w: 240, h: 90 };
+    for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(blast, e.hb())) e.hurt(18, e.cx > this.cx ? 1 : -1, 'spell');
+    for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'shock', x: this.cx + d * 30, y: this.y + this.h, vx: d * 480, dmg: 8, friendly: true, pierce: true, life: 0.45, color: '#dff3ff', passWalls: true }));
+  }
+
   hurt(dmg, srcX) {
-    if (this.invuln > 0 || this.dead || G.state !== 'play') return false;
+    if (this.invuln > 0 || this.dead || this.diving || G.state !== 'play') return false;
     this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300; this.vy = -320; this.onGround = false; this.sitting = null;
@@ -314,6 +351,7 @@ class Proj {
     if (this.kind === 'shock') return { x: this.x - this.w / 2, y: this.y - this.h, w: this.w, h: this.h };
     if (this.kind === 'beam') return { x: this.x - this.bw / 2, y: 0, w: this.bw, h: G.level.ph };
     if (this.kind === 'pillar') return { x: this.x - this.bw / 2, y: this.y - this.ph, w: this.bw, h: this.ph };
+    if (this.kind === 'cloud') { const k = clamp(this.t / 0.25, 0.3, 1); return { x: this.x - this.w * k / 2, y: this.y - this.h * k / 2, w: this.w * k, h: this.h * k }; }
     return { x: this.x - this.r, y: this.y - this.r, w: this.r * 2, h: this.r * 2 };
   }
   update(dt) {
@@ -330,6 +368,11 @@ class Proj {
     }
     this.vy += this.grav * dt;
     this.x += this.vx * dt; this.y += this.vy * dt;
+    if (this.kind === 'cloud') {
+      if (this.life < 0.3) return;      // fading puff no longer hurts
+      if (!G.player.dead && overlap(G.player.hurtbox(), this.rect())) G.player.hurt(this.dmg, this.x);
+      return;
+    }
     if (this.kind === 'rock') {
       if (this.t < this.tele) { this.vy = 0; this.y = this.y0; return; }
       if (L.solidAtPx(this.x, this.y + this.r)) { this.dead = true; G.burst(this.x, this.y + this.r, 12, { color: '#8a94a0', speed: 160, life: 0.5, size: 4, vy: -80 }); G.shake(3, 0.1); return; }
@@ -649,4 +692,121 @@ class ShadeEnemy extends Enemy {   // the shade that keeps your Geo after a deat
   }
 }
 
-const ENEMY_TYPES = { crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel };
+class Diver extends Enemy {     // mosquito: hovers, locks on, then spears in a straight line
+  constructor(d) { super(d, 28, 24); this.hp = 12; this.geo = 4; this.kb = 1; this.blood = '#ffb070'; this.glowR = 90; this.ph = rand(0, 6); this.cool = rand(0.5, 1.5); }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(330);
+    switch (this.currentState) {
+      case ST.IDLE: {
+        const tx = this.home.x + Math.sin(this.t * 0.9 + this.ph) * 50, ty = this.home.y + Math.sin(this.t * 2 + this.ph) * 16;
+        this.vx = approach(this.vx, (tx - this.cx) * 2, 300 * dt); this.vy = approach(this.vy, (ty - this.cy) * 2, 300 * dt);
+        this.face = sign(p.cx - this.cx) || this.face;
+        this.cool -= dt;
+        if (sees && this.cool <= 0) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        break;
+      }
+      case ST.ANTICIPATION: {   // shiver while aiming
+        this.vx *= 0.8; this.vy *= 0.8;
+        const a = Math.atan2(p.cy - this.cy, p.cx - this.cx); this.aim = a; this.face = Math.cos(a) >= 0 ? 1 : -1;
+        if (this.stateT > 0.45) this.setState(ST.ATTACK);
+        break;
+      }
+      case ST.ATTACK:
+        this.vx = Math.cos(this.aim) * 560; this.vy = Math.sin(this.aim) * 560;
+        if (this.stateT > 0.7 || this.hitL || this.hitR || this.hitU || this.onGround) { this.vx *= 0.2; this.vy *= 0.2; this.cool = 1.3; this.home = { x: this.cx, y: this.cy - 40 }; this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.92; this.vy *= 0.92;
+        if (this.stateT > 0.2) { this.cool = 0.8; this.setState(ST.IDLE); }
+        break;
+    }
+    this.physics(dt, false);
+  }
+}
+
+class Spider extends Enemy {    // hangs on a thread, drops on the player, then chases along the floor
+  constructor(d) {
+    super(d, 34, 24); this.hp = 14; this.geo = 5; this.kb = 0.8; this.blood = '#c8a8ff';
+    this.hanging = !d.ground; if (!this.hanging) this.currentState = ST.CHASE;
+    this.anchorY = null;
+  }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player;
+    if (this.anchorY === null) { let ty = Math.floor(this.y / TILE); while (ty > 0 && !G.level.solid(Math.floor(this.cx / TILE), ty)) ty--; this.anchorY = (ty + 1) * TILE; }
+    switch (this.currentState) {
+      case ST.IDLE:     // hanging
+        if (this.hanging) {
+          this.vx = 0; this.vy = 0; this.y += Math.sin(this.t * 2) * 0.2;
+          if (!p.dead && Math.abs(p.cx - this.cx) < 80 && p.cy > this.cy && p.cy - this.cy < 460 && this.seesPlayer(480)) { this.hanging = false; this.setState(ST.ATTACK); Sound.play('tele'); }
+          this.physics(0, false);
+          return;
+        }
+        this.setState(ST.CHASE);
+        break;
+      case ST.ATTACK:   // falling
+        if (this.onGround) { G.shake(3, 0.1); G.burst(this.cx, this.y + this.h, 8, { color: '#8a8aa0', speed: 120, life: 0.4, size: 3 }); this.setState(ST.CHASE); }
+        break;
+      case ST.CHASE:
+        if (this.onGround) {
+          this.face = p.cx > this.cx ? 1 : -1;
+          this.vx = this.edgeAhead(this.face) ? 0 : this.face * 115;
+          if (Math.abs(p.cx - this.cx) < 70 && Math.abs(p.cy - this.cy) < 50 && this.stateT > 0.6) this.setState(ST.ANTICIPATION);
+        }
+        break;
+      case ST.ANTICIPATION:
+        this.vx = 0;
+        if (this.stateT > 0.3) { this.vy = -380; this.vx = this.face * 260; this.onGround = false; this.setState(ST.RECOIL); }
+        break;
+      case ST.RECOIL:
+        if (this.onGround && this.stateT > 0.15) { this.vx *= 0.8; if (this.stateT > 0.35) this.setState(ST.CHASE); }
+        break;
+    }
+    this.physics(dt);
+  }
+}
+
+class Shroom extends Enemy {    // slow walker that breathes out a cloud of spores
+  constructor(d) { super(d, 30, 36); this.hp = 16; this.geo = 5; this.kb = 0.6; this.blood = '#ffcf70'; this.cool = rand(0.5, 1.5); }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player;
+    switch (this.currentState) {
+      case ST.IDLE: this.vx = 0; if (this.stateT > 0.6) this.setState(ST.PATROL); break;
+      case ST.PATROL:
+        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * 32; }
+        this.cool -= dt;
+        if (this.cool <= 0 && this.seesPlayer(210) && Math.abs(p.cy - this.cy) < 80) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        break;
+      case ST.ANTICIPATION: this.vx = 0; if (this.stateT > 0.5) this.setState(ST.ATTACK); break;
+      case ST.ATTACK:
+        G.projs.push(new Proj({ kind: 'cloud', x: this.cx + this.face * 46, y: this.cy - 4, w: 84, h: 64, vx: this.face * 30, vy: -12, dmg: 1, life: 1.5, pierce: true, passWalls: true, color: '#e8d070' }));
+        Sound.play('dash'); this.cool = 2; this.setState(ST.IDLE);
+        break;
+      case ST.RECOIL: if (this.onGround) this.vx *= 0.85; if (this.stateT > 0.2) this.setState(ST.PATROL); break;
+    }
+    this.physics(dt);
+  }
+}
+
+class Jelly extends Enemy {     // drifting jellyfish that bursts into sparks when popped
+  constructor(d) { super(d, 30, 32); this.hp = 8; this.geo = 3; this.kb = 0.6; this.blood = '#ffc890'; this.glowR = 130; this.ph = rand(0, 6); }
+  update(dt) {
+    this.tick(dt);
+    switch (this.currentState) {
+      case ST.RECOIL: this.vx *= 0.9; this.vy *= 0.9; if (this.stateT > 0.25) this.setState(ST.IDLE); break;
+      default: {
+        const tx = this.home.x + Math.sin(this.t * 0.5 + this.ph) * 60, ty = this.home.y + Math.sin(this.t * 0.9 + this.ph) * 30;
+        this.vx = approach(this.vx, (tx - this.cx) * 0.8, 60 * dt); this.vy = approach(this.vy, (ty - this.cy) * 0.8, 60 * dt);
+      }
+    }
+    this.physics(dt, false);
+  }
+  kill() {
+    super.kill();
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.3; G.projs.push(new Proj({ kind: 'orb', x: this.cx, y: this.cy, vx: Math.cos(a) * 170, vy: Math.sin(a) * 170, r: 7, dmg: 1, life: 1.4, color: '#ffc890' })); }
+  }
+}
+
+const ENEMY_TYPES = { crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly };

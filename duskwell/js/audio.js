@@ -5,7 +5,7 @@ const Sound = (() => {
   let muted = false, theme = 'town', bossMode = false, timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4 };
+  const ROOT = { town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
 
   function init() {
@@ -86,6 +86,7 @@ const Sound = (() => {
     select() { tone({ f: 600, d: 0.06, v: 0.08, type: 'triangle' }); },
     confirm() { tone({ f: 500, d: 0.06, v: 0.1, type: 'triangle' }); tone({ f: 750, d: 0.1, v: 0.1, type: 'triangle', delay: 0.06 }); },
     break() { noise({ f: 900, f2: 200, d: 0.3, v: 0.3 }); },
+    bounce() { tone({ f: 180, f2: 620, d: 0.22, v: 0.16, type: 'triangle' }); noise({ f: 400, d: 0.1, v: 0.1 }); },
     shade() { tone({ f: 150, f2: 100, d: 0.6, v: 0.15, type: 'triangle' }); },
   };
 

@@ -52,6 +52,7 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   if (o.air) { sy = 1 + clamp(-o.vy / 2600, -0.05, 0.1); sx = 1 / sy; }
   if (o.landT > 0) { sy = 0.88; sx = 1.1; }
   if (o.dash) { sx = 1.35; sy = 0.8; }
+  if (o.dive) { sx = 0.78; sy = 1.22; }
   if (o.sit) sy = 0.84;
   if (o.run) lean = 0.1;
   if (o.hurt) lean = -0.25;
@@ -97,7 +98,13 @@ Art.drawPlayer = function (g, p, t) {
   if (p.dead) return;
   let alpha = 1;
   if (p.invuln > 0 && Math.floor(t * 24) % 2 === 0) alpha = 0.4;
-  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding, run: p.onGround && Math.abs(p.vx) > 30, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT };
+  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving, run: p.onGround && Math.abs(p.vx) > 30, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving };
+  if (p.diving) {
+    const tr = g.createLinearGradient(0, p.y - 120, 0, p.y + p.h);
+    tr.addColorStop(0, 'rgba(220,240,255,0)'); tr.addColorStop(1, 'rgba(220,240,255,0.75)');
+    g.fillStyle = tr; g.fillRect(p.cx - 12, p.y - 120, 24, 120 + p.h);
+    bloom(g, p.cx, p.y + p.h, 60, '#dff3ff', 0.5);
+  }
   if (p.focusT > 0) {
     const k = p.focusT / 0.9;
     bloom(g, p.cx, p.cy - 6, 40 + k * 50, '#dff3ff', 0.2 + k * 0.4);
@@ -495,4 +502,160 @@ Art.drawFx = function (g, f) {
   } else if (f.type === 'ring') {
     g.save(); g.globalAlpha = a; g.strokeStyle = f.color; g.lineWidth = 4 * a + 1; ellipse(g, f.x, f.y, 10 + k * 90, (10 + k * 90) * (f.flat || 1)); g.stroke(); g.restore();
   }
+};
+
+// ---------------------------------------------------------------- newer enemies
+Art.enemy.diver = function (g, e, t) {          // masked mosquito with a long proboscis
+  const tele = e.currentState === 'anticipation', atk = e.currentState === 'attack';
+  g.save(); g.translate(e.cx + (tele ? Math.sin(t * 60) * 1.5 : 0), e.cy);
+  const ang = atk || tele ? (e.aim || 0) : (e.face > 0 ? 0 : Math.PI);
+  g.rotate(ang); if (Math.cos(ang) < 0) g.scale(1, -1);
+  const flap = Math.sin(t * 44);
+  g.fillStyle = 'rgba(230,244,255,0.5)'; g.strokeStyle = INK; g.lineWidth = 1.8;
+  ellipse(g, -6, -10, 5, 10 + flap * 3, -0.5); g.fill(); g.stroke(); ellipse(g, 0, -10, 5, 9 - flap * 3, 0.4); g.fill(); g.stroke();
+  g.strokeStyle = INK; g.lineWidth = 3.5; g.beginPath(); g.moveTo(8, 1); g.lineTo(30, 2); g.stroke();
+  g.strokeStyle = e.flash > 0 ? '#fff' : '#d8c8b0'; g.lineWidth = 1.6; g.stroke();
+  ellipse(g, -12, 3, 9, 6, 0.3); fs(g, F(e, '#6a3a2a'), INK, 2.4);
+  mask(g, 2, 0, 8.5, 8, 1.05, 1, e.flash > 0 ? '#fff' : BONE);
+  g.restore();
+  if (tele) bloom(g, e.cx, e.cy, 36, '#ff8a4a', 0.4);
+};
+Art.enemy.spider = function (g, e, t) {         // round spider on a thread
+  if (e.currentState === 'idle' && e.hanging && e.anchorY !== null) {
+    g.strokeStyle = 'rgba(230,230,245,0.7)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(e.cx, e.anchorY); g.lineTo(e.cx, e.y + 4); g.stroke();
+  }
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face || 1, 1);
+  const hang = e.currentState === 'idle' && e.hanging, walk = Math.sin(t * 16) * (e.currentState === 'chase' ? 3 : 0);
+  g.strokeStyle = INK; g.lineWidth = 2.6; g.lineCap = 'round';
+  for (let i = 0; i < 4; i++) {
+    const lx = -12 + i * 8, s = i % 2 ? 1 : -1;
+    g.beginPath(); g.moveTo(lx * 0.5, -12); g.quadraticCurveTo(lx - 4, hang ? -24 : -22, lx * 1.3 + s * walk, hang ? -6 : 0); g.stroke();
+  }
+  ellipse(g, -4, -13, 13, 10); fs(g, F(e, '#2e2840'), INK, 2.8);
+  g.fillStyle = e.flash > 0 ? '#fff' : 'rgba(200,170,255,0.35)'; ellipse(g, -8, -17, 5, 3, -0.4); g.fill();
+  mask(g, 9, -12, 7, 6.5, 1.1, 1, e.flash > 0 ? '#fff' : BONE);
+  g.restore();
+};
+Art.enemy.brood_child = Art.enemy.spider;
+Art.enemy.shroom = function (g, e, t) {         // walking toadstool
+  const puff = e.currentState === 'anticipation' ? clamp(e.stateT / 0.5, 0, 1) : 0, walk = e.currentState === 'patrol' ? Math.sin(t * 8) * 2 : 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  g.strokeStyle = INK; g.lineWidth = 3; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-4, -8); g.lineTo(-5 + walk, 0); g.moveTo(5, -8); g.lineTo(6 - walk, 0); g.stroke();
+  ellipse(g, 0, -14, 9, 9); fs(g, F(e, '#e8dcc0'), INK, 2.6);
+  g.fillStyle = INK; ellipse(g, 3, -14, 1.8, 3); g.fill(); ellipse(g, 7, -14, 1.8, 3); g.fill();
+  const cw = 18 + puff * 5;
+  g.beginPath(); g.moveTo(-cw, -18); g.quadraticCurveTo(-cw, -40 - puff * 6, 0, -40 - puff * 6); g.quadraticCurveTo(cw, -40 - puff * 6, cw, -18); g.quadraticCurveTo(0, -24, -cw, -18); g.closePath();
+  fs(g, F(e, '#d8a040'), INK, 3);
+  g.fillStyle = e.flash > 0 ? '#fff' : '#fff1d0'; ellipse(g, -7, -30, 3.5, 2.5); g.fill(); ellipse(g, 6, -33, 3, 2.2); g.fill(); ellipse(g, 11, -24, 2.5, 2); g.fill();
+  if (puff > 0) bloom(g, 16, -20, 30, '#e8d070', puff * 0.5);
+  g.restore();
+};
+Art.enemy.jelly = function (g, e, t) {
+  const x = e.cx, y = e.cy - 4, r = 15 + Math.sin(t * 3 + e.ph) * 1.5;
+  bloom(g, x, y, 50, '#ffb070', 0.25);
+  g.fillStyle = e.flash > 0 ? 'rgba(255,255,255,0.9)' : 'rgba(235,220,255,0.35)'; g.strokeStyle = INK; g.lineWidth = 2.6;
+  g.beginPath(); g.arc(x, y, r, Math.PI, 0); g.quadraticCurveTo(x + r * 0.5, y + 5, x, y + 2); g.quadraticCurveTo(x - r * 0.5, y + 5, x - r, y); g.fill(); g.stroke();
+  g.fillStyle = e.flash > 0 ? '#fff' : 'rgba(255,190,110,0.95)'; ellipse(g, x, y - r * 0.35, r * 0.34, r * 0.3); g.fill();
+  g.strokeStyle = 'rgba(235,220,255,0.55)'; g.lineWidth = 1.8;
+  for (let k = -2; k <= 2; k++) { g.beginPath(); g.moveTo(x + k * 5, y + 3); g.quadraticCurveTo(x + k * 6 + Math.sin(t * 3 + k) * 5, y + 14, x + k * 4, y + 22); g.stroke(); }
+};
+
+// ---------------------------------------------------------------- newer bosses
+Art.boss.spore = function (g, b, t) {            // a toadstool matriarch
+  const fl = b.flash > 0, sq = b.tele > 0 && b.onGround ? 0.9 : (!b.onGround ? 1.06 : 1);
+  g.save(); g.globalAlpha = b.alpha; g.translate(b.cx, b.y + b.h); g.scale(b.face * (2 - sq), sq);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 2, 0);
+  telGlow(g, b, '#ffb070', 0, -60, 130);
+  g.strokeStyle = INK; g.lineWidth = 6; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-18, -20); g.lineTo(-26, 0); g.moveTo(18, -20); g.lineTo(26, 0); g.stroke();
+  // stem body
+  g.beginPath(); g.moveTo(-26, -60); g.quadraticCurveTo(-34, -24, -22, -12); g.lineTo(22, -12); g.quadraticCurveTo(34, -24, 26, -60); g.closePath(); fs(g, fl ? '#fff' : '#eadfc4', INK, 3.5);
+  g.strokeStyle = 'rgba(120,90,60,0.35)'; g.lineWidth = 2; for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(i * 10, -56); g.lineTo(i * 12, -16); g.stroke(); }
+  mask(g, 8, -44, 15, 14, 1.15, 1, fl ? '#fff' : BONE);
+  // gills and cap
+  g.fillStyle = fl ? '#fff' : '#b88a60'; g.beginPath(); g.moveTo(-58, -66); g.quadraticCurveTo(0, -48, 58, -66); g.lineTo(58, -70); g.lineTo(-58, -70); g.fill();
+  g.beginPath(); g.moveTo(-60, -66); g.quadraticCurveTo(-58, -118, 0, -120); g.quadraticCurveTo(58, -118, 60, -66); g.quadraticCurveTo(0, -56, -60, -66); g.closePath();
+  const gr = g.createLinearGradient(0, -120, 0, -60); gr.addColorStop(0, fl ? '#fff' : '#ff9a52'); gr.addColorStop(1, fl ? '#fff' : '#b8341e');
+  fs(g, gr, INK, 4);
+  g.fillStyle = fl ? '#fff' : '#fff1d8';
+  for (const [x, y, r] of [[-34, -92, 7], [-10, -106, 6], [16, -98, 8], [40, -84, 5], [-44, -74, 4], [4, -80, 5]]) { ellipse(g, x, y, r, r * 0.75); g.fill(); }
+  g.restore();
+};
+Art.boss.drowned = function (g, b, t) {          // barnacled diver in a round helm
+  const fl = b.flash > 0;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 2, 0);
+  telGlow(g, b, '#8fe0ff', 0, -70, 130);
+  const step = b.vx !== 0 ? Math.sin(t * 14) * 5 : 0;
+  g.strokeStyle = INK; g.lineWidth = 11; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-18, -34); g.lineTo(-22 + step, 0); g.moveTo(18, -34); g.lineTo(22 - step, 0); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#3a5a6a'; g.lineWidth = 6; g.stroke();
+  // torso
+  ellipse(g, 0, -62, 42, 36); fs(g, fl ? '#fff' : '#2c4656', INK, 4);
+  g.save(); ellipse(g, 0, -62, 42, 36); g.clip();
+  g.strokeStyle = INK; g.lineWidth = 3; for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(-44, -62 + i * 11); g.quadraticCurveTo(0, -52 + i * 11, 44, -62 + i * 11); g.stroke(); }
+  g.fillStyle = fl ? '#fff' : 'rgba(150,230,255,0.25)'; ellipse(g, -16, -80, 14, 6, -0.4); g.fill();
+  g.restore();
+  for (const [x, y] of [[-26, -40], [28, -50], [-8, -30], [12, -86]]) { ellipse(g, x, y, 5, 4); fs(g, fl ? '#fff' : '#d8d0b8', INK, 2); }
+  // helm with a glass port
+  ellipse(g, 12, -106, 26, 24); fs(g, fl ? '#fff' : '#6a7a80', INK, 4);
+  ellipse(g, 16, -106, 15, 14); fs(g, b.tele > 0 ? '#bff4ff' : 'rgba(40,90,110,0.9)', INK, 3);
+  mask(g, 16, -106, 10, 10, 1.1, 1, fl ? '#fff' : BONE);
+  bloom(g, 16, -106, 40, '#8fe0ff', 0.25);
+  // anchor arm
+  g.save(); g.translate(36, -72); g.rotate(b.tele > 0 ? -1.6 : (b.melee ? 0.4 : 0.9));
+  g.strokeStyle = INK; g.lineWidth = 12; g.beginPath(); g.moveTo(0, 0); g.lineTo(44, 0); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#3a5a6a'; g.lineWidth = 7; g.stroke();
+  g.strokeStyle = INK; g.lineWidth = 8; g.beginPath(); g.moveTo(44, -26); g.lineTo(44, 26); g.moveTo(44, 26); g.quadraticCurveTo(62, 22, 66, 8); g.moveTo(44, 26); g.quadraticCurveTo(26, 22, 22, 8); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#9aa6ac'; g.lineWidth = 4; g.stroke();
+  g.restore();
+  g.restore();
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#bff4ff'; g.fillRect(b.cx + Math.cos(a) * 30 - 3, b.y - 6 + Math.sin(a) * 6, 6, 6); }
+};
+Art.boss.brood = function (g, b, t) {            // great spider mother
+  const fl = b.flash > 0, ceil = b.onCeil;
+  g.save(); g.translate(b.cx, ceil ? b.y : b.y + b.h); if (ceil) g.scale(b.face, -1); else g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 2, 0);
+  telGlow(g, b, '#c8a8ff', 0, -40, 130);
+  const walk = b.vx !== 0 ? Math.sin(t * 18) * 5 : 0;
+  g.strokeStyle = INK; g.lineWidth = 5; g.lineCap = 'round';
+  for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+    const bx = s * (10 + i * 12), w = (i % 2 ? 1 : -1) * walk * s;
+    g.beginPath(); g.moveTo(bx * 0.6, -34); g.quadraticCurveTo(bx * 1.4, -70 + i * 4, bx * 1.9 + w, 0); g.stroke();
+  }
+  ellipse(g, -26, -44, 42, 32); fs(g, fl ? '#fff' : '#2a2238', INK, 4);
+  g.save(); ellipse(g, -26, -44, 42, 32); g.clip();
+  g.strokeStyle = fl ? '#fff' : 'rgba(200,168,255,0.45)'; g.lineWidth = 3;
+  for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-26, -44, 12 + i * 11, 0, 7); g.stroke(); }
+  g.restore();
+  ellipse(g, 26, -40, 22, 18); fs(g, fl ? '#fff' : '#3a3050', INK, 3.5);
+  mask(g, 34, -40, 14, 13, 1.15, 1, fl ? '#fff' : BONE);
+  if (b.tele > 0) { g.fillStyle = '#ff6a8a'; for (const [x, y] of [[28, -48], [40, -48], [34, -54]]) { ellipse(g, x, y, 2, 2); g.fill(); } }
+  g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.moveTo(46, -34); g.quadraticCurveTo(58, -28, 54, -18); g.moveTo(44, -30); g.quadraticCurveTo(50, -20, 44, -14); g.stroke();
+  g.restore();
+  if (ceil) { g.strokeStyle = 'rgba(230,230,245,0.6)'; g.lineWidth = 2; g.beginPath(); g.moveTo(b.cx, 0); g.lineTo(b.cx, b.y); g.stroke(); }
+};
+
+// ---------------------------------------------------------------- newer projectiles
+const baseDrawProj = Art.drawProj;
+Art.drawProj = function (g, p, t) {
+  if (p.kind === 'cloud') {
+    const k = clamp(p.t / 0.25, 0.3, 1), a = clamp(p.life / 0.4, 0, 1) * 0.55;
+    for (let i = 0; i < 5; i++) {
+      const x = p.x + Math.cos(i * 1.3 + t) * p.w * 0.25 * k, y = p.y + Math.sin(i * 1.7 + t * 1.2) * p.h * 0.2 * k;
+      glow(g, x, y, p.w * 0.4 * k, p.color, a);
+    }
+    return;
+  }
+  if (p.kind === 'web') {
+    g.save(); g.translate(p.x, p.y); g.rotate(p.t * 4);
+    bloom(g, 0, 0, 24, '#e6e0ff', 0.35);
+    g.strokeStyle = '#f0ecff'; g.lineWidth = 1.8;
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(-12, 0); g.lineTo(12, 0); g.stroke(); g.rotate(Math.PI / 4); }
+    g.strokeStyle = 'rgba(240,236,255,0.8)'; ellipse(g, 0, 0, 7, 7); g.stroke(); ellipse(g, 0, 0, 11, 11); g.stroke();
+    g.restore();
+    return;
+  }
+  baseDrawProj(g, p, t);
 };

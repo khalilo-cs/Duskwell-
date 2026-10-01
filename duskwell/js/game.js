@@ -2,7 +2,7 @@
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff' };
+const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
@@ -41,6 +41,20 @@ G.breakTile = function (tx, ty) {
   Sound.play('break'); G.shake(3, 0.12);
   G.burst(tx * TILE + 16, ty * TILE + 16, 12, { color: '#8d97a3', speed: 180, life: 0.6, size: 4 });
 };
+// cracked floors collapse as a whole connected piece
+G.breakCrack = function (tx, ty) {
+  const L = G.level, stack = [[tx, ty]];
+  let n = 0;
+  while (stack.length && n < 400) {
+    const [x, y] = stack.pop();
+    if (L.get(x, y) !== T_CRACK) continue;
+    L.set(x, y, T_AIR); G.flags['brk_' + L.id + '_' + x + '_' + y] = true; n++;
+    G.burst(x * TILE + 16, y * TILE + 16, 5, { color: '#9aa4b0', speed: 200, life: 0.7, size: 4 });
+    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  }
+  Sound.play('break'); G.shake(8, 0.3);
+};
+function sealCount() { return SEAL_FLAGS.filter(f => G.flags[f]).length; }
 G.toastMsg = function (text, dur) { G.toast = { text, t: 0, dur: dur || 2.2 }; };
 
 // ---------------------------------------------------------------- saving
@@ -68,7 +82,7 @@ function enterRoom(id, spawn) {
   G.signs = def.signs.map(s => ({ text: s.text, px: s.x * TILE + 16, py: (s.y + 1) * TILE }));
   G.gates = []; G.arena = null; G.boss = null; G.bossBarShow = false; G.doorLock = true;
   // persistent changes
-  for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) if (L.get(x, y) === T_BREAK && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR);
+  for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.get(x, y); if ((v === T_BREAK || v === T_CRACK) && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR); }
   for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; G.enemies.push(en); }
   for (const it of def.items) if (!G.flags[it.id]) G.items.push(new Item(it));
   if (G.shade && G.shade.room === id) {
@@ -84,6 +98,7 @@ function enterRoom(id, spawn) {
     let fy = a.spawn.y; while (fy < L.h - 1 && !L.solid(a.spawn.x, fy)) fy++;
     G.floorY = fy * TILE;
   }
+  if (def.sealGate && sealCount() < def.sealGate.need) closeGate(def.sealGate, true);
   // player placement
   if (spawn.bench) {
     const b = G.benches.find(b => b.room === id) || G.benches[0];
@@ -157,6 +172,7 @@ G.collectItem = function (it) {
   }
   G.flags[d.id] = true;
   if (d.kind === 'seed') { P.maxHp++; P.hp = P.maxHp; G.banner = { title: tr('seed'), desc: tr('seed_d'), t: 0 }; }
+  else if (d.kind === 'fang') { P.nail += 3; G.banner = { title: tr('fang'), desc: tr('fang_d'), t: 0, big: true }; }
   else if (d.kind === 'ability') {
     P.ab[d.ability] = true;
     G.banner = { title: tr('abil_' + d.ability), desc: tr('abil_' + d.ability + '_d'), t: 0, big: true };
@@ -169,6 +185,7 @@ G.onBossDying = function (b) { G.bossBarShow = true; };
 G.onBossDeath = function (b) {
   const a = G.arena; if (!a) return;
   a.state = 'won'; G.flags[a.def.flag] = true; G.boss = null; G.bossBarShow = false;
+  for (const e of G.enemies) if (e.kind === 'brood_child') e.dead = true;
   G.dropGeo(b.cx, b.cy, b.geo); G.flash = 0.8; Sound.boss(false);
   G.burst(b.cx, b.cy, 50, { color: '#ffffff', speed: 360, life: 1.2, size: 4, grav: -30 });
   openGates();
@@ -209,7 +226,10 @@ function interact() {
     G.state = 'dialog'; Sound.play('select'); return true;
   }
   const s = nearest(G.signs, P.cx, 54);
-  if (s) { G.dialog = { lines: [tr(s.text)], i: 0, t: 0 }; G.state = 'dialog'; Sound.play('select'); return true; }
+  if (s) {
+    const text = s.text === 'seal_gate' ? tr('seal_gate') + '  ' + sealCount() + ' / ' + SEAL_FLAGS.length : tr(s.text);
+    G.dialog = { lines: [text], i: 0, t: 0 }; G.state = 'dialog'; Sound.play('select'); return true;
+  }
   return false;
 }
 const SHOP_ITEMS = [
@@ -256,7 +276,7 @@ function updatePlay(dt) {
 
   // arena trigger
   const a = G.arena;
-  if (a && a.state === 'idle' && P.cx > a.def.trigger * TILE && P.onGround) {
+  if (a && a.state === 'idle' && ((a.def.triggerDir || 1) > 0 ? P.cx > a.def.trigger * TILE : P.cx < a.def.trigger * TILE) && P.onGround) {
     a.state = 'fight';
     for (const gt of a.def.gates) if (gt.close === 'start') closeGate(gt);
     const B = BOSS_TYPES[a.def.boss];
@@ -557,11 +577,14 @@ function drawWorld(g) {
   const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW, L.pw - vx), vh = Math.min(VH, L.ph - vy);
   if (vw > 0 && vh > 0) g.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
   for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(g, d, t, th);
+    else if (d.type === 'seals') Art.drawSeals(g, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
   // breakable walls and gates
   const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE)), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const v = L.get(x, y);
     if (v === T_BREAK) Art.drawBreak(g, x, y, th, t); else if (v === T_GATE) Art.drawGate(g, x, y, th, t);
+    else if (v === T_CRACK) Art.drawCrack(g, x, y, th, t);
+    else if (v === T_ACID) Art.drawAcid(g, x, y, L.get(x, y - 1) !== T_ACID, t);
   }
   for (const b of G.benches) Art.drawBench(g, b, t, P.sitting === b);
   for (const n of G.npcs) Art.drawNPC(g, n, t);

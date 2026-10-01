@@ -19,18 +19,18 @@ for (const id of W.order) {
   };
   r.enemies.forEach(e => {
     chk(e, 'enemy');
-    const ground = ['crawler', 'hopper', 'spitter', 'sentinel', 'shard'].includes(e.type);
+    const ground = ['crawler', 'hopper', 'spitter', 'sentinel', 'shard', 'shroom'].includes(e.type);
     if (ground) { const b = r.at(e.x, e.y + 1); if (b !== 1 && b !== 2 && b !== 4) { console.log('ENEMY NOT ON GROUND', id, e.type, e.x, e.y); errors++; } }
   });
   r.items.forEach(e => chk(e, 'item'));
-  r.benches.forEach(e => { chk(e, 'bench'); const b = r.at(e.x, e.y + 1); if (b !== 1 && b !== 2) { console.log('BENCH FLOATING', id, e.x, e.y); errors++; } });
+  r.benches.forEach(e => { chk(e, 'bench'); const b = r.at(e.x, e.y + 1); if (b !== 1 && b !== 2 && b !== 7) { console.log('BENCH FLOATING', id, e.x, e.y); errors++; } });
   if (only && only !== id) continue;
   if (process.argv[2] === undefined) continue;
   console.log('== ' + id + ' ' + r.w + 'x' + r.h);
   const ch = ' #-^B';
   for (let y = 0; y < r.h; y++) {
     let line = '';
-    for (let x = 0; x < r.w; x++) line += ' #-^%X'[r.at(x, y)] || '?';
+    for (let x = 0; x < r.w; x++) line += ' #-^%XmC~'[r.at(x, y)] || '?';
     const arr = line.split('');
     r.enemies.forEach(e => { if (e.y === y) arr[e.x] = e.type[0]; });
     r.items.forEach(e => { if (e.y === y) arr[e.x] = '*'; });

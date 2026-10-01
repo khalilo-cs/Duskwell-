@@ -789,6 +789,11 @@ function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
   Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
   const wake = () => Sound.init();
+  // tapping the picture focuses it for the keyboard and works as "confirm" on menus
+  G.canvas.addEventListener('pointerdown', () => {
+    try { G.canvas.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    if (G.state === 'title' || G.state === 'ending' || G.state === 'dialog' || G.state === 'banner') window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' })), window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' }));
+  });
   window.addEventListener('keydown', wake); window.addEventListener('pointerdown', wake);
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; } });
   Art.ambientInit();

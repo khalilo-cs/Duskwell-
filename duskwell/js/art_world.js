@@ -10,6 +10,7 @@ const THEMES = {
   spore:   { sky: ['#120804', '#3a200e', '#7a4a1c'], far: '#4a2a12', mid: '#2e190b', near: '#1a0e06', tile: '#221409', hi: '#ffb870', edge: '#060301', fog: '#e89a4a', part: '#ffd890', glow: '#ffb070', leaf: ['#e8742a', '#ffb070', '#d8a040', '#9e2f18'], name: 'spore' },
   aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
+  title:   { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#060a18', tile: '#0e1430', hi: '#9cc4ff', edge: '#020308', fog: '#5a6aa8', part: '#dfe8ff', glow: '#ffe9b0', name: 'title' },
   throne:  { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', tile: '#0e121e', hi: '#c6d6f4', edge: '#010203', fog: '#5e72a0', part: '#eef4ff', glow: '#ffe2a8', name: 'throne' },
 };
 
@@ -332,8 +333,66 @@ function drawCritters(g, th, camX, camY, t) {
     }
   }
 }
+// ---------- painted backgrounds ----------
+// art/bg/<area>/{sky,l0,l1,l2}.webp are painted offline by tools/paint (an opaque sky plus far,
+// mid and near layers, each tiling every PAINT_P logical px). Until an area's set has loaded,
+// or if it cannot load, the procedural layers below are drawn instead.
+const PAINT_P = 1600, PAINT_H = 700, PAINT_TOP = -40, SKY_Z = 160, PAINT_KEEP = 3;
+const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
+Art.loadPainted = function (theme) {
+  if (!THEMES[theme]) return;
+  if (painted.has(theme)) { const p = painted.get(theme); painted.delete(theme); painted.set(theme, p); return; }
+  const p = { imgs: [], n: 0, ready: false };
+  ['sky', 'l0', 'l1', 'l2'].forEach((k, i) => {
+    const im = new Image();
+    im.onload = () => { if (++p.n === 4) p.ready = true; };
+    im.src = 'art/bg/' + theme + '/' + k + '.webp';
+    p.imgs[i] = im;
+  });
+  painted.set(theme, p);
+  // each set is ~28 MB once decoded, so keep only the current area and its neighbours
+  while (painted.size > PAINT_KEEP) painted.delete(painted.keys().next().value);
+};
+function drawPainted(g, th, p, camX, camY, t) {
+  for (let li = 0; li < 4; li++) {
+    const f = depthFactor(li ? LAYER_Z[li - 1] : SKY_Z);
+    const off = -(((camX * f) % PAINT_P) + PAINT_P) % PAINT_P;
+    const y = PAINT_TOP - camY * f * VERTICAL_PARALLAX + (li ? 14 * (li - 2) : 0);
+    for (let x = off; x < VW; x += PAINT_P) g.drawImage(p.imgs[li], x, y, PAINT_P, PAINT_H);
+    if (li === 0) drawRays(g, th, camX);
+    if (li === 2) drawCritters(g, th, camX, camY, t);
+    if (li > 0) {
+      const fog = g.createLinearGradient(0, VH * 0.4, 0, VH);
+      fog.addColorStop(0, rgba(th.fog, 0)); fog.addColorStop(1, rgba(th.fog, 0.04 + li * 0.035));
+      g.fillStyle = fog; g.fillRect(0, 0, VW, VH);
+    }
+  }
+}
+function drawRays(g, th, camX) {
+  const n = th.name;
+  if (n === 'throne' || n === 'cave' || n === 'title') return;
+  for (let i = 0; i < 5; i++) {
+    const x = ((i * 280 - camX * 0.1) % (VW + 300) + VW + 300) % (VW + 300) - 120;
+    const ray = g.createLinearGradient(x, 0, x + 120, VH);
+    const rc = n === 'town' ? '255,200,130' : n === 'moss' ? '190,255,225' : '255,170,230';
+    ray.addColorStop(0, 'rgba(' + rc + ',0.13)'); ray.addColorStop(1, 'rgba(' + rc + ',0)');
+    g.fillStyle = ray; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 70, 0); g.lineTo(x + 220, VH); g.lineTo(x + 80, VH); g.fill();
+  }
+}
+// Title screen backdrop: true when the painted set was drawn.
+Art.drawTitleBackdrop = function (g, camX, t) {
+  const p = painted.get('title');
+  if (!p || !p.ready) return false;
+  const th = THEMES.title;
+  if (!th.critters) makeLayers(th);
+  drawPainted(g, th, p, camX, 0, t);
+  return true;
+};
 Art.drawBackground = function (g, L, camX, camY, t) {
   const th = THEMES[L.def.theme];
+  if (!th.critters) makeLayers(th);
+  const p = painted.get(L.def.theme);
+  if (p && p.ready) { drawPainted(g, th, p, camX, camY, t); return; }
   if (!th.layers) th.layers = makeLayers(th);
   const sky = g.createLinearGradient(0, 0, 0, VH);
   sky.addColorStop(0, th.sky[0]); sky.addColorStop(0.55, th.sky[1]); sky.addColorStop(1, th.sky[2]);
@@ -350,15 +409,7 @@ Art.drawBackground = function (g, L, camX, camY, t) {
     g.fillStyle = halo; g.fillRect(0, 0, VW, VH);
     g.strokeStyle = 'rgba(255,236,200,0.25)'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 110, 0, 7); g.stroke();
   }
-  if (n !== 'throne' && n !== 'cave') {
-    for (let i = 0; i < 5; i++) {
-      const x = ((i * 280 - camX * 0.1) % (VW + 300) + VW + 300) % (VW + 300) - 120;
-      const ray = g.createLinearGradient(x, 0, x + 120, VH);
-      const rc = n === 'town' ? '255,200,130' : n === 'moss' ? '190,255,225' : '255,170,230';
-      ray.addColorStop(0, 'rgba(' + rc + ',0.13)'); ray.addColorStop(1, 'rgba(' + rc + ',0)');
-      g.fillStyle = ray; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 70, 0); g.lineTo(x + 220, VH); g.lineTo(x + 80, VH); g.fill();
-    }
-  }
+  drawRays(g, th, camX);
   for (let li = 0; li < 3; li++) {
     g.save();
     const f = depthFactor(LAYER_Z[li]);

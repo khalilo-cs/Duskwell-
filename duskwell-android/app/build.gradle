@@ -8,8 +8,8 @@ android {
         applicationId 'com.duskwell.game'
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '1.1'
     }
     signingConfigs {
         release {
@@ -41,7 +41,7 @@ android {
 tasks.register('copyWeb', Copy) {
     doFirst { delete "${projectDir}/src/main/assets/www" }
     from("${rootDir}/../duskwell") {
-        include 'index.html', 'js/**'
+        include 'index.html', 'js/**', 'art/**', 'audio/**'
         filesMatching('index.html') {
             filter { String line ->
                 if (line.contains('rel="preconnect"')) return null

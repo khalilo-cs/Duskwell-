@@ -1,28 +1,129 @@
 'use strict';
-// Procedural sound effects and a slow ambient score. No audio files are needed.
+// Sound effects are synthesised on the fly. The score is recorded: one looping MP3 per area plus
+// two boss themes (audio/music, rendered by tools/music from the original compositions), streamed
+// through Web Audio so the loops are sample-exact. If those files cannot be fetched (for instance
+// when index.html is opened straight from disk) the score falls back to a plain <audio> element,
+// and failing that to the old procedural ambience, so the game always has music.
 const Sound = (() => {
-  let ctx = null, master = null, sfxBus = null, musicBus = null, delay = null;
-  let muted = false, theme = 'town', bossMode = false, timer = null, step = 0;
+  let ctx = null, master = null, sfxBus = null, musicBus = null, fileBus = null, delay = null;
+  let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
+  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed' };
+  const MUSIC_DIR = 'audio/music/';
+  const MUSIC_VOL = 0.8;
+  const MASTER_VOL = 0.55;
 
   function init() {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
-    master = ctx.createGain(); master.gain.value = muted ? 0 : 0.55; master.connect(ctx.destination);
+    master = ctx.createGain(); master.gain.value = muted ? 0 : MASTER_VOL; master.connect(ctx.destination);
     sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = 0.32; musicBus.connect(master);
-    // soft echo for the music
+    fileBus = ctx.createGain(); fileBus.gain.value = MUSIC_VOL; fileBus.connect(master);
+    // soft echo for the procedural fallback score
     delay = ctx.createDelay(1.5); delay.delayTime.value = 0.42;
     const fb = ctx.createGain(); fb.gain.value = 0.42;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
     delay.connect(lp); lp.connect(fb); fb.connect(delay); lp.connect(musicBus);
-    startMusic();
+    // no music while the tab or the Android app is in the background
+    document.addEventListener('visibilitychange', () => {
+      if (!ctx) return;
+      if (document.hidden) { ctx.suspend(); if (Score.el) Score.el.pause(); }
+      else { ctx.resume(); if (Score.el && !muted) Score.el.play().catch(() => {}); }
+    });
+    Score.start();
   }
+
+  // ------------------------------------------------------------------ recorded score
+  const Score = {
+    mode: 'pending',      // 'buffer' (Web Audio), 'element' (<audio>), 'synth' (procedural)
+    meta: null,           // music.json: { name: { loop: seconds, gain } }
+    cache: new Map(),     // decoded AudioBuffers, most recently used last
+    loading: new Map(),   // name -> Promise<AudioBuffer>
+    want: null, cur: null, el: null, fadeTimer: null,
+    start() {
+      const viaFile = location.protocol === 'file:';
+      const metaReq = viaFile ? Promise.reject(new Error('file')) : fetch(MUSIC_DIR + 'music.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+      metaReq.then(m => { this.meta = m; this.mode = 'buffer'; this.update(); })
+        .catch(() => { this.mode = 'element'; this.update(); });
+    },
+    desired() { return bossMode ? bossTrack : (TRACK[theme] || 'crossroads'); },
+    update() {
+      if (!ctx || this.mode === 'pending') return;
+      if (this.mode === 'synth') { if (!timer) startMusic(); return; }
+      const name = this.desired();
+      if (name === this.want) return;
+      this.want = name;
+      if (this.mode === 'buffer') {
+        this.load(name).then(buf => { if (this.want === name) this.playBuffer(name, buf); })
+          .catch(() => { if (this.want === name) { this.mode = 'element'; this.want = null; this.update(); } });
+      } else this.playElement(name);
+    },
+    load(name) {
+      if (this.cache.has(name)) { const b = this.cache.get(name); this.cache.delete(name); this.cache.set(name, b); return Promise.resolve(b); }
+      if (this.loading.has(name)) return this.loading.get(name);
+      const p = fetch(MUSIC_DIR + name + '.mp3')
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(data => new Promise((ok, fail) => { const q = ctx.decodeAudioData(data, ok, fail); if (q && q.catch) q.catch(fail); }))
+        .then(buf => {
+          this.loading.delete(name);
+          this.cache.set(name, buf);
+          // a decoded minute of stereo audio is ~20 MB, so keep only the newest two pieces
+          while (this.cache.size > 2) this.cache.delete(this.cache.keys().next().value);
+          return buf;
+        }, err => { this.loading.delete(name); throw err; });
+      this.loading.set(name, p);
+      return p;
+    },
+    prefetch(name) { if (ctx && this.mode === 'buffer' && name !== this.want) this.load(name).catch(() => {}); },
+    fadeOut(cur, sec) {
+      if (!cur) return;
+      const t = ctx.currentTime;
+      cur.gain.gain.cancelScheduledValues(t);
+      cur.gain.gain.setValueAtTime(cur.gain.gain.value, t);
+      cur.gain.gain.linearRampToValueAtTime(0, t + sec);
+      try { cur.src.stop(t + sec + 0.05); } catch (e) { /* already stopped */ }
+    },
+    playBuffer(name, buf) {
+      const info = (this.meta && this.meta[name]) || { loop: buf.duration, gain: 1 };
+      // Decoders that keep the MP3 encoder delay give ~1105 extra samples up front.
+      const lead = buf.duration - info.loop > 0.02 ? 1105 / 44100 : 0;
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      src.loopStart = lead; src.loopEnd = Math.min(buf.duration, lead + info.loop);
+      const gain = ctx.createGain();
+      src.connect(gain); gain.connect(fileBus);
+      const fade = bossMode ? 0.35 : 1.8;
+      const t = ctx.currentTime;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(info.gain, t + fade);
+      src.start(t, lead);
+      this.fadeOut(this.cur, bossMode ? 0.5 : 2.2);
+      this.cur = { name, src, gain };
+    },
+    playElement(name) {
+      const old = this.el;
+      const el = new Audio(MUSIC_DIR + name + '.mp3');
+      el.loop = true; el.volume = 0; el.muted = muted;
+      el.addEventListener('error', () => { if (this.el === el) { this.el = null; this.mode = 'synth'; this.update(); } });
+      this.el = el;
+      el.play().catch(() => {});
+      const target = MUSIC_VOL * MASTER_VOL * ((this.meta && this.meta[name] && this.meta[name].gain) || 0.8);
+      const t0 = performance.now(), ms = bossMode ? 400 : 1800;
+      clearInterval(this.fadeTimer);
+      this.fadeTimer = setInterval(() => {
+        const k = Math.min(1, (performance.now() - t0) / ms);
+        el.volume = target * k;
+        if (old) old.volume = Math.max(0, old.volume * (1 - k));
+        if (k >= 1) { clearInterval(this.fadeTimer); if (old) old.pause(); }
+      }, 50);
+    },
+  };
 
   function tone(o) {
     if (!ctx || muted) return;
@@ -98,7 +199,7 @@ const Sound = (() => {
   function startMusic() {
     if (timer) clearInterval(timer);
     timer = setInterval(() => {
-      if (!ctx || muted || ctx.state !== 'running') return;
+      if (!ctx || muted || ctx.state !== 'running' || Score.mode !== 'synth') return;
       step++;
       if (bossMode) {
         // pulse and tense line
@@ -118,14 +219,25 @@ const Sound = (() => {
   return {
     init,
     play(name) { try { if (FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
-    setTheme(t) { if (t !== theme) { theme = t; } },
-    boss(on) { if (bossMode !== on) { bossMode = on; if (ctx) startMusic(); } },
+    // area theme: 'title', 'town', 'cave', 'moss', ... (see TRACK)
+    setTheme(t) { if (t !== theme) { theme = t; Score.update(); } },
+    // boss music on/off; the final boss has a theme of its own
+    boss(on, final) {
+      const track = final ? 'king' : 'boss';
+      if (bossMode === on && (!on || bossTrack === track)) return;
+      bossMode = on; if (on) bossTrack = track;
+      if (ctx && Score.mode === 'synth') startMusic();
+      Score.update();
+    },
+    prefetch(final) { Score.prefetch(final ? 'king' : 'boss'); },
     toggle() {
       muted = !muted;
       try { localStorage.setItem('duskwell_mute', muted ? '1' : '0'); } catch (e) { /* ignore */ }
-      if (master) master.gain.value = muted ? 0 : 0.55;
+      if (master) master.gain.value = muted ? 0 : MASTER_VOL;
+      if (Score.el) Score.el.muted = muted;
       return !muted;
     },
     isOn: () => !muted,
+    musicState: () => ({ mode: Score.mode, want: Score.want, playing: Score.cur ? Score.cur.name : (Score.el ? Score.el.src : null), cached: [...Score.cache.keys()] }),
   };
 })();

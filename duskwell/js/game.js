@@ -118,6 +118,11 @@ function enterRoom(id, spawn) {
   }
   G.visited[id] = true;
   Sound.setTheme(def.theme); Sound.boss(false);
+  // painted backdrops for this area, then for the areas behind its doors so they are ready in time
+  Art.loadPainted(def.theme);
+  for (const d of def.doors) { const n = WORLD.rooms[d.to]; if (n && n.theme !== def.theme) Art.loadPainted(n.theme); }
+  Art.loadPainted(def.theme);
+  if (def.arena && !G.flags[def.arena.flag]) Sound.prefetch(def.arena.boss === 'king');
   Art.ambientInit();
   snapCamera();
   if (def.area !== G.lastArea) { G.areaBanner = { key: 'area_' + def.area, t: 0, color: AREA_COLORS[def.area] }; G.lastArea = def.area; }
@@ -190,7 +195,7 @@ G.onBossDeath = function (b) {
   G.burst(b.cx, b.cy, 50, { color: '#ffffff', speed: 360, life: 1.2, size: 4, grav: -30 });
   openGates();
   if (a.def.reward) G.items.push(new Item({ id: a.def.reward.id, x: a.def.reward.x, y: a.def.reward.y, kind: a.def.reward.kind, ability: a.def.reward.ability }));
-  if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; }, 2.2, 0.4, 1.5); saveGame(); }
+  if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; Sound.setTheme('title'); }, 2.2, 0.4, 1.5); saveGame(); }
 };
 
 function startGame(useSave) {
@@ -282,7 +287,7 @@ function updatePlay(dt) {
     const B = BOSS_TYPES[a.def.boss];
     const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
     G.enemies.push(boss); G.boss = boss;
-    Sound.boss(true);
+    Sound.boss(true, a.def.boss === 'king');
   }
 
   // doors
@@ -385,7 +390,7 @@ function updatePause() {
     else if (id === 'map') G.state = 'map';
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
-    else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
+    else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
 }
 
@@ -431,7 +436,7 @@ function update(dt) {
     case 'dialog': updateDialog(dt); updateParticles(dt); break;
     case 'shop': updateShop(); break;
     case 'banner': updateBanner(dt); updateParticles(dt); for (const it of G.items) it.t += dt; break;
-    case 'ending': G.ending.t += dt; if (G.ending.t > 4 && Input.pressed('confirm')) { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.hasSave = readSave() !== null; G.menuSel = 0; }, 0.6, 0.2, 0.6); } break;
+    case 'ending': G.ending.t += dt; if (G.ending.t > 4 && Input.pressed('confirm')) { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.hasSave = readSave() !== null; G.menuSel = 0; Sound.setTheme('title'); }, 0.6, 0.2, 0.6); } break;
     case 'dying': {
       let d = dt; if (G.slowmo > 0) { G.slowmo -= dt; d = dt * 0.35; }
       updateDying(dt); updateParticles(d); break;
@@ -668,22 +673,29 @@ function drawMap(g) {
 
 function drawTitle(g) {
   const t = G.t;
-  const sky = g.createLinearGradient(0, 0, 0, VH); sky.addColorStop(0, '#04060e'); sky.addColorStop(0.6, '#10183a'); sky.addColorStop(1, '#2a2552');
-  g.fillStyle = sky; g.fillRect(0, 0, VW, VH);
-  for (let i = 0; i < 70; i++) { const x = hash2(i, 1, 7) * VW, y = hash2(i, 2, 7) * VH * 0.65; g.fillStyle = 'rgba(255,255,255,' + (0.2 + 0.6 * Math.abs(Math.sin(t + i))) + ')'; g.fillRect(x, y, 2, 2); }
-  g.fillStyle = 'rgba(255,240,205,0.9)'; g.beginPath(); g.arc(VW * 0.74, 140, 52, 0, 7); g.fill();
-  glow(g, VW * 0.74, 140, 200, '#ffe9b0', 0.25);
+  Art.loadPainted('title');
+  // painted moonlit kingdom drifting slowly past; the procedural version stands in until it loads
+  const painted = Art.drawTitleBackdrop(g, 260 + t * 14, t);
+  if (!painted) {
+    const sky = g.createLinearGradient(0, 0, 0, VH); sky.addColorStop(0, '#04060e'); sky.addColorStop(0.6, '#10183a'); sky.addColorStop(1, '#2a2552');
+    g.fillStyle = sky; g.fillRect(0, 0, VW, VH);
+    g.fillStyle = 'rgba(255,240,205,0.9)'; g.beginPath(); g.arc(VW * 0.74, 140, 52, 0, 7); g.fill();
+    glow(g, VW * 0.74, 140, 200, '#ffe9b0', 0.25);
+  }
+  for (let i = 0; i < 70; i++) { const x = hash2(i, 1, 7) * VW, y = hash2(i, 2, 7) * VH * 0.65; g.fillStyle = 'rgba(255,255,255,' + ((painted ? 0.1 : 0.2) + 0.6 * Math.abs(Math.sin(t + i)) * (painted ? 0.5 : 1)) + ')'; g.fillRect(x, y, 2, 2); }
   // silhouette hills and kingdom
-  g.fillStyle = '#0a0f24';
-  g.beginPath(); g.moveTo(0, VH); g.lineTo(0, 400);
-  for (let x = 0; x <= VW; x += 40) g.lineTo(x, 390 + Math.sin(x * 0.011) * 30 + Math.sin(x * 0.031) * 12);
-  g.lineTo(VW, VH); g.fill();
+  if (!painted) {
+    g.fillStyle = '#0a0f24';
+    g.beginPath(); g.moveTo(0, VH); g.lineTo(0, 400);
+    for (let x = 0; x <= VW; x += 40) g.lineTo(x, 390 + Math.sin(x * 0.011) * 30 + Math.sin(x * 0.031) * 12);
+    g.lineTo(VW, VH); g.fill();
+  }
   g.fillStyle = '#060a18';
   g.beginPath(); g.moveTo(0, VH); g.lineTo(0, 470);
   for (let x = 0; x <= VW; x += 30) g.lineTo(x, 455 + Math.sin(x * 0.02 + 2) * 22);
   g.lineTo(VW, VH); g.fill();
   // tower ruins
-  for (const [x, h] of [[600, 180], [660, 120], [720, 210], [800, 140]]) {
+  if (!painted) for (const [x, h] of [[600, 180], [660, 120], [720, 210], [800, 140]]) {
     g.fillStyle = '#080c1c'; g.fillRect(x, 420 - h, 34, h + 40); g.beginPath(); g.moveTo(x - 4, 420 - h); g.lineTo(x + 17, 420 - h - 36); g.lineTo(x + 38, 420 - h); g.fill();
     g.fillStyle = 'rgba(255,214,130,0.6)'; g.fillRect(x + 12, 420 - h + 30, 8, 12);
   }

@@ -1,0 +1,46 @@
+{
+ "aqueduct": {
+  "loop": 109.7143,
+  "gain": 0.776
+ },
+ "boss": {
+  "loop": 53.3333,
+  "gain": 0.868
+ },
+ "crossroads": {
+  "loop": 106.6667,
+  "gain": 0.917
+ },
+ "crystal": {
+  "loop": 73.8462,
+  "gain": 0.812
+ },
+ "hushvale": {
+  "loop": 72.0,
+  "gain": 0.956
+ },
+ "king": {
+  "loop": 58.1818,
+  "gain": 0.808
+ },
+ "moss": {
+  "loop": 91.4286,
+  "gain": 0.657
+ },
+ "spore": {
+  "loop": 76.8,
+  "gain": 0.724
+ },
+ "throne": {
+  "loop": 68.5714,
+  "gain": 0.69
+ },
+ "title": {
+  "loop": 87.2727,
+  "gain": 0.88
+ },
+ "webbed": {
+  "loop": 66.2069,
+  "gain": 0.689
+ }
+}

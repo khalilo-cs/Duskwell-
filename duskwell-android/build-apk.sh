@@ -8,8 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION_CODE="${VERSION_CODE:-1}"
-VERSION_NAME="${VERSION_NAME:-1.0}"
+VERSION_CODE="${VERSION_CODE:-2}"
+VERSION_NAME="${VERSION_NAME:-1.1}"
 PACKAGE="com.duskwell.game"
 KEYSTORE="${KEYSTORE:-sideload.keystore}"
 ALIAS="${ALIAS:-duskwell}"
@@ -30,6 +30,9 @@ rm -rf "$B" && mkdir -p "$B/assets/www" "$B/gen" "$B/classes" "$B/dex" "$B/signe
 echo ">> copying the game"
 cp ../duskwell/index.html "$B/assets/www/"
 cp -r ../duskwell/js "$B/assets/www/js"
+# painted backgrounds and the recorded score (the composing and painting tools stay out of the app)
+cp -r ../duskwell/art "$B/assets/www/art"
+cp -r ../duskwell/audio "$B/assets/www/audio"
 cp -r fonts "$B/assets/www/fonts"
 # web fonts come from the APK instead of Google, so the app works offline
 python3 - "$B/assets/www/index.html" <<'PY'

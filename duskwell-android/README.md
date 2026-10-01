@@ -2,6 +2,8 @@
 
 غلاف WebView يشغّل اللعبة من مجلد `../duskwell` من داخل التطبيق نفسه، **بلا إنترنت وبلا أي صلاحيات**. الخطوط (Cairo وCinzel، رخصة SIL OFL) مضمّنة في `fonts/`.
 
+الإصدار 1.1 (versionCode 2) يضمّ الموسيقى المسجّلة (`audio/`) والخلفيات المرسومة (`art/`)، ولذلك صار حجمه نحو 18 ميغابايت. يُثبَّت فوق الإصدار 1.0 مباشرة ويحتفظ بالحفظ لأنه موقّع بالمفتاح نفسه.
+
 ## تثبيت الـ APK الجاهز
 1. انقل `duskwell.apk` إلى هاتفك وافتحه.
 2. إن ظهر تنبيه، فعّل «السماح بالتثبيت من هذا المصدر».
@@ -12,7 +14,7 @@
 **بدون Android Studio** (يكفي JDK 17+ وpython3 وcurl وunzip):
 ```
 ./build-apk.sh                      # الناتج: duskwell.apk
-VERSION_CODE=2 VERSION_NAME=1.1 ./build-apk.sh
+VERSION_CODE=3 VERSION_NAME=1.2 ./build-apk.sh
 ```
 يُنزّل السكربت أدواته مرة واحدة إلى `.tools/`، وكلها من Maven Central وGitHub:
 - `aapt2` من حزمة apktool.

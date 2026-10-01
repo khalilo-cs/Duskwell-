@@ -47,6 +47,8 @@ public class PlayerController2D : MonoBehaviour
     public int Facing { get; private set; } = 1;
     public bool DoubleJumpAvailable { get; private set; }
     public Vector2 Velocity => rb.velocity;
+    // Set by abilities that root the player in place (focus healing, cutscenes).
+    public bool MovementLocked { get; set; }
     // Raised on landing and on pogo; a dash script subscribes to refill its air charge.
     public event System.Action AirActionsReset;
 
@@ -89,7 +91,7 @@ public class PlayerController2D : MonoBehaviour
     void Update()
     {
         ReadInput();
-        if (Mathf.Abs(moveInput) > 0.01f && controlLockTimer <= 0f) SetFacing(moveInput > 0 ? 1 : -1);
+        if (Mathf.Abs(moveInput) > 0.01f && controlLockTimer <= 0f && !MovementLocked) SetFacing(moveInput > 0 ? 1 : -1);
 
         // timers run in Update so short taps between physics steps are never lost
         coyoteTimer -= Time.deltaTime;
@@ -111,10 +113,11 @@ public class PlayerController2D : MonoBehaviour
 
         // ---- horizontal: instantaneous, no easing ----
         if (controlLockTimer > 0f) v.x = lockedVelocity.x;
+        else if (MovementLocked) v.x = 0f;
         else v.x = moveInput * runSpeed;
 
         // ---- jumping ----
-        if (jumpBufferTimer > 0f)
+        if (jumpBufferTimer > 0f && !MovementLocked)
         {
             if (IsGrounded || coyoteTimer > 0f)
             {

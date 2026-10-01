@@ -69,7 +69,7 @@ public class PlayerCombat : MonoBehaviour
     public float recoilTime = 0.08f;
 
     [Header("Hit stop")]
-    [Tooltip("Real-time seconds the game freezes on a hit. 0 disables it.")]
+    [Tooltip("Real-time seconds the game freezes on a hit (shared HitStop clock). 0 disables it.")]
     public float hitStopTime = 0.05f;
 
     // Raised for every target struck: use it to add soul, play sparks, shake the camera.
@@ -83,7 +83,6 @@ public class PlayerCombat : MonoBehaviour
     readonly HashSet<Collider2D> struckThisSwing = new HashSet<Collider2D>();
     bool bouncedThisSwing;
     bool recoiledThisSwing;
-    bool inHitStop;
 
     public bool IsAttacking => activeBox != null;
     public AttackDirection CurrentDirection => currentDirection;
@@ -182,21 +181,6 @@ public class PlayerCombat : MonoBehaviour
             controller.ApplyRecoil(new Vector2(-facing * recoilSpeed, 0f), recoilTime);
         }
 
-        if (hitStopTime > 0f && !inHitStop) StartCoroutine(HitStop());
-    }
-
-    IEnumerator HitStop()
-    {
-        inHitStop = true;
-        float previous = Time.timeScale;
-        Time.timeScale = 0f;
-        yield return new WaitForSecondsRealtime(hitStopTime);
-        Time.timeScale = previous > 0f ? previous : 1f;
-        inHitStop = false;
-    }
-
-    void OnDisable()
-    {
-        if (inHitStop) { Time.timeScale = 1f; inHitStop = false; }
+        HitStop.Freeze(hitStopTime);
     }
 }

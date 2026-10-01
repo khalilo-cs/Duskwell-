@@ -1,6 +1,7 @@
 package com.duskwell.game;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -9,6 +10,7 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -38,6 +40,8 @@ public class MainActivity extends Activity {
         + "return 'handled';})()";
 
     private WebView web;
+    private static final int PICK_IMAGE = 41;
+    private ValueCallback<Uri[]> pendingPick;   // the page's <input type=file> waiting for a picture
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -80,6 +84,25 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !HOST.equals(request.getUrl().getHost());   // stay inside the game
+            }
+        });
+
+        // "Your images" in the pause menu: let the page's file input open the system picture picker
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (pendingPick != null) pendingPick.onReceiveValue(null);
+                pendingPick = callback;
+                Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("image/*");
+                try {
+                    startActivityForResult(Intent.createChooser(pick, null), PICK_IMAGE);
+                } catch (Exception e) {
+                    pendingPick = null;
+                    return false;
+                }
+                return true;
             }
         });
 
@@ -157,6 +180,15 @@ public class MainActivity extends Activity {
                 if ("\"exit\"".equals(result)) finish();
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_IMAGE || pendingPick == null) return;
+        Uri picked = resultCode == RESULT_OK && data != null ? data.getData() : null;
+        pendingPick.onReceiveValue(picked != null ? new Uri[] { picked } : null);
+        pendingPick = null;
     }
 
     @Override

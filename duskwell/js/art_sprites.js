@@ -233,7 +233,9 @@ Art.drawPlayer = function (g, p, t) {
     g.strokeStyle = rgba('#e8f6ff', 0.75); g.lineWidth = 2.5; ellipse(g, p.cx, p.cy - 4, 28 - k * 12, 36 - k * 14); g.stroke();
   }
   bloom(g, p.cx, p.cy - 8, 46, '#9cc4ff', 0.08);
-  wanderer(g, p.cx, p.y + p.h + (p.sitting ? 4 : 0), p.face, o, alpha, null);
+  const skin = Skins.get('player');                   // a picture chosen in "Your images"
+  if (skin) { g.save(); g.globalAlpha = alpha; Skins.draw(g, skin, { x: p.x, y: p.y, w: p.w, h: p.h }, p.face, 0, 1.5); g.restore(); }
+  else wanderer(g, p.cx, p.y + p.h + (p.sitting ? 4 : 0), p.face, o, alpha, null);
   if (p.atkT > 0) {
     const pr = 1 - clamp(p.atkT / 0.16, 0, 1), a = 1 - pr * 0.7, f = p.face, m = p.atkAlt ? 1 : -1;
     let cx = p.cx, cy = p.cy - 4, a0, a1;

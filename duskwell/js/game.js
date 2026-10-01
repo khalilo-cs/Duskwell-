@@ -381,10 +381,11 @@ function titleItems() {
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
-    { id: 'lang', label: tr('lang') }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 function updatePause() {
   const items = pauseItems();
+  if (Skins.isOpen()) return;
   if (Input.pressed('pause')) { G.state = 'play'; Input.consume('pause'); return; }
   if (menuNav(items.length)) {
     Sound.play('confirm');
@@ -393,6 +394,7 @@ function updatePause() {
     else if (id === 'map') G.state = 'map';
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
+    else if (id === 'skins') Skins.open();
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
 }
@@ -606,7 +608,9 @@ function drawWorld(g) {
   for (const it of G.items) Art.drawItem(g, it, t);
   for (const c of G.geos) Art.drawGeo(g, c, t);
   for (const e of G.enemies) {
-    if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](g, e, t); }
+    const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
+    if (skin) Skins.draw(g, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
+    else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](g, e, t); }
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](g, e, t);
   }
   Art.drawPlayer(g, P, t);

@@ -1,0 +1,55 @@
+// Android Studio / Gradle build. The same APK can be built without the SDK by ./build-apk.sh.
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.duskwell.game'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.duskwell.game'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    signingConfigs {
+        release {
+            if (project.hasProperty('playKeystore')) {
+                // your private Google Play upload key: gradle :app:bundleRelease -PplayKeystore=... -PplayStorePass=... -PplayKeyAlias=... -PplayKeyPass=...
+                storeFile file(project.property('playKeystore'))
+                storePassword project.property('playStorePass')
+                keyAlias project.property('playKeyAlias')
+                keyPassword project.property('playKeyPass')
+            } else {
+                // public sideload key (password in README); never use it for Google Play
+                storeFile file('../sideload.keystore')
+                storePassword 'duskwell'
+                keyAlias 'duskwell'
+                keyPassword 'duskwell'
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+
+// Copy the web game into the APK's assets and point it at the bundled fonts (works offline).
+tasks.register('copyWeb', Copy) {
+    doFirst { delete "${projectDir}/src/main/assets/www" }
+    from("${rootDir}/../duskwell") {
+        include 'index.html', 'js/**'
+        filesMatching('index.html') {
+            filter { String line ->
+                if (line.contains('rel="preconnect"')) return null
+                line.contains('fonts.googleapis.com/css2') ? '<link href="fonts/fonts.css" rel="stylesheet">' : line
+            }
+        }
+    }
+    from("${rootDir}/fonts") { into 'fonts' }
+    into "${projectDir}/src/main/assets/www"
+}
+preBuild.dependsOn 'copyWeb'

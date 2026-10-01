@@ -1,0 +1,44 @@
+# تطبيق أندرويد — أرض الغسق
+
+غلاف WebView يشغّل اللعبة من مجلد `../duskwell` من داخل التطبيق نفسه، **بلا إنترنت وبلا أي صلاحيات**. الخطوط (Cairo وCinzel، رخصة SIL OFL) مضمّنة في `fonts/`.
+
+## تثبيت الـ APK الجاهز
+1. انقل `duskwell.apk` إلى هاتفك وافتحه.
+2. إن ظهر تنبيه، فعّل «السماح بالتثبيت من هذا المصدر».
+3. الحد الأدنى: Android 8.0 (API 26). اللعبة أفقية، وفيها أزرار لمس، وتعمل مع يد التحكم.
+4. زر الرجوع: في شاشة البداية يغلق التطبيق، وأثناء اللعب يفتح قائمة الإيقاف ويغلقها.
+
+## إعادة البناء
+**بدون Android Studio** (يكفي JDK 17+ وpython3 وcurl وunzip):
+```
+./build-apk.sh                      # الناتج: duskwell.apk
+VERSION_CODE=2 VERSION_NAME=1.1 ./build-apk.sh
+```
+يُنزّل السكربت أدواته مرة واحدة إلى `.tools/`، وكلها من Maven Central وGitHub:
+- `aapt2` من حزمة apktool.
+- `android.jar` للإصدار API 34.
+- `dx` لتحويل الشيفرة إلى dex.
+- `apksig` من Google للتوقيع.
+
+بعد التنزيل يبني التطبيق ويحاذيه ويوقّعه بتوقيع v2، ثم يتحقق من التوقيع.
+
+**مع Android Studio أو Gradle**: افتح هذا المجلد واختر `Build > Build APK(s)`، أو نفّذ `gradle :app:assembleRelease`. ينسخ مشروع Gradle ملفات اللعبة إلى الأصول تلقائياً قبل كل بناء.
+
+بعد أي تعديل على `../duskwell` أعد البناء ليدخل الجديد في التطبيق.
+
+## التوقيع
+- **مفتاح التثبيت المباشر:** الملف `sideload.keystore` (الاسم المستعار `duskwell`، وكلمة السر `duskwell`) علني في المستودع. يلزم لكي تُثبَّت التحديثات فوق النسخة القديمة. **لا ترفع به إلى Google Play.**
+- **لمتجر Google Play** أنشئ مفتاحك الخاص واحفظه بسرية:
+  ```
+  keytool -genkeypair -keystore my.keystore -alias me -keyalg RSA -keysize 2048 -validity 36500
+  KEYSTORE=my.keystore ALIAS=me PASS=... ./build-apk.sh
+  ```
+  يطلب المتجر ملف AAB لا APK، فابنِه من Gradle: `gradle :app:bundleRelease -PplayKeystore=my.keystore -PplayStorePass=... -PplayKeyAlias=me -PplayKeyPass=...`
+
+## المحتوى
+| المسار | ما هو |
+| --- | --- |
+| `app/src/main/java/com/duskwell/game/MainActivity.java` | WebView بملء الشاشة. يخدم ملفات اللعبة من العنوان `https://appassets.androidplatform.net/` ليبقى الحفظ ثابتاً، ويرفض أي طلب خارجي، ويخفي أشرطة النظام، ويمنع انطفاء الشاشة، ويربط زر الرجوع بقائمة الإيقاف |
+| `app/src/main/res` | الأيقونة التكيّفية، وهي شخصية الجوّال من رسومات اللعبة، واسم التطبيق |
+| `build-apk.sh`، `tools/` | البناء بدون SDK: المحاذاة (`zipalign.py`) والتوقيع والتحقق (`SignApk.java`) |
+| `store/icon-512.png` | أيقونة المتجر |

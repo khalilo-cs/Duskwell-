@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Smooth follow for an orthographic 2D camera, kept inside the current room.
+// Smooth follow for an orthographic 2D camera, kept inside the current room, with screen shake.
 [RequireComponent(typeof(Camera))]
 public class CameraFollow2D : MonoBehaviour
 {
@@ -19,10 +19,13 @@ public class CameraFollow2D : MonoBehaviour
 
     Camera cam;
     Vector3 velocity;
+    Vector3 basePosition;                       // followed position before shake is added
+    float shakeTimer, shakeDuration, shakeAmplitude;
 
     void Awake()
     {
         cam = GetComponent<Camera>();
+        basePosition = transform.position;
         if (roomBounds != null) SetBounds(roomBounds.bounds);
     }
 
@@ -32,9 +35,18 @@ public class CameraFollow2D : MonoBehaviour
         hasBounds = true;
         if (snap && target != null)
         {
-            transform.position = ClampToBounds(DesiredPosition());
+            basePosition = ClampToBounds(DesiredPosition());
+            transform.position = basePosition;
             velocity = Vector3.zero;
         }
+    }
+
+    // Shake that fades out over "duration" real seconds. A stronger request replaces a weaker one.
+    public void Shake(float amplitude, float duration)
+    {
+        if (amplitude < shakeAmplitude * (shakeTimer / Mathf.Max(0.0001f, shakeDuration))) return;
+        shakeAmplitude = amplitude;
+        shakeDuration = shakeTimer = Mathf.Max(0.01f, duration);
     }
 
     Vector3 DesiredPosition()
@@ -50,15 +62,25 @@ public class CameraFollow2D : MonoBehaviour
         Vector3 next;
         if (useSmoothDamp)
         {
-            next = transform.position;
-            next.x = Mathf.SmoothDamp(transform.position.x, goal.x, ref velocity.x, smoothTimeX);
-            next.y = Mathf.SmoothDamp(transform.position.y, goal.y, ref velocity.y, smoothTimeY);
+            next = basePosition;
+            next.x = Mathf.SmoothDamp(basePosition.x, goal.x, ref velocity.x, smoothTimeX);
+            next.y = Mathf.SmoothDamp(basePosition.y, goal.y, ref velocity.y, smoothTimeY);
         }
         else
         {
-            next = Vector3.Lerp(transform.position, goal, 1f - Mathf.Exp(-lerpSpeed * Time.deltaTime));
+            next = Vector3.Lerp(basePosition, goal, 1f - Mathf.Exp(-lerpSpeed * Time.deltaTime));
         }
-        transform.position = ClampToBounds(next);
+        basePosition = ClampToBounds(next);
+
+        Vector3 shake = Vector3.zero;
+        if (shakeTimer > 0f)
+        {
+            shakeTimer -= Time.unscaledDeltaTime;       // keeps shaking through hit stop
+            float k = Mathf.Clamp01(shakeTimer / shakeDuration);
+            Vector2 r = Random.insideUnitCircle * shakeAmplitude * k;
+            shake = new Vector3(r.x, r.y, 0f);
+        }
+        transform.position = basePosition + shake;
     }
 
     // Keep the whole view inside the room; centre it when the room is smaller than the view.

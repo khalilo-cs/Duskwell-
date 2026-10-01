@@ -19,7 +19,18 @@ They compile cleanly against stand-in UnityEngine types; they have not been run 
 | `SaveSystem.cs` | `SaveData` (bench, max masks, abilities, flags, deaths, play time) stored as JSON in `PlayerPrefs` | Static, nothing to attach |
 | `ScreenFader.cs` | Full-screen black fade on unscaled time, used by deaths and room changes | A black UI Image with a CanvasGroup |
 | `HUD.cs` | Mask icons that rebuild on upgrades and flash when one breaks; soul vessel whose level eases toward the real value and pulses when a heal is affordable | The Canvas |
-| `CameraFollow2D.cs` | `SmoothDamp` (or `Vector3.Lerp`) follow with look-ahead, clamped to the room's `BoxCollider2D` bounds | Main Camera (orthographic) |
+| `PersistentRoot.cs` | Keeps the player, camera, UI and managers alive across scene loads; a duplicate destroys itself | One root object holding all of them |
+| `RoomTransition.cs` | Doorway at a room edge: id, target scene and door, which edge it sits on, spawn point and the room's camera bounds; re-arms only after the player steps out | Each doorway trigger |
+| `RoomManager.cs` | Fade out, load the target scene asynchronously if needed, place the player at the matching door, clamp the camera, entry motion (side doors walk in, floor openings pop up, ceiling openings fall in), fade in | Persistent root |
+| `PlayerDash.cs` | Gravity-free horizontal burst toward the held direction, cooldown, one air dash refilled by landing, wall cling or pogo; `unlocked` flag | Player |
+| `PlayerWallJump.cs` | Wall sensors, slow slide while holding toward a wall, wall jump with input lock and coyote grace, faces away from the wall, refills air actions; `unlocked` flag | Player |
+| `AbilityPickup.cs` | Grants Dash, Wall Jump or Double Jump once and saves its flag; removes itself if already collected | Ability relic |
+| `StoneGuardianBoss.cs` | First boss as a `switch (currentState)` FSM: Dormant, Intro, Idle, Leap (shockwaves on landing), Slam (club hitbox, forward wave, falling rocks), Charge (until a wall) then Stunned, Dying, Dead. Phase two below half health: faster wind-ups and more rocks | Boss |
+| `Shockwave.cs` | Ground wave that travels, hurts on touch and breaks on walls | Prefab |
+| `FallingRock.cs` | Warning marker on the floor, then a falling rock that hurts and shatters | Prefab |
+| `BossArena.cs` | Seals the gates when the player walks in, wakes the boss, saves the flag and reveals the reward on victory, resets everything if the player dies | Trigger inside the arena |
+| `BossHealthBar.cs` | Boss name and health with a trailing lag bar, driven by static `BossEvents` so it works across scenes | Persistent canvas |
+| `CameraFollow2D.cs` | `SmoothDamp` (or `Vector3.Lerp`) follow with look-ahead, clamped to the room's `BoxCollider2D` bounds, and `Shake(amplitude, duration)` that keeps running through hit stop | Main Camera (orthographic) |
 | `ParallaxLayer.cs` | Moves a layer by `z / (cameraDistance + z)` of the camera's motion, so far layers look slow and negative-z foreground looks fast; optional horizontal looping | Each background / foreground sprite |
 
 ## Scene setup in short
@@ -30,6 +41,9 @@ They compile cleanly against stand-in UnityEngine types; they have not been run 
 5. **Spikes**: a trigger with the `Hazard` component, on layer `Hazard` and tagged `Hazard`, so touching costs a mask and a down strike bounces off.
 6. **Benches**: a trigger with `Bench`, a child `sitPoint`, a unique `benchId` and the room's bounds collider.
 7. **UI**: a Screen Space Overlay Canvas with `HUD` (mask container with a Horizontal Layout Group, a mask Image prefab, a Filled vertical soul Image) and a full-screen black Image with `ScreenFader`.
-8. **Game manager**: an empty object with `GameManager`; drag in the player's `PlayerHealth`, `PlayerController2D`, `PlayerSoul`, the camera, the fader, the start bench and every bench.
+8. **Persistent root**: one root object with `PersistentRoot` holding the player, the camera, the canvas, `GameManager` and `RoomManager`. Drag the player's components, the camera, the fader and the start bench into `GameManager`.
+9. **Rooms**: each room has a `BoxCollider2D` (trigger, on an ignored layer) marking its bounds. Each doorway is a `RoomTransition` with a unique `doorId`, the `targetScene` and `targetDoorId` of the matching door, the edge it sits on and a spawn point one or two tiles inside the room. Add every scene to Build Settings.
+10. **Abilities**: add `PlayerDash` (map `Dash`, or keep `Fire3`) and `PlayerWallJump` (wall mask = Ground) to the player with `unlocked` off; place `AbilityPickup` relics, or use one as a boss reward.
+11. **Boss**: build the arena with gate objects (inactive, solid when active), a `BossArena` trigger a few tiles past the entrance, the `StoneGuardianBoss` with its slam hitbox, ground check, arena edge markers and the `Shockwave` / `FallingRock` prefabs, and a `BossHealthBar` on the canvas.
 
 Tuning notes are in each field's `[Tooltip]`, visible in the Inspector.

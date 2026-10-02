@@ -101,6 +101,8 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   const t = o.t, plain = tint || null;
   const bob = o.run ? Math.abs(Math.sin(t * 16)) * 2.2 : Math.sin(t * 2.4) * 0.9;
   const scarf = plain || '#36cfc2', scarfDk = plain || '#1f8c84';
+  const cid = Gear.cloak(), gc = Gear.c(), custom = cid !== 'drifter';
+  const cTop = custom ? shade(gc.color, 1.2) : '#26304a', cMid = custom ? gc.color : '#141a28', cLow = custom ? shade(gc.color, 0.42) : '#0a0d16', hemC = custom ? shade(gc.trim, 0.45) : '#0d3a40';
   g.lineCap = 'round'; g.lineJoin = 'round';
 
   // --- scarf tails streaming behind
@@ -137,10 +139,10 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   if (plain) { cloakPath(); fs(g, plain, INK, 3); }
   else {
     cloakPath();
-    const cg = g.createLinearGradient(0, -22, 0, 0); cg.addColorStop(0, '#26304a'); cg.addColorStop(0.55, '#141a28'); cg.addColorStop(1, '#0a0d16');
+    const cg = g.createLinearGradient(0, -22, 0, 0); cg.addColorStop(0, cTop); cg.addColorStop(0.55, cMid); cg.addColorStop(1, cLow);
     fs(g, cg, INK, 3);
     g.save(); cloakPath(); g.clip();
-    g.fillStyle = '#0d3a40'; g.beginPath(); g.moveTo(-14, -6 - fl * 6); g.lineTo(14, -6 - fl * 6); g.lineTo(14, 2); g.lineTo(-14, 2); g.fill();   // teal lining at the hem
+    g.fillStyle = hemC; g.beginPath(); g.moveTo(-14, -6 - fl * 6); g.lineTo(14, -6 - fl * 6); g.lineTo(14, 2); g.lineTo(-14, 2); g.fill();   // teal lining at the hem
     g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 1.4;                                                                    // folds
     g.beginPath(); g.moveTo(-3, -18 - bob); g.quadraticCurveTo(-6, -11, -5.5, -3); g.moveTo(3.5, -18 - bob); g.quadraticCurveTo(5, -11, 4, -3); g.moveTo(0.5, -16 - bob); g.lineTo(0, -6); g.stroke();
     g.strokeStyle = 'rgba(150,180,230,0.28)'; g.lineWidth = 1.2;
@@ -150,6 +152,7 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
     g.restore();
     g.strokeStyle = 'rgba(170,200,255,0.4)'; g.lineWidth = 1.3;                                                              // rim light up the front edge
     g.beginPath(); g.moveTo(6.5, -20 - bob); g.quadraticCurveTo(12.6, -12, 11.8, -4); g.stroke();
+    if (custom) cloakExtras(g, cid, t, bob, fl, o, cloakPath);
   }
 
   // --- the free hand, peeking out at the front of the cloak
@@ -160,20 +163,20 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   const hy = -30 - bob, horn = plain || BONE;
   const hornPath = sgn => { g.beginPath(); g.moveTo(sgn * 8, hy - 7); g.bezierCurveTo(sgn * 15, hy - 12, sgn * 15.5, hy - 20, sgn * 9.5, hy - 26); g.bezierCurveTo(sgn * 10, hy - 18, sgn * 7, hy - 13, sgn * 2.5, hy - 10); g.closePath(); };
   for (const sgn of [-1, 1]) {
-    hornPath(sgn); fs(g, horn, INK, 2.6);
-    if (!plain) { g.strokeStyle = 'rgba(120,135,160,0.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(sgn * 6, hy - 9); g.bezierCurveTo(sgn * 11, hy - 13, sgn * 12, hy - 18, sgn * 9.5, hy - 23); g.stroke(); }
+    if (plain) { hornPath(sgn); fs(g, horn, INK, 2.6); }
+    else {
+      formD(g, c => hornPath(sgn), [sgn * 9, hy - 16, 7, 12], '#eef0f2', { lw: 2.6, spec: 0.3, hi: '#ffffff', lo: '#9aa6b8' });
+      g.save(); hornPath(sgn); g.clip(); g.strokeStyle = 'rgba(90,105,130,0.5)'; g.lineWidth = 0.9;       // growth rings
+      for (let r = 0; r < 4; r++) { const k = hy - 11 - r * 3.4; g.beginPath(); g.moveTo(sgn * (6 + r * 0.9), k + 1.8); g.lineTo(sgn * (12.5 - r * 0.4), k - 1.4); g.stroke(); }
+      g.restore();
+    }
   }
 
   // --- the mask: shaded bone, a hairline crack, two deep eyes that blink
   const maskPath = () => { g.beginPath(); g.moveTo(0, hy - 11.5); g.bezierCurveTo(8, hy - 11.5, 12.6, hy - 6, 12.4, hy + 0.5); g.bezierCurveTo(12.2, hy + 7, 7, hy + 11.5, 0, hy + 12); g.bezierCurveTo(-7, hy + 11.5, -12.2, hy + 7, -12.4, hy + 0.5); g.bezierCurveTo(-12.6, hy - 6, -8, hy - 11.5, 0, hy - 11.5); g.closePath(); };
   if (plain) { maskPath(); fs(g, plain, INK, 2.6); }
   else {
-    maskPath();
-    const mg = g.createRadialGradient(4, hy - 6, 1, 0, hy, 15); mg.addColorStop(0, '#ffffff'); mg.addColorStop(0.55, '#eef2f6'); mg.addColorStop(1, '#b8c4d2');
-    fs(g, mg, INK, 2.6);
-    g.save(); maskPath(); g.clip();
-    g.fillStyle = 'rgba(70,90,125,0.18)'; ellipse(g, -3, hy + 7, 13, 7); g.fill();
-    g.restore();
+    maskD(g, 0, hy + 0.2, 12.4, 12, { base: '#f6f8fa', brow: 0.9, lean: 0.4 });
     // the crack glows faintly with soul light
     const crack = () => { g.beginPath(); g.moveTo(6.5, hy - 10.4); g.lineTo(5.2, hy - 7.5); g.lineTo(6.6, hy - 5.6); g.lineTo(5.8, hy - 3.8); };
     const pulse = 0.35 + 0.2 * Math.sin(t * 2.2);
@@ -181,13 +184,16 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
     g.strokeStyle = 'rgba(30,60,80,0.75)'; g.lineWidth = 0.9; crack(); g.stroke();
     g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 1.4;                      // gloss along the brow
     g.beginPath(); g.moveTo(-3, hy - 9.6); g.quadraticCurveTo(3, hy - 11, 8.4, hy - 7.6); g.stroke();
+    if ((t % 3.7) < 0.12 && !o.atk) {                                                  // a blink: lids over the sockets
+      g.fillStyle = '#eef2f6'; for (const x of [-4.6, 5.8]) { ellipse(g, x, hy + 1.4, 4, 6.4); g.fill(); }
+      g.strokeStyle = INK; g.lineWidth = 1.6; for (const x of [-4.6, 5.8]) { g.beginPath(); g.moveTo(x - 3, hy + 2); g.quadraticCurveTo(x, hy + 3.4, x + 3, hy + 2); g.stroke(); }
+    }
   }
-  const blink = (t % 3.7) < 0.12 && !o.atk ? 0.15 : 1;
-  const eye = (x, rx, ry, rot) => {
-    g.fillStyle = INK; ellipse(g, x, hy + 1.2, rx, ry * blink, rot); g.fill();
-    if (!plain && blink === 1) { g.fillStyle = 'rgba(200,225,255,0.85)'; g.beginPath(); g.arc(x + rx * 0.35, hy - ry * 0.45, 0.9, 0, 7); g.fill(); }
-  };
-  eye(-4.2, 3.3, 5.3, 0.12); eye(5.0, 3.5, 5.5, -0.1);
+  if (plain) {
+    const blink = (t % 3.7) < 0.12 && !o.atk ? 0.15 : 1;
+    const eye = (x, rx, ry, rot) => { g.fillStyle = INK; ellipse(g, x, hy + 1.2, rx, ry * blink, rot); g.fill(); };
+    eye(-4.2, 3.3, 5.3, 0.12); eye(5.0, 3.5, 5.5, -0.1);
+  }
 
   // --- the scarf wrapped at the neck, with knitted bands
   g.strokeStyle = INK; g.lineWidth = 7.5; g.beginPath(); g.moveTo(-7.5, -20 - bob); g.quadraticCurveTo(0, -15.5 - bob, 7.5, -20 - bob); g.stroke();

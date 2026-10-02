@@ -7,10 +7,17 @@ const HeroStyle = (() => {
   try { const v = localStorage.getItem('duskwell_hero_style'); if (LIST.includes(v)) i = LIST.indexOf(v); } catch (e) { /* ignore */ }
   return {
     cur: () => LIST[i],
-    sheet: () => 'hero_' + LIST[i],
+    // the sheet in use: the artist's own, with the cloak's two blues swapped for the equipped cloak's colours
+    sheet() {
+      const base = 'hero_' + LIST[i], id = typeof Gear !== 'undefined' ? Gear.cloak() : 'drifter';
+      if (id === 'drifter' || LIST[i] === 'vector') return base;
+      const c = parseInt(Gear.def('cloak', id).color.slice(1), 16), at = (k, kk) => { const f = v => Math.min(255, Math.round(v * kk)); return (f((c >> 16) & 255) << 16) | (f((c >> 8) & 255) << 8) | f(c & 255); };
+      const swaps = LIST[i] === 'blue' ? { 0x3d5da4: at(0, 1.1), 0x192c3e: at(0, 0.45) } : { 0x1d2036: at(0, 0.7), 0x18182f: at(0, 0.4) };
+      return Pixel.variant(base, id, swaps) || base;
+    },
     pixel: () => LIST[i] !== 'vector' && Pixel.ready('hero_' + LIST[i]),
     next() { i = (i + 1) % LIST.length; try { localStorage.setItem('duskwell_hero_style', LIST[i]); } catch (e) { /* ignore */ } },
-    label() { return { blue: ['بكسل أزرق', 'Pixel blue'], dark: ['بكسل داكن', 'Pixel dark'], vector: ['مرسوم بالحبر', 'Inked'] }[LIST[i]][LANG.cur === 'ar' ? 0 : 1]; },
+    label() { return { blue: ['بكسل أزرق', 'Pixel blue'], dark: ['بكسل داكن', 'Pixel dark'], vector: ['مرسوم بالتفصيل', 'Detailed ink'] }[LIST[i]][LANG.cur === 'ar' ? 0 : 1]; },
   };
 })();
 

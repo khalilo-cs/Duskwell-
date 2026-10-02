@@ -147,12 +147,13 @@ WEAPON_ART.bonesaw = (g, len, f, plain, t) => {
 };
 
 // the sword the hero wears is whatever is equipped
+const CARRY_K = { lance: 0.62, scythe: 0.6, rapier: 0.72, duskblade: 0.9 };
 const heroSwordBase = heroSword;
 heroSword = function (g, x, y, ang, len, plain) {
   const id = Gear.weapon();
   if (id === 'nail' || !WEAPON_ART[id]) { heroSwordBase(g, x, y, ang, len, plain); return; }
   g.save(); g.translate(x, y); g.rotate(ang); g.lineJoin = 'round'; g.lineCap = 'round';
-  WEAPON_ART[id](g, len, len / 40, plain, (G && G.t) || 0);
+  WEAPON_ART[id](g, len <= 30 ? len * (CARRY_K[id] || 1) : len, len / 40, plain, (G && G.t) || 0);       // the long ones are worn shorter on the back
   g.restore();
 };
 // any weapon at any place (shop shelf, equipment screen): same drawing, chosen by id
@@ -371,11 +372,27 @@ Art.frozenFx = function (g, e, t) {
   g.restore();
 };
 
-// the hero: the weapon's own swing for everything but the nail, plus the arts around the body
+// the hero: the weapon's own swing for everything but the nail, plus the arts around the body. The artist's pixel
+// sprite carries only the nail, so for any other weapon it is drawn over the sprite: on the back at rest, in the hand
+// when striking.
 const baseDrawPlayer = Art.drawPlayer;
 Art.drawPlayer = function (g, p, t) {
+  const id = Gear.weapon(), pixel = !Skins.get('player') && HeroStyle.pixel() && !p.dead, other = id !== 'nail';
+  const f = p.face, HS = 1.1;
+  if (pixel && other && p.atkT <= 0 && !p.sitting) heroSword(g, p.cx - f * 10, p.y + p.h - 27, f > 0 ? 2.02 : Math.PI - 2.02, 28, null);
   baseDrawPlayer(g, p, t);
-  if (p.atkT > 0 && !p.dead && Gear.weapon() !== 'nail') Art.swingFx(g, p, t);
+  if (p.atkT > 0 && !p.dead && other) {
+    if (pixel) {
+      const pr = 1 - clamp(p.atkT / Math.max(0.05, Math.min(0.16, Gear.w().cd * 0.6)), 0, 1), m = p.atkAlt ? 1 : -1;
+      let a0, a1;
+      if (p.atkDir === 'up') { a0 = -Math.PI * 0.85; a1 = -Math.PI * 0.15; }
+      else if (p.atkDir === 'down') { a0 = Math.PI * 0.15; a1 = Math.PI * 0.85; }
+      else { a0 = -0.95 * m; a1 = 0.95 * m; if (f < 0) { a0 = Math.PI - a0; a1 = Math.PI - a1; } }
+      const sweep = lerp(a0, a1, clamp(pr * 1.6, 0, 1)), hx = p.cx + f * 14, hy = p.cy + (p.atkDir === 'up' ? -6 : p.atkDir === 'down' ? 6 : 0);
+      heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HS * (Charms.has('reach') ? 1.3 : 1), null);
+    }
+    Art.swingFx(g, p, t);
+  }
   Art.drawArtsFx(g, p, t);
 };
 
@@ -383,3 +400,62 @@ Art.drawPlayer = function (g, p, t) {
 Art.drawHeroPreview = function (g, x, y, scale, t) {
   wanderer(g, x, y, 1, { t, vx: 0, vy: 0, scale }, 1, null);
 };
+
+// ---------------------------------------------------------------- the cloaks on the inked hero
+// Drawn in the hero's own space (feet at the origin, facing +x) over the cloak, under the head. cloakPath() adds the cloak's outline.
+function cloakExtras(g, id, t, bob, fl, o, cloakPath) {
+  const c = Gear.CLOAKS[id], neck = -21 - bob;
+  g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+  if (id === 'ironhide') {
+    g.save(); cloakPath(); g.clip();                                                      // a leather belt and its buckle
+    g.fillStyle = '#2a2018'; g.fillRect(-14, -12.4, 28, 3); g.strokeStyle = INK; g.lineWidth = 0.8; g.strokeRect(-14, -12.4, 28, 3);
+    formD(g, pol([-2.4, -13.4, 2.4, -13.4, 2.4, -8.8, -2.4, -8.8]), [0, -11, 3, 3], '#d8b868', { lw: 1.2, spec: 0.5 });
+    g.restore();
+    for (const sg of [-1, 1]) {                                                            // pauldrons with rivets
+      formD(g, ell(sg * 8.4, neck + 0.4, 6, 3.6, sg * 0.28), [sg * 8.4, neck, 6, 3.6], '#a2aac0', { lw: 2.1, spec: 0.5 });
+      rivetD(g, sg * 6.4, neck, 0.9); rivetD(g, sg * 10.2, neck + 0.6, 0.9);
+    }
+  } else if (id === 'windweave') {
+    const len = 22 + Math.min(14, Math.abs(o.vx) * 0.05) + (o.air ? 5 : 0);
+    for (const [dy, ph, col] of [[0, 0, c.trim], [3.6, 1.2, shade(c.trim, 0.7)]]) {         // long ribbons streaming from the shoulders
+      const w = Math.sin(t * 8 + ph) * 3;
+      g.strokeStyle = INK; g.lineWidth = 5.6; g.beginPath(); g.moveTo(-6, neck + 2 + dy); g.quadraticCurveTo(-len * 0.5, neck + 3 + dy + w, -len, neck + 1 + dy - w * 0.6); g.stroke();
+      g.strokeStyle = col; g.lineWidth = 3; g.stroke();
+    }
+    g.fillStyle = c.trim; g.beginPath(); g.arc(0, neck + 3, 2.2, 0, 7); g.fill(); g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
+  } else if (id === 'soulveil') {
+    g.save(); cloakPath(); g.clip();
+    const vg = g.createLinearGradient(0, -22, 0, 0); vg.addColorStop(0, 'rgba(207,168,255,0.0)'); vg.addColorStop(1, 'rgba(207,168,255,0.42)'); g.fillStyle = vg; g.fillRect(-16, -24, 32, 26);
+    g.strokeStyle = 'rgba(230,205,255,0.35)'; g.lineWidth = 1; for (let k = 0; k < 4; k++) { const x = -9 + k * 6; g.beginPath(); g.moveTo(x, -18); g.quadraticCurveTo(x + Math.sin(t * 2 + k) * 2, -10, x - 1, -2); g.stroke(); }
+    g.restore();
+    for (let k = 0; k < 3; k++) {                                                          // little souls that circle the shoulders
+      const a = t * 1.8 + k * 2.1, x = Math.cos(a) * 14, y = -14 - bob + Math.sin(a) * 6;
+      bloom(g, x, y, 8, '#e0c8ff', 0.7); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x, y, 1.1, 0, 7); g.fill();
+    }
+  } else if (id === 'emberweave') {
+    g.save(); cloakPath(); g.clip();
+    const eg = g.createLinearGradient(0, -12, 0, 0); eg.addColorStop(0, 'rgba(255,120,40,0)'); eg.addColorStop(1, 'rgba(255,170,70,' + (0.65 + 0.25 * Math.sin(t * 5)) + ')'); g.fillStyle = eg; g.fillRect(-16, -12, 32, 14);
+    g.strokeStyle = 'rgba(255,200,120,0.7)'; g.lineWidth = 0.9; g.lineJoin = 'miter'; g.beginPath(); g.moveTo(-8, -9); g.lineTo(-5, -5); g.lineTo(-1, -8); g.lineTo(3, -4); g.lineTo(7, -8); g.stroke();
+    g.restore();
+    for (let k = 0; k < 4; k++) { const u = (t * 0.9 + k * 0.27) % 1; g.fillStyle = 'rgba(255,' + (190 - u * 90 | 0) + ',80,' + (1 - u) + ')'; g.beginPath(); g.arc(-8 + k * 5.4 + Math.sin(t * 3 + k) * 1.4, -4 - u * 20, 1.3 - u * 0.6, 0, 7); g.fill(); }
+  } else if (id === 'frostfur') {
+    g.fillStyle = '#ffffff';
+    g.save(); cloakPath(); g.clip(); for (let x = -14; x < 15; x += 3.4) { g.beginPath(); g.arc(x, -3 + (Math.abs(x) % 2) * 0.4, 2.6, 0, 7); g.fill(); g.strokeStyle = 'rgba(150,180,215,0.7)'; g.lineWidth = 0.8; g.stroke(); } g.restore();
+    for (let x = -9; x <= 9; x += 3.2) { g.beginPath(); g.arc(x, neck + 1.2 - Math.abs(x) * 0.07 + (Math.abs(x) % 2) * 0.3, 2.9, 0, 7); g.fillStyle = '#ffffff'; g.fill(); g.strokeStyle = INK; g.lineWidth = 1.3; g.stroke(); }
+    g.fillStyle = 'rgba(160,200,240,0.6)'; for (const x of [-5, 0, 5]) { g.beginPath(); g.arc(x - 0.6, neck - 0.4, 1, 0, 7); g.fill(); }
+  } else if (id === 'duskmantle') {
+    g.save(); cloakPath(); g.clip();
+    g.strokeStyle = c.trim; g.lineWidth = 1.6; cloakPath(); g.save(); g.translate(0, 0); g.scale(0.9, 0.95); g.translate(0, -0.5); g.stroke(); g.restore();
+    g.fillStyle = c.trim; for (const x of [-8, -2.6, 2.8, 8.2]) { g.beginPath(); g.moveTo(x, -8); g.lineTo(x + 1.5, -5.6); g.lineTo(x, -3.4); g.lineTo(x - 1.5, -5.6); g.closePath(); g.fill(); }
+    g.restore();
+    for (const sg of [-1, 1]) spikeD(g, sg * 9, neck + 1, sg > 0 ? -0.9 : -2.24, 6, 1.6, '#d8b868');
+    bloom(g, 0, neck + 3, 8, '#ffe0a0', 0.5); formD(g, pol([0, neck, 2.4, neck + 2.6, 0, neck + 5.4, -2.4, neck + 2.6]), [0, neck + 2.7, 2.6, 3], '#d84a68', { lw: 1.2, spec: 0.6 });
+  } else if (id === 'boneward') {
+    g.save(); cloakPath(); g.clip();
+    for (let k = 0; k < 3; k++) { const y = -17 + k * 4.6; g.strokeStyle = INK; g.lineWidth = 3.4; g.beginPath(); g.moveTo(-9, y); g.quadraticCurveTo(0, y + 3.6, 9, y); g.stroke(); g.strokeStyle = '#efe6d0'; g.lineWidth = 1.8; g.stroke(); }
+    g.restore();
+    for (const sg of [-1, 1]) formD(g, ell(sg * 8.2, neck + 0.4, 5.2, 3.2, sg * 0.3), [sg * 8.2, neck, 5, 3], '#e8dcc0', { lw: 1.9, spec: 0.4 });
+    formD(g, ell(0, neck + 3.2, 3.4, 3.2), [0, neck + 3.2, 3.4, 3.2], '#efe6d0', { lw: 1.5 }); g.fillStyle = INK; g.beginPath(); g.arc(-1.2, neck + 2.8, 0.8, 0, 7); g.arc(1.2, neck + 2.8, 0.8, 0, 7); g.fill();
+  }
+  g.restore();
+}

@@ -180,6 +180,29 @@ const Pixel = (() => {
     return f[Math.floor(t * fps) % f.length];
   }
 
+  // a palette-swapped copy of a loaded sheet (the hero's cloak colour follows the equipped cloak); swaps maps 0xRRGGBB -> 0xRRGGBB.
+  // Returns the new sheet's name, or null while the original is still loading or cannot be read.
+  function variant(base, key, swaps) {
+    const name = base + '@' + key, s0 = sheets[base];
+    if (sheets[name]) return sheets[name].ready ? name : null;
+    if (!s0 || !s0.ready) return null;
+    const m = s0.meta, im = s0.img, c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+    try {
+      const id = g.getImageData(0, 0, c.width, c.height), d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (!d[i + 3]) continue;
+        const to = swaps[(d[i] << 16) | (d[i + 1] << 8) | d[i + 2]];
+        if (to !== undefined) { d[i] = (to >> 16) & 255; d[i + 1] = (to >> 8) & 255; d[i + 2] = to & 255; }
+      }
+      g.putImageData(id, 0, 0);
+      const [cw, ch] = m.cell, n = Math.round(c.width / cw), frames = [];
+      for (let f = 0; f < n; f++) frames.push(analyse(g.getImageData(f * cw, 0, cw, ch), cw, ch));
+      sheets[name] = { meta: m, ready: true, frames, img: c, tinted: {} };
+      return name;
+    } catch (e) { sheets[name] = { ready: false }; return null; }
+  }
+
   for (const k in SPRITE_META) load(k, SPRITE_META[k]);
-  return { setFlat(on, g) { flat = !!on; shadowG = on ? g : null; }, draw, silhouette, shadow, setScene, frameOf, ready: n => !!(sheets[n] && sheets[n].ready), meta: n => sheets[n] && sheets[n].meta, SCALE };
+  return { setFlat(on, g) { flat = !!on; shadowG = on ? g : null; }, draw, silhouette, shadow, setScene, frameOf, variant, ready: n => !!(sheets[n] && sheets[n].ready), meta: n => sheets[n] && sheets[n].meta, SCALE };
 })();

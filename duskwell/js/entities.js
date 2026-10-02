@@ -89,6 +89,13 @@ class Player {
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
+  // ---- numbers the charms change (see charms.js) ----
+  spellCost() { return Charms.has('thrift') ? 24 : 33; }
+  focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1); }
+  nailDamage() { return Math.round(this.nail * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1)); }
+  spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1)); }
+  reachK() { return Charms.has('reach') ? 1.35 : 1; }
+
   touchWall(dir) {
     const L = G.level, x = dir > 0 ? this.x + this.w + 1 : this.x - 1;
     return L.solidAtPx(x, this.y + 8) || L.solidAtPx(x, this.y + this.h - 8);
@@ -121,22 +128,22 @@ class Player {
     // ---- cast / focus ----
     if (Input.pressed('cast')) { this.castHold = 0; this.castDone = false; }
     // Down + cast plunges at once, so it never waits for the key to be released
-    if (Input.pressed('cast') && this.ab.dive && Input.down('down') && this.soul >= 33 && !stunned && this.dashT <= 0) {
+    if (Input.pressed('cast') && this.ab.dive && Input.down('down') && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
       this.castDone = true; this.startDive(); return;
     }
     if (Input.down('cast')) this.castHold += dt;
-    const canFocus = this.onGround && this.soul >= 33 && this.hp < this.maxHp && ix === 0 && this.dashT <= 0 && !stunned && this.atkT <= 0;
+    const canFocus = this.onGround && this.soul >= this.spellCost() && this.hp < this.maxHp && ix === 0 && this.dashT <= 0 && !stunned && this.atkT <= 0;
     if (Input.down('cast') && canFocus && this.castHold > 0.22 && !this.castDone) {
       if (this.focusT === 0) Sound.play('focus');
       this.focusT += dt;
-      if (this.focusT >= 0.9) {
-        this.hp = Math.min(this.maxHp, this.hp + 1); this.soul -= 33; this.focusT = 0; this.castDone = true;
+      if (this.focusT >= this.focusTime()) {
+        this.hp = Math.min(this.maxHp, this.hp + (Charms.has('deep') ? 2 : 1)); this.soul -= this.spellCost(); this.focusT = 0; this.castDone = true;
         Sound.play('heal'); G.burst(this.cx, this.cy, 22, { color: '#dff6ff', speed: 220, life: 0.7, size: 3, grav: -80 });
       }
       if (Math.random() < 0.5) G.burst(this.cx + rand(-18, 18), this.y + this.h, 1, { color: '#bfe8ff', speed: 30, life: 0.8, size: 2, grav: -160, vy: -60 });
     } else if (this.focusT > 0) { this.focusT = 0; this.castDone = true; }
     if (Input.released('cast')) {
-      if (!this.castDone && this.castHold < 0.3 && this.soul >= 33 && !stunned && this.dashT <= 0) {
+      if (!this.castDone && this.castHold < 0.3 && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
         this.castBolt();
       }
       this.castHold = 0;
@@ -153,7 +160,7 @@ class Player {
 
     // ---- dash ----
     if (Input.pressed('dash') && this.ab.dash && this.dashCD <= 0 && (this.onGround || this.airDash) && !stunned && !focusing) {
-      this.dashT = 0.21; this.dashCD = 0.5;
+      this.dashT = 0.21; this.dashCD = Charms.has('dashmaster') ? 0.3 : 0.5;
       if (ix !== 0) this.face = ix;
       if (!this.onGround) this.airDash = false;
       this.atkT = 0; this.vy = 0;
@@ -175,7 +182,7 @@ class Player {
       } else if (focusing) {
         this.vx = 0;
       } else {
-        const target = ix * 250;
+        const target = ix * (Charms.has('boots') ? 305 : 250);
         this.vx = approach(this.vx, target, (ix === 0 ? 4200 : 3600) * dt * (this.onGround ? 1 : 0.85));
         if (ix !== 0 && this.atkT <= 0) this.face = ix;
         else if (ix !== 0 && this.atkT > 0 && this.atkDir !== 'side') this.face = ix;
@@ -221,7 +228,7 @@ class Player {
     if (this.atkBuf > 0 && this.atkCD <= 0 && !stunned && !focusing && this.dashT <= 0) {
       this.atkBuf = 0;
       this.atkDir = iy < 0 ? 'up' : (iy > 0 && !this.onGround ? 'down' : 'side');
-      this.atkT = 0.16; this.atkCD = 0.34; this.atkAlt ^= 1; this.hits = new Set();
+      this.atkT = 0.16; this.atkCD = Charms.has('swift') ? 0.21 : 0.34; this.atkAlt ^= 1; this.hits = new Set();
       Sound.play('slash');
     }
     if (this.atkT > 0) this.attackHits();
@@ -274,9 +281,10 @@ class Player {
     const L = G.level;
     let hb;
     const cx = this.cx;
-    if (this.atkDir === 'up') hb = { x: cx - 30, y: this.y - 58, w: 60, h: 64 };
-    else if (this.atkDir === 'down') hb = { x: cx - 28, y: this.y + this.h - 10, w: 56, h: 56 };
-    else hb = { x: this.face > 0 ? this.x + this.w - 4 : this.x + 4 - 70, y: this.y - 8, w: 70, h: 52 };
+    const rk = this.reachK();
+    if (this.atkDir === 'up') hb = { x: cx - 30, y: this.y + 6 - 64 * rk, w: 60, h: 64 * rk };
+    else if (this.atkDir === 'down') hb = { x: cx - 28, y: this.y + this.h - 10, w: 56, h: 56 * rk };
+    else hb = { x: this.face > 0 ? this.x + this.w - 4 : this.x + 4 - 70 * rk, y: this.y - 8, w: 70 * rk, h: 52 };
     this.atkBox = hb;
     let connected = false;
     for (const e of G.enemies) {
@@ -284,8 +292,8 @@ class Player {
       if (overlap(hb, e.hb())) {
         this.hits.add(e);
         const dir = this.atkDir === 'side' ? this.face : (e.cx > cx ? 1 : -1);
-        e.hurt(this.nail, dir, this.atkDir);
-        this.soul = Math.min(this.maxSoul, this.soul + this.soulGain);
+        e.hurt(this.nailDamage(), dir, this.atkDir);
+        this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
         connected = true;
       }
     }
@@ -312,15 +320,15 @@ class Player {
   }
 
   castBolt() {
-    this.soul -= 33; this.castT = 0.25;
+    this.soul -= this.spellCost(); this.castT = 0.25;
     Sound.play('cast');
-    G.projs.push(new Proj({ x: this.cx + this.face * 24, y: this.cy - 2, vx: this.face * 640, vy: 0, r: 15, dmg: 14, friendly: true, pierce: true, life: 0.85, kind: 'bolt', color: '#bfe6ff', passWalls: false }));
+    G.projs.push(new Proj({ x: this.cx + this.face * 24, y: this.cy - 2, vx: this.face * 640, vy: 0, r: 15, dmg: this.spellDmg(14), friendly: true, pierce: true, life: 0.85, kind: 'bolt', color: '#bfe6ff', passWalls: false }));
     this.vx = -this.face * 140; this.recoil = 0.1;
     G.shake(3, 0.12);
   }
 
   startDive() {
-    this.soul -= 33; this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
+    this.soul -= this.spellCost(); this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
     Sound.play('cast'); G.burst(this.cx, this.cy, 12, { color: '#dff3ff', speed: 160, life: 0.4, size: 3 });
   }
   updateDive(dt) {
@@ -339,23 +347,41 @@ class Player {
     Sound.play('slam'); G.shake(10, 0.35); G.ring(this.cx, this.y + this.h - 6, '#dff3ff', 0.35);
     G.burst(this.cx, this.y + this.h, 24, { color: '#dff3ff', speed: 300, life: 0.5, size: 3, vy: -120 });
     const blast = { x: this.cx - 120, y: this.y + this.h - 80, w: 240, h: 90 };
-    for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(blast, e.hb())) e.hurt(18, e.cx > this.cx ? 1 : -1, 'spell');
-    for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'shock', x: this.cx + d * 30, y: this.y + this.h, vx: d * 480, dmg: 8, friendly: true, pierce: true, life: 0.45, color: '#dff3ff', passWalls: true }));
+    for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(blast, e.hb())) e.hurt(this.spellDmg(18), e.cx > this.cx ? 1 : -1, 'spell');
+    for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'shock', x: this.cx + d * 30, y: this.y + this.h, vx: d * 480, dmg: this.spellDmg(8), friendly: true, pierce: true, life: 0.45, color: '#dff3ff', passWalls: true }));
   }
 
   hurt(dmg, srcX) {
     if (this.invuln > 0 || this.dead || this.diving || G.state !== 'play') return false;
+    if (Charms.absorb()) {                    // Shell Ward turns the blow aside, once
+      this.invuln = 0.9; this.vx = (this.cx < srcX ? -1 : 1) * 160; this.recoil = 0.1;
+      Sound.play('clank'); G.hitstop(0.08); G.shake(4, 0.15); G.ring(this.cx, this.cy, '#d8c8a0', 0.4);
+      G.burst(this.cx, this.cy, 14, { color: '#e8dcb8', speed: 220, life: 0.4, size: 3 });
+      return true;
+    }
+    if (Charms.over()) dmg *= 2;               // overcharmed: every wound costs double
     this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300; this.vy = -320; this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
     G.burst(this.cx, this.cy, 16, { color: '#e9f3ff', speed: 240, life: 0.5, size: 3 });
     G.burst(this.cx, this.cy, 10, { color: '#1a2230', speed: 200, life: 0.5, size: 4 });
-    if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); }
+    if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }
+    if (Charms.has('spirit')) this.soul = Math.min(this.maxSoul, this.soul + 18);
+    if (Charms.has('thorn')) this.thornBurst();
     return true;
   }
+  // Thorn Mantle: the wound makes thorns burst out and strike everything close by
+  thornBurst() {
+    G.ring(this.cx, this.cy, '#b6ef6a', 0.5);
+    G.burst(this.cx, this.cy, 18, { color: '#b6ef6a', speed: 300, life: 0.4, size: 3 });
+    for (const e of G.enemies) {
+      if (e.dead || e.ghostly) continue;
+      if (Math.hypot(e.cx - this.cx, e.cy - this.cy) < 120) e.hurt(this.spellDmg(9), e.cx > this.cx ? 1 : -1, 'spell');
+    }
+  }
   spikeHurt() {
-    this.hp -= 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
+    this.hp -= Charms.over() ? 2 : 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
     Sound.play('hurt'); G.hitstop(0.12); G.shake(8, 0.3);
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return; }
     G.respawnFade(this.safe.x, this.safe.y);
@@ -422,6 +448,7 @@ class Player {
   sit(bench) {
     this.sitting = bench; this.vx = 0; this.vy = 0; this.x = bench.px - this.w / 2; this.y = bench.py - this.h;
     this.hp = this.maxHp; this.soul = this.maxSoul;
+    Charms.rest();
   }
 }
 
@@ -490,6 +517,10 @@ class Geo {
     this.age += dt;
     this.vy = Math.min(this.vy + GRAV * 0.8 * dt, 700);
     if (this.onGround) this.vx *= 0.9;
+    if (Charms.has('magnet') && this.age > 0.4 && !G.player.dead) {      // Geo Magnet draws it in
+      const mx = G.player.cx - (this.x + this.w / 2), my = G.player.cy - (this.y + this.h / 2), md = Math.hypot(mx, my);
+      if (md < 190 && md > 1) { this.vx = mx / md * 520; this.vy = my / md * 520; }
+    }
     moveBody(this, dt, G.level);
     if (this.hitL || this.hitR) this.vx = -this.vx * 0.5;
     if (this.onGround && this.vy === 0 && Math.abs(this.vx) > 10 && Math.random() < 0.0) this.vy = -100;

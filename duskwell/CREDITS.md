@@ -25,3 +25,6 @@ Trimmed, normalised and re-encoded by `tools/audio/build_sfx.py`; used in `audio
 ## Not used
 Hollow Knight's own art and music belong to Team Cherry and are not part of this game. The "Your images" panel only lets a player try
 pictures from their own device; they stay in that browser and are never shipped.
+
+## Charms
+The 14 charms (`js/charms.js`), their names, effects and icons (`js/art_charms.js`, drawn in code) are original to this project. Equippable relics limited by a number of slots are a common genre mechanic, so only the idea is shared with other Metroidvanias; no names, art or text from Hollow Knight or any other game are used.

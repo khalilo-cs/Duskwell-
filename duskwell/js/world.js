@@ -144,6 +144,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     boss: 'weaver', flag: 'boss_weaver', trigger: 9, spawn: { x: 30, y: 17 },
     gates: [{ x: 0, y: 15, w: 1, h: 3, close: 'start' }, { x: 39, y: 15, w: 1, h: 3, close: 'always' }],
     reward: { id: 'ability_wall', kind: 'ability', ability: 'wall', x: 20, y: 16 },
+    reward2: { id: 'charm_siphon', kind: 'charm', charm: 'siphon', x: 23, y: 17 },
   };
 
   // ===================== CRYSTAL SPIRES =====================
@@ -339,6 +340,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     boss: 'drowned', flag: 'boss_drowned', trigger: 34, triggerDir: -1, spawn: { x: 12, y: 19 },
     gates: [{ x: 43, y: 17, w: 1, h: 3, close: 'start' }],
     reward: { id: 'seed_drowned', kind: 'seed', x: 22, y: 18 },
+    reward2: { id: 'charm_thrift', kind: 'charm', charm: 'thrift', x: 25, y: 19 },
   };
 
   // ===================== CRYSTAL SPIRES: the cracked hall =====================
@@ -389,6 +391,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     boss: 'brood', flag: 'boss_brood', trigger: 34, triggerDir: -1, spawn: { x: 10, y: 19 },
     gates: [{ x: 43, y: 17, w: 1, h: 3, close: 'start' }],
     reward: { id: 'fang_brood', kind: 'fang', x: 22, y: 18 },
+    reward2: { id: 'charm_deep', kind: 'charm', charm: 'deep', x: 25, y: 19 },
   };
 
   // ===================== HOLLOW THRONE: the seal gate =====================
@@ -479,6 +482,16 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   WORLD.rooms.ht1.enemy('husk', 39, 26);
   WORLD.rooms.ht1.enemy('husk', 48, 26);
 
+  // charms (see charms.js): each lies next to a spot the route already reaches; three more drop from guardians
+  const charm = (r, id, x, y) => WORLD.rooms[r].item('charm_' + id, x, y, 'charm', { charm: id });
+  charm('cx2', 'thorn', 4, 14);       // the high ledge, beside the mask seed
+  charm('cx5', 'spirit', 5, 16);      // inside the secret pocket
+  charm('mg1', 'swift', 48, 4);       // on the island with the mask seed
+  charm('ht1', 'focus', 7, 16);       // beside the far seed
+  charm('sp1', 'shell', 44, 13);      // on the ledge above the stash
+  charm('aq3', 'dashmaster', 7, 19);  // inside the secret pocket
+  charm('cs4', 'mage', 10, 13);       // on the ledge above the stash
+  charm('fd3', 'fury', 68, 11);       // the raised reward ledge of the Rustworks
   WORLD.order = Object.keys(WORLD.rooms);
   for (const id of WORLD.order) WORLD.rooms[id].finish();
 })();

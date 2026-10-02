@@ -45,6 +45,10 @@ const STR = {
     sign_spore: 'لافتة: قبعات الفطر الحمراء تقذفك عالياً. اهبط عليها.',
     sign_crack: 'لافتة: الأرض هنا متشققة. شيءٌ أثقل من الخطى يمكنه كسرها.',
     sign_acid: 'لافتة: الماء الأخضر حمضٌ يحرق. لا تلمسه.',
+    charms: 'التمائم', cost: 'الفتحات', notches: 'الفتحات', worn: 'مرتداة', noCharms: 'لم تجد أي تميمة بعد. ابحث في الزوايا البعيدة، واسأل التاجر.',
+    charmsHint: 'Z: ارتداء أو نزع    Esc: رجوع', charmsBench: 'تُغيَّر التمائم وأنت جالس على مقعد فقط.', charmsFull: 'أنت مُثقَل بالتمائم أصلاً: انزع شيئاً أولاً.',
+    overcharm: 'تميمة فوق الفتحات! كل إصابة ستكلّفك الضعف.', charm_found_d: 'اجلس على مقعد وافتح التمائم من قائمة الإيقاف لترتديها.',
+    itemNotch: 'فتحة تميمة', itemNotchD: 'تتسع لتمائم أكثر',
   },
   en: {
     title: 'DUSKWELL', subtitle: 'A kingdom whose light fell into the deep',
@@ -87,6 +91,10 @@ const STR = {
     sign_spore: 'Sign: The red mushroom caps throw you high. Land on them.',
     sign_crack: 'Sign: The ground here is cracked. Something heavier than footsteps could break it.',
     sign_acid: 'Sign: The green water is acid. Do not touch it.',
+    charms: 'Charms', cost: 'Notches', notches: 'Notches', worn: 'Worn', noCharms: 'You have found no charms yet. Search the far corners, and ask the merchant.',
+    charmsHint: 'Z: wear or remove    Esc: back', charmsBench: 'Charms can only be changed while resting on a bench.', charmsFull: 'You are already overcharmed: remove something first.',
+    overcharm: 'Over the notch limit! Every wound will cost you double.', charm_found_d: 'Rest on a bench and open Charms from the pause menu to wear it.',
+    itemNotch: 'Charm Notch', itemNotchD: 'Room for more charms',
   },
 };
 function tr(k) { return (STR[LANG.cur] && STR[LANG.cur][k]) || STR.en[k] || k; }

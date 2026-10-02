@@ -44,7 +44,7 @@ function heroPose(p, t) {
 function drawSlash(g, p, fx, fy, k) {
   if (!SLASH_IMG.complete || !SLASH_IMG.naturalWidth) return;
   const m = Pixel.meta(HeroStyle.sheet()), sl = m.slash, pr = 1 - clamp(p.atkT / 0.16, 0, 1);
-  const grow = 1.1 + 0.5 * pr, a = pr < 0.5 ? 0 : 1 - (pr - 0.5) * 1.4;
+  const grow = (1.1 + 0.5 * pr) * (Charms.has('reach') ? 1.3 : 1), a = pr < 0.5 ? 0 : 1 - (pr - 0.5) * 1.4;
   g.save(); g.imageSmoothingEnabled = false; g.globalAlpha = a;
   if (p.atkDir === 'side') g.translate(fx, fy), g.scale(p.face * k, k);
   else g.translate(fx, fy - 12 * k), g.rotate(p.atkDir === 'up' ? -Math.PI / 2 : Math.PI / 2), g.scale(k, k);

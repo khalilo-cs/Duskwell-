@@ -229,7 +229,7 @@ Art.drawPlayer = function (g, p, t) {
     bloom(g, p.cx, p.y + p.h, 60, '#dff3ff', 0.5);
   }
   if (p.focusT > 0) {
-    const k = p.focusT / 0.9;
+    const k = p.focusT / p.focusTime();
     bloom(g, p.cx, p.cy - 6, 40 + k * 50, '#dff3ff', 0.2 + k * 0.4);
     g.strokeStyle = rgba('#e8f6ff', 0.75); g.lineWidth = 2.5; ellipse(g, p.cx, p.cy - 4, 28 - k * 12, 36 - k * 14); g.stroke();
   }
@@ -253,7 +253,7 @@ Art.drawPlayer = function (g, p, t) {
     // the sword in the hand, at the leading edge of the swing
     // the hand sits in front of the chest so the blade never crosses the mask
     const hx = p.cx + f * 14, hy = p.cy + (p.atkDir === 'up' ? -6 : p.atkDir === 'down' ? 6 : 0);
-    heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE, null);
+    heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE * (Charms.has('reach') ? 1.3 : 1), null);
     g.fillStyle = INK; ellipse(g, hx, hy, 3.2, 2.8); g.fill();
   }
 };
@@ -570,6 +570,10 @@ Art.drawItem = function (g, it, t) {
     for (let i = 0; i < 3; i++) { const a = t * 1.5 + i * 2.09; g.strokeStyle = 'rgba(230,243,255,0.55)'; g.lineWidth = 2; ellipse(g, it.x, y, 24 + i * 4, 10 + i * 6, a); g.stroke(); }
     ellipse(g, it.x, y, 14, 14); fs(g, '#ffffff', INK, 3);
     g.fillStyle = 'rgba(120,180,255,0.5)'; ellipse(g, it.x, y, 7, 7); g.fill();
+  } else if (it.kind === 'charm') {
+    const c = Charms.DEFS[it.def.charm].color;
+    bloom(g, it.x, y, 90, c, 0.4 + 0.12 * Math.sin(t * 3));
+    Art.drawCharm(g, it.def.charm, it.x, y, 17, { glow: true });
   } else if (it.kind === 'seed') {
     bloom(g, it.x, y, 56, '#e8f4ff', 0.35);
     mask(g, it.x, y, 12, 13, 1.1, 0);

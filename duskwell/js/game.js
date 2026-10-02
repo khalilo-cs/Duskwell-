@@ -11,7 +11,7 @@ const G = {
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
-  geoPulse: 0, ending: null, deathText: 0, lastArea: '',
+  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0,
 };
 const P = G.player;
 
@@ -62,7 +62,7 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, room: G.bench.room, maxHp: P.maxHp, ab: P.ab, geo: P.geo, nail: P.nail, soulGain: P.soulGain, flags: G.flags,
-      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths,
+      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(),
     }));
   } catch (e) { /* storage may be blocked */ }
 }
@@ -95,7 +95,7 @@ function enterRoom(id, spawn) {
     const a = def.arena;
     G.arena = { def: a, state: G.flags[a.flag] ? 'won' : 'idle' };
     if (G.arena.state === 'idle') { for (const gt of a.gates) if (gt.close === 'always') closeGate(gt, true); }
-    else if (a.reward && !G.flags[a.reward.id]) G.items.push(new Item({ id: a.reward.id, x: a.reward.x, y: a.reward.y, kind: a.reward.kind, ability: a.reward.ability }));
+    else for (const r of [a.reward, a.reward2]) if (r && !G.flags[r.id]) G.items.push(new Item(r));
     let fy = a.spawn.y; while (fy < L.h - 1 && !L.solid(a.spawn.x, fy)) fy++;
     G.floorY = fy * TILE;
   }
@@ -179,6 +179,10 @@ G.collectItem = function (it) {
   G.flags[d.id] = true;
   if (d.kind === 'seed') { P.maxHp++; P.hp = P.maxHp; G.banner = { title: tr('seed'), desc: tr('seed_d'), t: 0 }; }
   else if (d.kind === 'fang') { P.nail += 3; G.banner = { title: tr('fang'), desc: tr('fang_d'), t: 0, big: true }; }
+  else if (d.kind === 'charm') {
+    Charms.give(d.charm);
+    G.banner = { title: Charms.name(d.charm), desc: Charms.desc(d.charm) + '  ' + tr('charm_found_d'), t: 0, charm: d.charm };
+  }
   else if (d.kind === 'ability') {
     P.ab[d.ability] = true;
     G.banner = { title: tr('abil_' + d.ability), desc: tr('abil_' + d.ability + '_d'), t: 0, big: true };
@@ -196,18 +200,18 @@ G.onBossDeath = function (b) {
   G.dropGeo(b.cx, b.cy, b.geo); G.flash = 0.8; Sound.boss(false);
   G.burst(b.cx, b.cy, 50, { color: '#ffffff', speed: 360, life: 1.2, size: 4, grav: -30 });
   openGates();
-  if (a.def.reward) G.items.push(new Item({ id: a.def.reward.id, x: a.def.reward.x, y: a.def.reward.y, kind: a.def.reward.kind, ability: a.def.reward.ability }));
+  for (const r of [a.def.reward, a.def.reward2]) if (r) G.items.push(new Item(r));
   if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; Sound.setTheme('title'); }, 2.2, 0.4, 1.5); saveGame(); }
 };
 
 function startGame(useSave) {
   Object.assign(P, new Player());
-  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null;
+  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset();
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
     P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = Object.assign(P.ab, s.ab); P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
-    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0;
+    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms);
     room = s.room; spawn = { bench: true };
   } else {
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
@@ -240,10 +244,18 @@ function interact() {
   return false;
 }
 const SHOP_ITEMS = [
-  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, apply() { P.maxHp++; P.hp = P.maxHp; } },
-  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, apply() { P.nail = 9; } },
-  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, apply() { P.soulGain = 17; } },
+  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
+  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail = 9; } },
+  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, icon: 'soul', apply() { P.soulGain = 17; } },
+  { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 300, icon: 'notch', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 550, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_reach', charm: 'reach', price: 120, apply() { Charms.give('reach'); } },
+  { id: 'buy_boots', charm: 'boots', price: 100, apply() { Charms.give('boots'); } },
+  { id: 'buy_magnet', charm: 'magnet', price: 90, apply() { Charms.give('magnet'); } },
 ];
+const shopList = () => SHOP_ITEMS.filter(it => !it.needs || G.flags[it.needs]);
+const shopName = it => (it.charm ? Charms.name(it.charm) : tr(it.name));
+const shopDesc = it => (it.charm ? Charms.desc(it.charm) : tr(it.desc));
 
 // ---------------------------------------------------------------- update
 function updateParticles(dt) {
@@ -379,7 +391,7 @@ function titleItems() {
   return a;
 }
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -392,6 +404,7 @@ function updatePause() {
     const id = items[G.menuSel].id;
     if (id === 'resume') G.state = 'play';
     else if (id === 'map') G.state = 'map';
+    else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
@@ -410,15 +423,42 @@ function updateDialog(dt) {
   }
 }
 function updateShop() {
-  const n = SHOP_ITEMS.length + 1;
+  const list = shopList(), n = list.length + 1, VIS = 6;
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); return; }
   if (menuNav(n)) {
     if (G.menuSel === n - 1) { G.state = 'play'; return; }
-    const it = SHOP_ITEMS[G.menuSel];
+    const it = list[G.menuSel];
     if (G.flags[it.id]) { Sound.play('hit'); return; }
     if (P.geo < it.price) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
-    P.geo -= it.price; G.flags[it.id] = true; it.apply(); Sound.play('ability'); G.burst(VW / 2, VH / 2, 0, {});
-    G.toastMsg(tr(it.name), 1.8);
+    P.geo -= it.price; G.flags[it.id] = true; it.apply(); Sound.play('ability');
+    G.toastMsg(shopName(it), 1.8);
+  }
+  G.menuSel = Math.min(G.menuSel, n - 1);
+  if (G.menuSel < G.shopTop) G.shopTop = G.menuSel;
+  if (G.menuSel >= G.shopTop + VIS) G.shopTop = G.menuSel - VIS + 1;
+}
+
+// ---------------------------------------------------------------- the charm screen
+const CHARM_COLS = 7;
+function updateCharms(dt) {
+  const list = Charms.ownedList(), n = list.length;
+  if (G.charmNote) { G.charmNote.t += dt; if (G.charmNote.t > 3) G.charmNote = null; }
+  if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'pause'; Input.consume('pause'); Input.consume('map'); Sound.play('select'); return; }
+  if (!n) return;
+  G.charmSel = clamp(G.charmSel, 0, n - 1);
+  const move = d => { G.charmSel = clamp(G.charmSel + d, 0, n - 1); Sound.play('select'); };
+  if (Input.pressed('left')) move(-1);
+  if (Input.pressed('right')) move(1);
+  if (Input.pressed('up')) move(-CHARM_COLS);
+  if (Input.pressed('down')) move(CHARM_COLS);
+  if (Input.pressed('confirm')) {
+    if (!P.sitting) { Sound.play('hurt'); G.charmNote = { text: tr('charmsBench'), t: 0, bad: true }; return; }
+    const r = Charms.toggle(list[G.charmSel]);
+    if (r === 'full') { Sound.play('hurt'); G.charmNote = { text: tr('charmsFull'), t: 0, bad: true }; }
+    else {
+      Sound.play(r === 'off' ? 'select' : 'confirm');
+      G.charmNote = r === 'over' ? { text: tr('overcharm'), t: 0, bad: true } : null;
+    }
   }
 }
 function updateBanner(dt) {
@@ -441,6 +481,7 @@ function update(dt) {
     case 'map': if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('confirm') || Input.pressed('attack')) { G.state = 'play'; Input.consume('map'); Input.consume('pause'); } break;
     case 'dialog': updateDialog(dt); updateParticles(dt); break;
     case 'shop': updateShop(); break;
+    case 'charms': updateCharms(dt); break;
     case 'banner': updateBanner(dt); updateParticles(dt); for (const it of G.items) it.t += dt; break;
     case 'ending': G.ending.t += dt; if (G.ending.t > 4 && Input.pressed('confirm')) { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.hasSave = readSave() !== null; G.menuSel = 0; Sound.setTheme('title'); }, 0.6, 0.2, 0.6); } break;
     case 'dying': {
@@ -484,11 +525,11 @@ function drawHUD(g) {
   // soul orb
   const ox = 52, oy = 54, r = 30, soul = P.soul / P.maxSoul;
   g.save();
-  glow(g, ox, oy, 60, '#cfe8ff', P.soul >= 33 ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
+  glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
   g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill();
   g.save(); g.beginPath(); g.arc(ox, oy, r - 2, 0, 7); g.clip();
   const ly = oy + r - 2 * (r - 2) * soul;
-  g.fillStyle = P.soul >= 33 ? '#e4f4ff' : '#9bb8d6';
+  g.fillStyle = P.soul >= P.spellCost() ? '#e4f4ff' : '#9bb8d6';
   g.beginPath(); g.moveTo(ox - r, oy + r);
   for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
   g.lineTo(ox + r, oy + r); g.closePath(); g.fill();
@@ -616,6 +657,10 @@ function drawWorld(g) {
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](g, e, t);
   }
   Art.drawPlayer(g, P, t);
+  if (Charms.shellUp() && !P.dead) {
+    bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
+    g.strokeStyle = 'rgba(232,220,184,' + (0.45 + 0.2 * Math.sin(t * 5)) + ')'; g.lineWidth = 2; ellipse(g, P.cx, P.cy, 24, 33); g.stroke();
+  }
   for (const p of G.projs) Art.drawProj(g, p, t);
   for (const f of G.fx) Art.drawFx(g, f);
   for (const p of G.parts) {
@@ -745,27 +790,84 @@ function drawDialog(g) {
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.beginPath(); const by = 492 + Math.sin(G.t * 5) * 2; g.moveTo(VW / 2 - 8, by - 6); g.lineTo(VW / 2 + 8, by - 6); g.lineTo(VW / 2, by + 3); g.fill();
   g.restore();
 }
+// small pictures for the shop rows that are not charms
+function shopIcon(g, kind, x, y) {
+  g.save(); g.translate(x, y);
+  if (kind === 'mask') drawMaskIcon(g, 0, 0, true, 0);
+  else if (kind === 'nail') { poly(g, [0, -16, 5, 8, -5, 8]); fs(g, '#e6eef7', INK, 2.5); poly(g, [-10, 8, 10, 8, 10, 12, -10, 12]); fs(g, '#8a96a8', INK, 2); }
+  else if (kind === 'soul') { g.beginPath(); g.moveTo(0, -15); g.bezierCurveTo(4, -7, 12, -2, 12, 4); g.arc(0, 4, 12, 0, Math.PI); g.bezierCurveTo(-12, -2, -4, -7, 0, -15); g.closePath(); fs(g, '#cfe8ff', INK, 2.5); }
+  else if (kind === 'notch') { ellipse(g, 0, 0, 13, 13); fs(g, '#0d1322', INK, 3); g.strokeStyle = '#7fe3d9'; g.lineWidth = 2.5; ellipse(g, 0, 0, 9, 9); g.stroke(); g.fillStyle = '#7fe3d9'; ellipse(g, 0, 0, 3.5, 3.5); g.fill(); }
+  g.restore();
+}
 function drawShop(g) {
+  const list = shopList(), VIS = 6, ROW = 58, Y0 = 138;
   g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH);
-  drawPanel(g, 150, 70, VW - 300, 400);
-  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('shopTitle'), VW / 2, 112, '#eef5ff');
+  drawPanel(g, 130, 30, VW - 260, 480);
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('shopTitle'), VW / 2, 72, '#eef5ff');
   g.font = font(22, '700'); g.textAlign = 'right'; g.direction = 'ltr';
-  g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 190, 112);
-  SHOP_ITEMS.forEach((it, i) => {
-    const y = 170 + i * 82, on = G.menuSel === i, sold = G.flags[it.id];
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(180, y - 30, VW - 360, 68); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(180.5, y - 29.5, VW - 361, 67); }
-    setDir(g); g.textAlign = 'center'; g.font = font(26, '700'); g.fillStyle = sold ? '#6d7a8c' : '#eef5ff'; g.fillText(tr(it.name), VW / 2, y - 6);
-    g.font = font(17, '500'); g.fillStyle = '#9db5d6'; g.fillText(tr(it.desc), VW / 2, y + 22);
-    g.textAlign = 'right'; g.direction = 'ltr'; g.font = font(22, '700'); g.fillStyle = sold ? '#6d7a8c' : (P.geo >= it.price ? '#ffe9a0' : '#c77'); g.fillText(sold ? tr('soldout') : it.price + ' ' + tr('price'), VW - 200, y + 6);
+  g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 170, 72);
+  for (let i = G.shopTop; i < Math.min(list.length + 1, G.shopTop + VIS); i++) {
+    const y = Y0 + (i - G.shopTop) * ROW, on = G.menuSel === i;
+    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(160, y - 28, VW - 320, 56); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(160.5, y - 27.5, VW - 321, 55); }
+    if (i === list.length) {
+      setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(190,205,225,0.8)'; g.fillText(tr('leave'), VW / 2, y);
+      continue;
+    }
+    const it = list[i], sold = G.flags[it.id];
+    if (it.charm) Art.drawCharm(g, it.charm, 202, y, 21, { dim: sold });
+    else shopIcon(g, it.icon, 202, y);
+    setDir(g); g.textAlign = 'center'; g.font = font(23, '700'); g.fillStyle = sold ? '#6d7a8c' : '#eef5ff'; g.fillText(shopName(it), VW / 2, y - 9);
+    g.font = font(15, '500'); g.fillStyle = '#9db5d6'; g.fillText(shopDesc(it), VW / 2, y + 15);
+    g.textAlign = 'right'; g.direction = 'ltr'; g.font = font(21, '700'); g.fillStyle = sold ? '#6d7a8c' : (P.geo >= it.price ? '#ffe9a0' : '#c77'); g.fillText(sold ? tr('soldout') : it.price + ' ' + tr('price'), VW - 180, y);
+  }
+  g.fillStyle = 'rgba(230,240,255,0.55)';
+  if (G.shopTop > 0) { g.beginPath(); g.moveTo(VW / 2 - 8, 112); g.lineTo(VW / 2 + 8, 112); g.lineTo(VW / 2, 102); g.fill(); }
+  if (G.shopTop + VIS < list.length + 1) { g.beginPath(); g.moveTo(VW / 2 - 8, 488); g.lineTo(VW / 2 + 8, 488); g.lineTo(VW / 2, 498); g.fill(); }
+}
+
+function drawCharms(g) {
+  g.fillStyle = 'rgba(3,5,10,0.95)'; g.fillRect(0, 0, VW, VH);
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('charms'), VW / 2, 40, '#eef5ff');
+  // the notches: filled for what is worn, red beyond the limit
+  const total = Charms.notches(), used = Charms.used(), shown = Math.max(total, used), sx = VW / 2 - (shown - 1) * 15;
+  for (let i = 0; i < shown; i++) {
+    const x = sx + i * 30, y = 86, bad = i >= total;
+    ellipse(g, x, y, 10, 10); fs(g, i < used ? (bad ? '#d24a4a' : '#7fe3d9') : '#0d1322', bad ? '#ff8a8a' : '#9fb4cf', 2.5);
+  }
+  g.font = font(16, '600'); g.fillStyle = Charms.over() ? '#ff8a8a' : '#9db5d6'; g.direction = 'ltr'; g.fillText(tr('notches') + ': ' + used + ' / ' + total, VW / 2, 112);
+  setDir(g);
+  const list = Charms.ownedList();
+  if (!list.length) {
+    g.font = font(22, '600'); g.fillStyle = '#9db5d6'; g.fillText(tr('noCharms'), VW / 2, 250);
+  }
+  const CW = 104, x0 = (VW - CHARM_COLS * CW) / 2 + CW / 2;
+  list.forEach((id, i) => {
+    const cx = x0 + (i % CHARM_COLS) * CW, cy = 168 + Math.floor(i / CHARM_COLS) * 100, on = i === G.charmSel, worn = Charms.has(id);
+    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(cx - 46, cy - 42, 92, 88); g.strokeStyle = 'rgba(230,240,255,0.8)'; g.lineWidth = 1.5; g.strokeRect(cx - 45.5, cy - 41.5, 91, 87); }
+    if (worn) bloom(g, cx, cy - 4, 52, Charms.DEFS[id].color, 0.28);
+    Art.drawCharm(g, id, cx, cy - 4, 28, { worn });
+    for (let k = 0; k < Charms.DEFS[id].cost; k++) { ellipse(g, cx + (k - (Charms.DEFS[id].cost - 1) / 2) * 12, cy + 34, 4, 4); fs(g, worn ? '#7fe3d9' : '#2a3550', '#9fb4cf', 1.5); }
   });
-  drawMenu(g, [{ label: tr('leave') }], G.menuSel - SHOP_ITEMS.length, 172 + SHOP_ITEMS.length * 82 - 10, 50);
+  if (list.length) {
+    const id = list[clamp(G.charmSel, 0, list.length - 1)], d = Charms.DEFS[id];
+    drawPanel(g, 80, 352, VW - 160, 160);
+    setDir(g); g.textAlign = 'center'; g.font = font(28, '700'); textShadow(g, Charms.name(id), VW / 2, 384, d.color);
+    g.font = font(18, '500'); g.fillStyle = '#9db5d6'; g.fillText(tr('cost') + ': ' + d.cost + (Charms.has(id) ? '   ·   ' + tr('worn') : ''), VW / 2, 414);
+    g.font = font(20, '600'); g.fillStyle = '#e1ecf8';
+    wrapText(g, Charms.desc(id), VW - 260).forEach((l, k) => g.fillText(l, VW / 2, 446 + k * 26));
+    const note = G.charmNote;
+    g.font = font(17, '600');
+    if (note) { g.fillStyle = note.bad ? '#ff9a8a' : '#9db5d6'; g.fillText(note.text, VW / 2, 494); }
+    else { g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(P.sitting ? tr('charmsHint') : tr('charmsBench'), VW / 2, 494); }
+  }
 }
 function drawBanner(g) {
   const b = G.banner, k = clamp(b.t / 0.5, 0, 1);
   g.fillStyle = 'rgba(0,0,0,' + 0.55 * k + ')'; g.fillRect(0, 0, VW, VH);
   g.save(); g.globalAlpha = k; setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
   glow(g, VW / 2, 230, 240, '#dff0ff', 0.25);
-  g.font = font(54, '700'); textShadow(g, b.title, VW / 2, 200, '#f4f9ff', 16);
+  if (b.charm) Art.drawCharm(g, b.charm, VW / 2, 124, 46, { glow: true, worn: true });
+  g.font = font(54, '700'); textShadow(g, b.title, VW / 2, 206, '#f4f9ff', 16);
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.fillRect(VW / 2 - 160, 240, 320, 2);
   g.font = font(24, '600'); const lines = wrapText(g, b.desc, 620);
   lines.forEach((l, i) => { g.fillStyle = '#d6e4f5'; g.fillText(l, VW / 2, 290 + i * 34); });
@@ -802,9 +904,10 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 190, 54); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 168, 44); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
+        if (G.state === 'charms') drawCharms(g);
         if (G.state === 'banner') drawBanner(g);
       }
   }
@@ -854,5 +957,5 @@ function refreshTouchLabels() {
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;
-window.DW = { G, P, enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
+window.DW = { G, P, Charms, enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
 window.addEventListener('DOMContentLoaded', boot);

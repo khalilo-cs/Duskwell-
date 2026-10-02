@@ -7,7 +7,7 @@ const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', c
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
   level: null, player: new Player(), enemies: [], projs: [], geos: [], items: [], parts: [], fx: [],
-  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0, bolt: 0, boltCD: 4,
+  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0, bolt: 0, boltCD: 4, seen: {}, bestSel: 0, bestT: 0,
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
@@ -62,7 +62,7 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, room: G.bench.room, maxHp: P.maxHp, ab: P.ab, geo: P.geo, nail: P.nail, soulGain: P.soulGain, flags: G.flags,
-      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(),
+      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(), seen: G.seen,
     }));
   } catch (e) { /* storage may be blocked */ }
 }
@@ -210,12 +210,12 @@ G.onBossDeath = function (b) {
 function startGame(useSave) {
   Object.assign(P, new Player());
   G.look = 0; G.lookT = 0; G.lookDir = 0;
-  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset();
+  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); G.seen = {};
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
     P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = Object.assign(P.ab, s.ab); P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
-    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms);
+    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms); G.seen = s.seen || {};
     room = s.room; spawn = { bench: true };
   } else {
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
@@ -341,6 +341,13 @@ function updatePlay(dt) {
     }
   }
 
+  // the bestiary: a creature is entered when it first comes into view
+  for (const e of G.enemies) {
+    if (e.dead || Math.abs(e.cx - P.cx) > 520 || Math.abs(e.cy - P.cy) > 330) continue;
+    const key = bestiaryKey(e);
+    if (key && !G.seen[key]) { G.seen[key] = true; G.toastMsg(tr('bestiaryNew') + bestiaryName(BESTIARY[BESTIARY_INDEX[key]]), 2.4); }
+  }
+
   // Cinder Edge: a struck enemy smoulders, then takes the burn
   for (const e of G.enemies) {
     if (!(e.burnT > 0) || e.dead) continue;
@@ -451,7 +458,7 @@ function gfxLabel() {
   return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
 }
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -465,6 +472,7 @@ function updatePause() {
     if (id === 'resume') G.state = 'play';
     else if (id === 'map') G.state = 'map';
     else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
+    else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
@@ -537,6 +545,7 @@ function update(dt) {
   if (G.shakeT > 0) G.shakeT -= dt;
   switch (G.state) {
     case 'title': updateTitle(); break;
+    case 'bestiary': updateBestiary(dt); break;
     case 'trans': updateTrans(dt); break;
     case 'pause': updatePause(); break;
     case 'map': if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('confirm') || Input.pressed('attack')) { G.state = 'play'; Input.consume('map'); Input.consume('pause'); } break;
@@ -1024,6 +1033,7 @@ function draw() {
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
+        if (G.state === 'bestiary') drawBestiary(g);
         if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
       }

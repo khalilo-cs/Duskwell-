@@ -159,6 +159,14 @@ const STR = {
     merchant: 'التاجر: هل معك جيو؟ عندي ما يساعدك في العتمة.',
     trap: 'تحذير: أنت في ساحة معركة. لا مفرّ حتى النهاية.',
     abil_superdash: 'قلب الشهاب', abil_superdash_d: 'على الأرض أو متشبّثاً بجدار: اضغط Q (أو زر الشهاب) مطوّلاً حتى يومض، ثم اتركه لتنطلق كالشهاب. القفز يوقفك.',
+    area_frost: 'قمم الصقيع', area_ember: 'أعماق الجمر',
+    sign_to_frost: 'لافتة: شرقاً قمم الصقيع. تقطعها حفرة عريضة لا يعبرها إلا من يندفع.',
+    sign_to_ember: 'لافتة: غرباً أعماق الجمر. الحمم تتدفق هناك، ومن لا يتسلق الجدران يعود أدراجه.',
+    sign_frost: 'لافتة: الجليد زلق. من يتمهّل يعبر، ومن يركض ينزلق.',
+    sign_frost_queen: 'لافتة: ملكة الصقيع تنتظر خلف هذا الباب. اجلس على المقعد أولاً.',
+    sign_ember: 'لافتة: الحمم تحرق. لا تلمسها.',
+    sign_ember_colossus: 'لافتة: قلب الفرن يخفق خلف هذا الباب. العملاق الجمري لا يرحم.',
+    boss_queen: 'ملكة الصقيع', boss_colossus: 'العملاق الجمري',
     area_rustworks: 'ورشة الصدأ', gate_opened: 'دوّى صوت بوابةٍ تنفتح.',
     sign_rust: 'لافتة: ورشة الصدأ. الألواح المتآكلة لا تحتمل الوقوف طويلاً.',
     sign_lever: 'لافتة: الذراع يوقظ الآلات ويفتح باب الورشة. اضربه.',
@@ -171,6 +179,7 @@ const STR = {
     sign_spore: 'لافتة: قبعات الفطر الحمراء تقذفك عالياً. اهبط عليها.',
     sign_crack: 'لافتة: الأرض هنا متشققة. شيءٌ أثقل من الخطى يمكنه كسرها.',
     sign_acid: 'لافتة: الماء الأخضر حمضٌ يحرق. لا تلمسه.',
+    gfx: 'الرسوم',
     charms: 'التمائم', cost: 'الفتحات', notches: 'الفتحات', worn: 'مرتداة', noCharms: 'لم تجد أي تميمة بعد. ابحث في الزوايا البعيدة، واسأل التاجر.',
     charmsHint: 'Z: ارتداء أو نزع    Esc: رجوع', charmsBench: 'تُغيَّر التمائم وأنت جالس على مقعد فقط.', charmsFull: 'أنت مُثقَل بالتمائم أصلاً: انزع شيئاً أولاً.',
     overcharm: 'تميمة فوق الفتحات! كل إصابة ستكلّفك الضعف.', charm_found_d: 'اجلس على مقعد وافتح التمائم من قائمة الإيقاف لترتديها.',
@@ -210,6 +219,14 @@ const STR = {
     merchant: 'Merchant: Got any Geo? I have things that help in the dark.',
     trap: 'Warning: this is a battle arena. There is no way out until the end.',
     abil_superdash: 'Comet Heart', abil_superdash_d: 'On the ground or clinging to a wall, hold Q (or the Comet button) until it flashes, then let go to blaze forward. Jump to stop.',
+    area_frost: 'Rimecrest', area_ember: 'Cinderdeep',
+    sign_to_frost: 'Sign: east lies Rimecrest. A wide pit cuts the way; only those who dash cross it.',
+    sign_to_ember: 'Sign: west lies Cinderdeep. Lava runs there, and those who cannot climb walls turn back.',
+    sign_frost: 'Sign: the ice is slippery. Those who go slowly cross; those who run slide.',
+    sign_frost_queen: 'Sign: the Rime Queen waits behind this door. Rest on the bench first.',
+    sign_ember: 'Sign: lava burns. Do not touch it.',
+    sign_ember_colossus: 'Sign: the Furnace Heart beats behind this door. The Cinder Colossus shows no mercy.',
+    boss_queen: 'The Rime Queen', boss_colossus: 'The Cinder Colossus',
     area_rustworks: 'The Rustworks', gate_opened: 'Somewhere, a gate grinds open.',
     sign_rust: 'Sign: The Rustworks. The corroded plates will not hold you for long.',
     sign_lever: 'Sign: The lever wakes the machines and opens the works. Strike it.',
@@ -222,6 +239,7 @@ const STR = {
     sign_spore: 'Sign: The red mushroom caps throw you high. Land on them.',
     sign_crack: 'Sign: The ground here is cracked. Something heavier than footsteps could break it.',
     sign_acid: 'Sign: The green water is acid. Do not touch it.',
+    gfx: 'Graphics',
     charms: 'Charms', cost: 'Notches', notches: 'Notches', worn: 'Worn', noCharms: 'You have found no charms yet. Search the far corners, and ask the merchant.',
     charmsHint: 'Z: wear or remove    Esc: back', charmsBench: 'Charms can only be changed while resting on a bench.', charmsFull: 'You are already overcharmed: remove something first.',
     overcharm: 'Over the notch limit! Every wound will cost you double.', charm_found_d: 'Rest on a bench and open Charms from the pause menu to wear it.',
@@ -367,9 +385,9 @@ const Sound = (() => {
   let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
-  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry' };
+  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember' };
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
   const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   const MUSIC_VOL = 0.8;
@@ -684,7 +702,7 @@ class RoomBuilder {
     this.id = id; this.w = w; this.h = h;
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
-    this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = [];
+    this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = []; this.iceCells = new Set();
     this.signs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
@@ -702,6 +720,8 @@ class RoomBuilder {
   bounce(x, y, w) { return this.fill(x, y, w, 1, T_BOUNCE); }          // mushroom cap: launches the player
   crack(x, y, w, h) { return this.fill(x, y, w, h || 1, T_CRACK); }    // only a dive breaks it
   acid(x, y, w, h) { return this.fill(x, y, w, h || 1, T_ACID); }
+  ice(x, y, w, h) { h = h || 1; this.fill(x, y, w, h, T_SOLID); for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) this.iceCells.add(j * this.w + i); return this; }     // slippery rock
+  lava(x, y, w, h) { return this.fill(x, y, w, h || 1, T_ACID); }                                                                                      // looks like lava in Cinderdeep
   crumble(x, y, w) { return this.fill(x, y, w, 1, T_CRUMBLE); }          // gives way soon after it is stood on
   // machinery (see mechanics.js): coordinates in tiles; saws are placed by their centre
   mover(x, y, w, tx, ty, o) { this.mech.push(Object.assign({ type: 'mover', x, y, w, to: { x: tx, y: ty } }, o || {})); return this; }
@@ -716,6 +736,40 @@ class RoomBuilder {
   station(x, y) { this.stations.push({ x, y }); return this; }          // lantern station: fast travel between lit stations
   sign(x, y, text) { this.signs.push({ x, y, text }); return this; }
   decor(type, x, y, o) { this.deco.push(Object.assign({ type, x, y }, o || {})); return this; }
+  // Draws the whole room from text, one character per tile (rows are y = 0..h-1, x = 0..w-1):
+  //   # solid   = one-way plate   ^ spikes   ~ acid or lava   b breakable wall   c cracked floor
+  //   m bounce cap   i ice (solid and slippery)   space = air
+  // Other characters come from the legend and mark what stands in that tile:
+  //   ['enemy', type, opts]  ['item', id, kind, opts]  ['bench']  ['station']  ['sign', text]  ['npc', type]
+  //   ['light', opts]  and ['door', id, to, toDoor]: all cells of one door letter form its rectangle.
+  ascii(rows, legend) {
+    legend = legend || {};
+    if (rows.length !== this.h) throw new Error(this.id + ': ' + rows.length + ' rows, expected ' + this.h);
+    const doors = {};
+    rows.forEach((row, y) => {
+      if (row.length !== this.w) throw new Error(this.id + ' row ' + y + ': ' + row.length + ' columns, expected ' + this.w);
+      for (let x = 0; x < this.w; x++) {
+        const ch = row[x], i = y * this.w + x;
+        const tile = { '#': T_SOLID, '=': T_ONEWAY, '^': T_HAZARD, '~': T_ACID, b: T_BREAK, c: T_CRACK, m: T_BOUNCE, i: T_SOLID }[ch];
+        this.t[i] = tile === undefined ? T_AIR : tile;
+        if (ch === 'i') this.iceCells.add(i);
+        if (tile !== undefined || ch === ' ') continue;
+        const e = legend[ch];
+        if (!e) throw new Error(this.id + ' (' + x + ',' + y + '): "' + ch + '" is not in the legend');
+        if (e[0] === 'door') { (doors[ch] = doors[ch] || { e, x0: x, y0: y, x1: x, y1: y }); const d = doors[ch]; d.x0 = Math.min(d.x0, x); d.y0 = Math.min(d.y0, y); d.x1 = Math.max(d.x1, x); d.y1 = Math.max(d.y1, y); }
+        else if (e[0] === 'enemy') this.enemy(e[1], x, y, e[2]);
+        else if (e[0] === 'item') this.item(e[1], x, y, e[2], e[3]);
+        else if (e[0] === 'bench') this.bench(x, y);
+        else if (e[0] === 'station') this.station(x, y);
+        else if (e[0] === 'sign') this.sign(x, y, e[1]);
+        else if (e[0] === 'npc') this.npc(e[1], x, y);
+        else if (e[0] === 'light') this.decor('light', x, y, e[1]);
+        else throw new Error(this.id + ': unknown legend kind ' + e[0]);
+      }
+    });
+    for (const k of Object.keys(doors)) { const d = doors[k]; this.door(d.e[1], d.x0, d.y0, d.x1 - d.x0 + 1, d.y1 - d.y0 + 1, d.e[2], d.e[3]); }
+    return this;
+  }
   at(x, y) { return (x < 0 || y < 0 || x >= this.w || y >= this.h) ? T_SOLID : this.t[y * this.w + x]; }
   finish() {
     // doors are cut last so they always open the frame
@@ -742,6 +796,8 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   town.npc('elder', 17, 17).npc('merchant', 40, 17);
   town.sign(7, 17, 'sign_controls');
   town.plat(24, 14, 5).plat(34, 13, 4);
+  town.door('east', 63, 15, 1, 3, 'fr1', 'w').door('west', 0, 15, 1, 3, 'em1', 'e');          // Rimecrest to the east, Cinderdeep to the west
+  town.sign(59, 17, 'sign_to_frost').sign(2, 17, 'sign_to_ember');
 
   // ===================== SUNKEN CROSSROADS =====================
   const cx1 = room('cx1', 40, 44, { area: 'crossroads', theme: 'cave', map: { x: 5, y: 3 } });
@@ -1177,9 +1233,211 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   charm('aq3', 'dashmaster', 7, 19);  // inside the secret pocket
   charm('cs4', 'mage', 10, 13);       // on the ledge above the stash
   charm('fd3', 'fury', 68, 11);       // the raised reward ledge of the Rustworks
-  WORLD.order = Object.keys(WORLD.rooms);
-  for (const id of WORLD.order) WORLD.rooms[id].finish();
 })();
+
+</script>
+<script>
+'use strict';
+// World data: Rimecrest (the frost area), east of Hushvale. Eight rooms; the first two need the dash and the
+// wall claw, the fourth the double jump; the last is the Rime Queen's arena. Ice is slippery (see Player.onIce).
+(function build() {
+  const frost = (id, w, h, mx, my) => room(id, w, h, { area: 'frost', theme: 'frost', map: { x: mx, y: my } });
+
+  // ===================== fr1: the Rime Gate. A wide pit needs the dash. =====================
+  const fr1 = frost('fr1', 72, 22, 10, -12);
+  fr1.solid(0, 18, 72, 4);
+  fr1.ice(1, 18, 13);                                         // a slippery start
+  fr1.air(15, 18, 8, 4).hazard(15, 21, 8, 1);                 // the first pit: 8 wide
+  fr1.solid(30, 15, 6, 3).ice(30, 15, 6);                     // an icy block
+  fr1.air(41, 18, 4, 4).hazard(41, 21, 4, 1);                 // a narrow pit
+  fr1.ice(48, 18, 12);
+  fr1.door('w', 0, 15, 1, 3, 'town', 'east').door('e', 71, 15, 1, 3, 'fr2', 'w');
+  fr1.enemy('slime', 8, 17).enemy('mole', 26, 17).enemy('warden', 39, 17).enemy('ram', 62, 17)
+    .enemy('icicle', 52, 1).enemy('icicle', 56, 1).enemy('icicle', 66, 1);
+  fr1.sign(4, 17, 'sign_frost');
+
+  // ===================== fr2: the Glacier Wall. A four-wide shaft: climb it with the wall claw. =====================
+  const fr2 = frost('fr2', 28, 42, 20, -17);
+  fr2.solid(0, 39, 28, 3);
+  fr2.solid(1, 6, 11, 27).solid(16, 6, 11, 27);               // two blocks leave a shaft x12..15
+  fr2.plat(12, 36, 4);                                        // a step to reach the foot of the shaft
+  fr2.door('w', 0, 36, 1, 3, 'fr1', 'e').door('e', 27, 3, 1, 3, 'fr3', 'w');
+  fr2.enemy('moth', 13, 24).enemy('moth', 14, 13).enemy('slime', 20, 38);
+  fr2.item('seed_fr2', 3, 5, 'seed');
+
+  // ===================== fr3: the Snowfield. Ice plains, a bench and a lantern station. =====================
+  const fr3 = frost('fr3', 72, 24, 24, -12);
+  fr3.solid(0, 20, 72, 4);
+  fr3.ice(1, 20, 28).ice(36, 20, 34);
+  fr3.air(30, 20, 6, 4).hazard(30, 23, 6, 1);                 // a six-wide pit between the ice sheets
+  fr3.solid(12, 17, 8, 3).ice(12, 17, 8);                     // a block to climb
+  fr3.plat(22, 14, 5).plat(38, 15, 6).plat(48, 12, 5);        // a way up over the ice
+  fr3.solid(58, 14, 8, 6).air(60, 17, 4, 3).breakable(58, 17, 2, 3);        // a hidden alcove
+  fr3.door('w', 0, 17, 1, 3, 'fr2', 'e').door('e', 71, 17, 1, 3, 'fr4', 'w');
+  fr3.bench(4, 19).station(8, 19);
+  fr3.enemy('ram', 24, 19).enemy('ram', 50, 19).enemy('veil', 40, 15).enemy('mole', 16, 16);
+  fr3.item('seed_fr3', 62, 19, 'seed');
+  fr3.decor('light', 6, 17, { r: 220, c: '#cfeeff' });
+
+  // ===================== fr4: the Hall of Rime. A stair of plates over a floor of spikes; the double jump pays. =====================
+  const fr4 = frost('fr4', 64, 28, 33, -13);
+  fr4.solid(0, 26, 64, 2);
+  fr4.hazard(8, 25, 31, 1);                                   // spikes under the whole stair
+  fr4.plat(6, 23, 5).plat(13, 20, 5).plat(20, 17, 5).plat(27, 14, 6);
+  fr4.solid(36, 12, 12, 3);                                   // a block at the top of the stair
+  fr4.plat(50, 15, 5).plat(55, 19, 5);
+  fr4.door('w', 0, 23, 1, 3, 'fr3', 'e').door('e', 63, 23, 1, 3, 'fr5', 'w');
+  fr4.enemy('veil', 18, 14).enemy('veil', 31, 9).enemy('chainman', 46, 25).enemy('moth', 55, 11).enemy('slime', 58, 25);
+  fr4.item('charm_soles', 41, 11, 'charm', { charm: 'soles' });
+
+  // ===================== fr5: Frostbite Gorge. A descent by ledges, with icicles over every path. =====================
+  const fr5 = frost('fr5', 36, 46, 41, -18);
+  fr5.solid(0, 44, 36, 2);
+  fr5.solid(1, 6, 9, 1).solid(13, 10, 10, 1).solid(25, 14, 10, 1).solid(13, 18, 10, 1).solid(1, 22, 10, 1)
+    .solid(13, 26, 10, 1).solid(25, 30, 10, 1).solid(13, 34, 10, 1).solid(1, 38, 10, 1);
+  fr5.plat(12, 41, 4);                                        // a step for the climb back
+  fr5.hazard(11, 43, 13, 1);                                  // the bottom pit
+  fr5.door('w', 0, 3, 1, 3, 'fr4', 'e').door('e', 35, 41, 1, 3, 'fr6', 'w');
+  fr5.enemy('moth', 18, 14).enemy('moth', 28, 24).enemy('slime', 5, 5).enemy('slime', 29, 13).enemy('mole', 17, 33)
+    .enemy('icicle', 15, 11).enemy('icicle', 19, 11).enemy('icicle', 28, 15).enemy('icicle', 31, 15).enemy('icicle', 16, 19).enemy('icicle', 4, 23)
+    .enemy('icicle', 16, 27).enemy('icicle', 28, 31).enemy('icicle', 16, 35);
+  fr5.item('cache_fr5', 5, 37, 'cache', { amount: 120 });
+
+  // ===================== fr6: the Frozen Library. Islands over a pit; a bench. =====================
+  const fr6 = frost('fr6', 56, 26, 46, -12);
+  fr6.solid(0, 22, 56, 4);
+  fr6.air(20, 22, 16, 4).hazard(20, 25, 16, 1);
+  fr6.solid(22, 21, 3, 5).solid(27, 19, 3, 7).solid(32, 21, 3, 5);          // three islands
+  fr6.plat(5, 17, 6).plat(45, 17, 6);                                       // shelves
+  fr6.door('w', 0, 19, 1, 3, 'fr5', 'e').door('e', 55, 19, 1, 3, 'fr7', 'w');
+  fr6.bench(3, 21);
+  fr6.enemy('chainman', 45, 21).enemy('slime', 14, 21).enemy('veil', 30, 12).enemy('moth', 10, 10).enemy('mole', 50, 21);
+  fr6.item('seed_fr6', 28, 18, 'seed');
+
+  // ===================== fr7: the Rime Antechamber. Quiet; a bench and the way to the queen. =====================
+  const fr7 = frost('fr7', 40, 22, 53, -12);
+  fr7.solid(0, 18, 40, 4);
+  fr7.door('w', 0, 15, 1, 3, 'fr6', 'e').door('e', 39, 15, 1, 3, 'fr8', 'w');
+  fr7.bench(6, 17);
+  fr7.sign(30, 17, 'sign_frost_queen');
+  fr7.decor('light', 20, 14, { r: 240, c: '#cfeeff' });
+
+  // ===================== fr8: the Rime Throne. =====================
+  const fr8 = frost('fr8', 44, 24, 58, -13);
+  fr8.solid(0, 20, 44, 4);
+  fr8.plat(6, 15, 5).plat(33, 15, 5).plat(19, 12, 6);
+  fr8.door('w', 0, 17, 1, 3, 'fr7', 'e');
+  fr8.arena = {
+    boss: 'queen', flag: 'boss_queen', trigger: 9, spawn: { x: 30, y: 19 },
+    gates: [{ x: 0, y: 17, w: 1, h: 3, close: 'start' }],
+    reward: { id: 'seed_queen', kind: 'seed', x: 20, y: 18 },
+    reward2: { id: 'charm_wick', kind: 'charm', charm: 'wick', x: 23, y: 19 },
+  };
+})();
+
+</script>
+<script>
+'use strict';
+// World data: Cinderdeep (the ember area), west of Hushvale. Eight rooms, entered from the right and left by the
+// left: lava pits (the first needs the dash), a smelter shaft to climb, a magma lake to hop across, a stair
+// that rewards the double jump, and the Cinder Colossus' arena. Lava hurts like spikes: it costs a mask and sends
+// the hero back to the last safe ground.
+(function build() {
+  const ember = (id, w, h, mx, my) => room(id, w, h, { area: 'ember', theme: 'ember', map: { x: mx, y: my } });
+
+  // ===================== em1: the Ash Gate. A narrow lava pit, a block, then an eight-wide pit (dash). =====================
+  const em1 = ember('em1', 72, 22, 57, 24);
+  em1.solid(0, 18, 72, 4);
+  em1.air(52, 18, 4, 4).lava(52, 19, 4, 3);                   // a narrow pit, x52..55
+  em1.solid(40, 15, 6, 3);                                    // a basalt block, x40..45
+  em1.air(24, 18, 8, 4).lava(24, 19, 8, 3);                   // the wide pit, x24..31: the dash
+  em1.door('e', 71, 15, 1, 3, 'town', 'west').door('w', 0, 15, 1, 3, 'em2', 'e');
+  em1.enemy('imp', 62, 17).enemy('imp', 36, 17).enemy('lavaworm', 12, 17).enemy('moth', 30, 9)
+    .enemy('icicle', 62, 1).enemy('icicle', 10, 1);
+  em1.sign(67, 17, 'sign_ember');
+
+  // ===================== em2: the Smelter Shaft. Climb it with the wall claw; a lava pit waits on the way in. =====================
+  const em2 = ember('em2', 28, 42, 50, 19);
+  em2.solid(0, 39, 28, 3);
+  em2.air(18, 39, 4, 3).lava(18, 40, 4, 2);                   // a pit before the shaft
+  em2.solid(1, 6, 11, 27).solid(16, 6, 11, 27);               // the shaft is x12..15
+  em2.plat(12, 36, 4);                                        // a step to reach the foot of the shaft
+  em2.door('e', 27, 36, 1, 3, 'em1', 'w').door('w', 0, 3, 1, 3, 'em3', 'e');
+  em2.enemy('moth', 13, 24).enemy('moth', 14, 13).enemy('chainman', 6, 5).enemy('lavaworm', 24, 38);
+  em2.item('cache_em2', 24, 5, 'cache', { amount: 110 });
+
+  // ===================== em3: the Slag Fields. Basalt plains and lava rivers, a bench and a lantern station. =====================
+  const em3 = ember('em3', 72, 24, 41, 24);
+  em3.solid(0, 20, 72, 4);
+  em3.air(44, 20, 8, 4).lava(44, 21, 8, 3);                   // an eight-wide river (dash)
+  em3.air(20, 20, 6, 4).lava(20, 21, 6, 3);
+  em3.solid(30, 16, 6, 4);
+  em3.plat(8, 15, 5).plat(58, 15, 6);
+  em3.solid(6, 13, 9, 7).air(8, 16, 5, 4).breakable(13, 16, 2, 4);          // a hidden alcove, opened from the right
+  em3.door('e', 71, 17, 1, 3, 'em2', 'w').door('w', 0, 17, 1, 3, 'em4', 'e');
+  em3.bench(66, 19).station(62, 19);
+  em3.enemy('roller', 17, 19).enemy('roller', 56, 19).enemy('chainman', 33, 15).enemy('imp', 40, 19).enemy('lavaworm', 28, 19).enemy('moth', 22, 11);
+  em3.item('seed_em3', 10, 19, 'seed');
+  em3.decor('light', 64, 17, { r: 220, c: '#ffb070' });
+
+  // ===================== em4: the Magma Hall. A lake of lava crossed by a ring of plates. =====================
+  const em4 = ember('em4', 64, 28, 32, 23);
+  em4.solid(0, 26, 64, 2);
+  em4.air(10, 26, 44, 2).lava(10, 26, 44, 2);                 // the lake, x10..53
+  em4.plat(48, 24, 4).plat(41, 22, 4).plat(34, 20, 4).plat(26, 18, 5).plat(19, 20, 4).plat(12, 22, 4);
+  em4.door('e', 63, 23, 1, 3, 'em3', 'w').door('w', 0, 23, 1, 3, 'em5', 'e');
+  em4.enemy('moth', 30, 14).enemy('moth', 44, 17).enemy('imp', 26, 17).enemy('imp', 58, 25).enemy('chainman', 5, 25);
+
+  // ===================== em5: the Obsidian Stair. Climb by plates; the last steps want the double jump. =====================
+  const em5 = ember('em5', 36, 46, 26, 19);
+  em5.solid(0, 44, 36, 2);
+  em5.lava(1, 43, 24, 1);                                     // the floor under the stair is lava
+  em5.plat(26, 41, 6).plat(16, 38, 6).plat(6, 35, 6).plat(16, 32, 6).plat(26, 29, 6).plat(16, 26, 6)
+    .plat(6, 23, 6).plat(16, 20, 6).plat(26, 17, 6).plat(16, 14, 6).plat(6, 11, 6).plat(14, 7, 4);
+  em5.solid(1, 6, 11, 1);
+  em5.door('e', 35, 41, 1, 3, 'em4', 'w').door('w', 0, 3, 1, 3, 'em6', 'e');
+  em5.enemy('imp', 18, 37).enemy('imp', 28, 28).enemy('moth', 12, 30).enemy('moth', 24, 19).enemy('chainman', 4, 5)
+    .enemy('icicle', 28, 1).enemy('icicle', 18, 1);
+  em5.item('cache_em5', 8, 22, 'cache', { amount: 140 });
+
+  // ===================== em6: the Forgotten Armory. Racks to climb, a hidden vault, a bench. =====================
+  const em6 = ember('em6', 56, 26, 19, 24);
+  em6.solid(0, 22, 56, 4);
+  em6.plat(10, 18, 6).plat(24, 15, 6).plat(36, 18, 6);
+  em6.solid(42, 14, 12, 8).air(44, 17, 8, 5).breakable(42, 17, 2, 5);         // a vault, opened from the left
+  em6.door('e', 55, 19, 1, 3, 'em5', 'w').door('w', 0, 19, 1, 3, 'em7', 'e');
+  em6.bench(50, 21);
+  em6.enemy('chainman', 18, 21).enemy('chainman', 33, 21).enemy('roller', 8, 21).enemy('lavaworm', 28, 21).enemy('imp', 38, 17).enemy('moth', 20, 9);
+  em6.item('seed_em6', 48, 21, 'seed');
+
+  // ===================== em7: the Ember Antechamber. Quiet; a bench and the way to the Colossus. =====================
+  const em7 = ember('em7', 40, 22, 13, 24);
+  em7.solid(0, 18, 40, 4);
+  em7.door('e', 39, 15, 1, 3, 'em6', 'w').door('w', 0, 15, 1, 3, 'em8', 'e');
+  em7.bench(33, 17);
+  em7.sign(8, 17, 'sign_ember_colossus');
+  em7.decor('light', 20, 14, { r: 240, c: '#ffb070' });
+
+  // ===================== em8: the Furnace Heart. =====================
+  const em8 = ember('em8', 48, 26, 7, 23);
+  em8.solid(0, 22, 48, 4);
+  em8.plat(8, 17, 6).plat(34, 17, 6).plat(21, 14, 6);
+  em8.decor('light', 24, 20, { r: 280, c: '#ff7a30' });         // the furnace glows under the floor
+  em8.door('e', 47, 19, 1, 3, 'em7', 'w');
+  em8.arena = {
+    boss: 'colossus', flag: 'boss_colossus', trigger: 38, triggerDir: -1, spawn: { x: 10, y: 21 },
+    gates: [{ x: 47, y: 19, w: 1, h: 3, close: 'start' }],
+    reward: { id: 'seed_colossus', kind: 'seed', x: 24, y: 20 },
+    reward2: { id: 'charm_cinder', kind: 'charm', charm: 'cinder', x: 28, y: 21 },
+  };
+})();
+
+</script>
+<script>
+'use strict';
+// The last world file: it lists the rooms in order and cuts the doors, after every area file has added its rooms.
+WORLD.order = Object.keys(WORLD.rooms);
+for (const id of WORLD.order) WORLD.rooms[id].finish();
 
 </script>
 <script>
@@ -1196,6 +1454,8 @@ const THEMES = {
   aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
   foundry: { sky: ['#0d0604', '#2a120a', '#5a2a12'], far: '#3a1a0e', mid: '#26120a', near: '#160a06', tile: '#24140e', hi: '#ffb27a', edge: '#060201', fog: '#ff7a3a', part: '#ffc890', glow: '#ff9a50', name: 'foundry' },
+  frost:   { sky: ['#0c1a2a', '#2a4a6a', '#8cb8d8'], far: '#5a86a8', mid: '#3a6080', near: '#1e3a54', tile: '#2b4256', hi: '#e6f8ff', edge: '#050b12', fog: '#a8d8f0', part: '#ffffff', glow: '#cfeeff', name: 'frost' },
+  ember:   { sky: ['#0a0304', '#2a0a0a', '#6a1a0a'], far: '#4a1410', mid: '#2a0c0a', near: '#150606', tile: '#201316', hi: '#ff7a3a', edge: '#050203', fog: '#ff4a1a', part: '#ffb060', glow: '#ff8a3a', name: 'ember' },
   title:   { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#060a18', tile: '#0e1430', hi: '#9cc4ff', edge: '#020308', fog: '#5a6aa8', part: '#dfe8ff', glow: '#ffe9b0', name: 'title' },
   throne:  { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', tile: '#0e121e', hi: '#c6d6f4', edge: '#010203', fog: '#5e72a0', part: '#eef4ff', glow: '#ffe2a8', name: 'throne' },
 };
@@ -1252,6 +1512,11 @@ Art.renderLevel = function (L, s) {
     if (eR) { g.moveTo(px + TILE + wob(x + 1, y + 3), py); g.lineTo(px + TILE + wob(x + 1, y + 4), py + TILE); }
     g.stroke();
     themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS);
+    if (L.isIce(x, y)) {                         // slippery ice: a pale glaze with a bright streak
+      g.fillStyle = 'rgba(190,235,255,0.42)'; g.fillRect(px, py, TILE, TILE);
+      g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 2; g.beginPath(); g.moveTo(px + 3, py + 4); g.lineTo(px + TILE - 8, py + 4); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(px + 6 + v * 10, py + 8); g.lineTo(px + 14 + v * 10, py + TILE - 4); g.stroke();
+    }
   }
 
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
@@ -1695,20 +1960,22 @@ Art.ambientInit = function () {
 Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
-    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4;
-    const fall = leafy ? 34 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : theme === 'foundry' ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
+    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4, snow = theme === 'frost';
+    const fall = leafy ? 34 : snow ? 30 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'foundry' || theme === 'ember') ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
     m.x += (Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
     m.y += (fall - rise) * dt * m.z;
     m.rot += dt * (leafy ? 2 : 0);
     if (m.y < -12) m.y = VH + 12; if (m.y > VH + 12) m.y = -12;
     if (m.x < -12) m.x = VW + 12; if (m.x > VW + 12) m.x = -12;
     const a = (0.3 + 0.5 * Math.abs(Math.sin(t * 1.3 + m.p))) * m.z;
-    if (leafy) {
+    if (snow) {
+      g.fillStyle = 'rgba(255,255,255,' + Math.min(0.9, 0.35 + a) + ')'; g.beginPath(); g.arc(m.x, m.y, 1.2 + m.s * m.z * 0.7, 0, 7); g.fill();
+    } else if (leafy) {
       g.save(); g.translate(m.x, m.y); g.rotate(m.rot); g.scale(1, Math.abs(Math.cos(m.rot * 1.3)) * 0.8 + 0.2);
       g.fillStyle = th.leaf[Math.floor(m.kind * 6.6) % th.leaf.length]; ellipse(g, 0, 0, 5 * m.z + 2, 2.6 * m.z + 1); g.fill(); g.restore();
     } else if (bubble) {
       g.strokeStyle = 'rgba(210,255,245,' + (0.25 + 0.3 * m.z) + ')'; g.lineWidth = 1.2; ellipse(g, m.x, m.y, m.s * 2.2 * m.z + 1.5, m.s * 2.2 * m.z + 1.5); g.stroke();
-    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || theme === 'foundry' || (theme === 'town' && m.kind > 0.85)) {
+    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || theme === 'foundry' || theme === 'ember' || (theme === 'town' && m.kind > 0.85)) {
       bloom(g, m.x, m.y, 10 * m.z + 4, theme === 'town' ? '#ffb0d8' : th.part, a * 0.6);
       g.fillStyle = rgba('#ffffff', Math.min(0.9, a)); g.beginPath(); g.arc(m.x, m.y, m.s * m.z * 0.8, 0, 7); g.fill();
     } else {
@@ -1763,8 +2030,19 @@ Art.drawCrack = function (g, x, y, th, t) {
   g.strokeStyle = rgba(th.glow, 0.45 + 0.25 * Math.sin(t * 2 + x)); g.lineWidth = 2;
   g.beginPath(); g.moveTo(px + 2, py + 10 + v * 8); g.lineTo(px + 12, py + 16); g.lineTo(px + 20, py + 8 + v * 6); g.lineTo(px + 30, py + 18); g.moveTo(px + 12, py + 16); g.lineTo(px + 14, py + 30); g.stroke();
 };
-Art.drawAcid = function (g, x, y, surface, t) {
+Art.drawAcid = function (g, x, y, surface, t, th) {
   const px = x * TILE, py = y * TILE;
+  if (th && th.name === 'ember') {              // lava
+    const g1 = g.createLinearGradient(0, py, 0, py + TILE); g1.addColorStop(0, 'rgba(255,200,90,0.95)'); g1.addColorStop(0.35, 'rgba(255,110,30,0.92)'); g1.addColorStop(1, 'rgba(170,30,10,0.95)');
+    g.fillStyle = g1; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
+    if (!surface) { g.fillStyle = 'rgba(255,120,40,' + (0.12 + 0.1 * Math.sin(t * 2 + x * 3 + y)) + ')'; g.fillRect(px, py, TILE, TILE); return; }
+    bloom(g, px + 16, py + 6, 54, '#ff7a30', 0.32);
+    g.beginPath(); g.moveTo(px, py + 10);
+    for (let i = 0; i <= 4; i++) g.lineTo(px + i * 8, py + 7 + Math.sin(t * 2.4 + (x * 4 + i) * 0.8) * 2.5);
+    g.lineTo(px + TILE, py + 14); g.lineTo(px, py + 14); g.closePath(); g.fillStyle = 'rgba(255,236,150,0.95)'; g.fill();
+    if (Math.sin(t * 1.7 + x * 5) > 0.93) { g.fillStyle = 'rgba(255,230,150,0.9)'; ellipse(g, px + 16, py + 3, 3, 4); g.fill(); }
+    return;
+  }
   g.fillStyle = 'rgba(70,200,80,0.55)'; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
   if (!surface) return;
   bloom(g, px + 16, py + 10, 30, '#9dff6a', 0.18);
@@ -1796,7 +2074,7 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
-const DARKNESS = { foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+const DARKNESS = { frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }
@@ -2624,6 +2902,23 @@ Art.drawProj = function (g, p, t) {
     }
     return;
   }
+  if (p.kind === 'bomb') {
+    g.save(); g.translate(p.x, p.y); g.rotate(p.t * 7);
+    bloom(g, 0, 0, 40, '#ff9a50', 0.3 + 0.2 * Math.sin(p.t * 22));
+    ellipse(g, 0, 0, p.r + 2, p.r + 2); fs(g, '#2a2024', INK, 2.6);
+    g.fillStyle = 'rgba(255,255,255,0.35)'; ellipse(g, -3, -3.5, 3, 2); g.fill();
+    g.strokeStyle = '#d8b878'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -p.r - 1); g.quadraticCurveTo(5, -p.r - 7, 9, -p.r - 6); g.stroke();
+    g.fillStyle = '#fff1a0'; ellipse(g, 9, -p.r - 6, 2.6 + Math.sin(p.t * 40), 2.6); g.fill();
+    g.restore();
+    return;
+  }
+  if (p.kind === 'blast') {
+    const k = clamp(p.t / 0.45, 0, 1), a = 1 - k;
+    const gr = g.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.r * 1.2); gr.addColorStop(0, 'rgba(255,240,170,' + 0.95 * a + ')'); gr.addColorStop(0.45, 'rgba(255,130,40,' + 0.75 * a + ')'); gr.addColorStop(1, 'rgba(120,20,10,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.r * 1.2, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(255,200,120,' + a + ')'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 7); g.stroke();
+    return;
+  }
   if (p.kind === 'web') {
     g.save(); g.translate(p.x, p.y); g.rotate(p.t * 4);
     bloom(g, 0, 0, 24, '#e6e0ff', 0.35);
@@ -2633,8 +2928,66 @@ Art.drawProj = function (g, p, t) {
     g.restore();
     return;
   }
+  if (p.pal && tintedProj(g, p, t)) return;
   baseDrawProj(g, p, t);
 };
+
+// the boss projectiles of Rimecrest and Cinderdeep: the same shapes, drawn in ice or in slag (p.pal, see bosses.js)
+function tintedProj(g, p, t) {
+  const pal = p.pal, k = p.kind;
+  if (k === 'shard') {
+    g.save(); g.translate(p.x, p.y); g.rotate(p.rot || Math.atan2(p.vy, p.vx));
+    bloom(g, 0, 0, 26, pal.glow, 0.45);
+    poly(g, [-14, 0, -2, -5, 17, 0, -2, 5]); fs(g, pal.fill, INK, 2.4);
+    poly(g, [-14, 0, -2, -5, 17, 0]); fs(g, pal.fill2, null);
+    g.restore(); return true;
+  }
+  if (k === 'orb') {
+    bloom(g, p.x, p.y, 34, pal.glow, 0.55);
+    g.save(); g.translate(p.x, p.y); g.rotate(t * 2 + p.t);
+    for (let i = 0; i < 3; i++) { g.rotate(Math.PI / 3); poly(g, [-p.r - 3, -1.6, p.r + 3, -1.6, p.r + 3, 1.6, -p.r - 3, 1.6]); fs(g, pal.fill, INK, 1.6); }
+    ellipse(g, 0, 0, p.r * 0.55, p.r * 0.55); fs(g, pal.fill2, INK, 1.8);
+    g.restore(); return true;
+  }
+  if (k === 'rock') {
+    if (p.t < p.tele) {
+      const a = 0.25 + 0.35 * Math.abs(Math.sin(p.t * 14));
+      const gr = g.createLinearGradient(0, p.y0, 0, G.floorY); gr.addColorStop(0, 'rgba(' + pal.rgb + ',0)'); gr.addColorStop(1, 'rgba(' + pal.rgb + ',' + a + ')');
+      g.fillStyle = gr; g.fillRect(p.x - 16, p.y0, 32, G.floorY - p.y0);
+    }
+    g.save(); g.translate(p.x + (p.t < p.tele ? Math.sin(p.t * 60) * 1.5 : 0), p.y);
+    bloom(g, 0, 0, 34, pal.glow, p.t < p.tele ? 0.25 : 0.5);
+    if (pal.spike) { poly(g, [-11, -18, 11, -18, 5, 6, 0, 26, -5, 6]); fs(g, pal.fill, INK, 3); poly(g, [-11, -18, -1, -18, 0, 26, -5, 6]); fs(g, pal.fill2, null); }
+    else { g.rotate(p.t * 3); poly(g, [-16, -4, -6, -16, 10, -12, 17, 2, 8, 15, -10, 13]); fs(g, '#2c2228', INK, 3.2); poly(g, [-6, -16, 10, -12, 2, -2]); fs(g, pal.fill, null); poly(g, [-3, 4, 8, 2, 3, 11]); fs(g, pal.fill2, null); }
+    g.restore(); return true;
+  }
+  if (k === 'pillar') {
+    if (p.t < p.tele) {
+      const f = p.t / p.tele;
+      bloom(g, p.x, p.y - 4, 40 + f * 20, pal.glow, 0.3 + f * 0.4);
+      g.strokeStyle = 'rgba(' + pal.rgb + ',' + (0.4 + f * 0.5) + ')'; g.lineWidth = 3; g.beginPath(); g.moveTo(p.x - 24, p.y - 2); g.lineTo(p.x + 24, p.y - 2); g.stroke();
+    } else {
+      const h = p.ph * clamp((p.t - p.tele) / 0.08, 0, 1);
+      bloom(g, p.x, p.y - h * 0.5, 80, pal.glow, 0.35);
+      poly(g, [p.x - 23, p.y, p.x - 14, p.y - h * 0.7, p.x - 6, p.y - h, p.x + 4, p.y - h * 0.75, p.x + 23, p.y]); fs(g, pal.fill, INK, 3.4);
+      poly(g, [p.x - 6, p.y, p.x - 6, p.y - h, p.x + 4, p.y - h * 0.75, p.x + 4, p.y]); fs(g, pal.fill2, null);
+    }
+    return true;
+  }
+  if (k === 'beam') {
+    const rgb = pal.rgb;
+    if (p.t < p.tele) {
+      const f = p.t / p.tele, w = 2 + f * 6;
+      g.fillStyle = 'rgba(' + rgb + ',' + (0.25 + 0.4 * f) + ')'; g.fillRect(p.x - w / 2, 0, w, G.level.ph);
+    } else {
+      const gr = g.createLinearGradient(p.x - p.bw / 2, 0, p.x + p.bw / 2, 0);
+      gr.addColorStop(0, 'rgba(' + rgb + ',0)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.7, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+      g.fillStyle = gr; g.fillRect(p.x - p.bw / 2 - 10, 0, p.bw + 20, G.level.ph);
+    }
+    return true;
+  }
+  return false;
+}
 
 // Dusk Cry: a column of pale light from the Wanderer's feet to the ceiling, flickering as it fades
 Art.drawWail = function (g, p, t) {
@@ -2711,6 +3064,286 @@ Art.enemy.ram = function (g, e, t) {
   g.restore();
   if (wind) bloom(g, 28, -20, 60, '#ff7a5a', 0.2);
   g.restore();
+};
+
+// ================================================= creatures of Rimecrest and Cinderdeep
+// Burrower: a mound while buried; a furred digger (frost) or a glowing worm (ember) when it erupts
+Art.enemy.mole = Art.enemy.lavaworm = function (g, e, t) {
+  const lava = e.kind === 'lavaworm', fl = e.flash > 0, st = e.currentState;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  if (e.buried) {
+    const tre = st === 'anticipation', k = tre ? 1 + e.stateT * 0.7 : 1, sh = tre ? Math.sin(t * 60) * 1.6 : 0;
+    g.translate(sh, 0);
+    ellipse(g, 0, 1, 22 * k, 8 * k); fs(g, lava ? '#2c1a16' : '#cfe0ee', INK, 2.6);
+    ellipse(g, -4, -2, 11, 3.5); g.fillStyle = lava ? '#6a3018' : '#f6fbff'; g.fill();
+    if (lava) bloom(g, 0, -4, 28, '#ff7a30', 0.3 + (tre ? 0.3 : 0));
+    g.restore(); return;
+  }
+  const rise = st === 'digging' ? clamp(1 - e.stateT / 0.45, 0, 1) : 1;
+  g.translate(0, (1 - rise) * 24); g.rotate(st === 'attack' ? -0.25 : 0);
+  if (!lava) {                                                           // the digger
+    ellipse(g, -4, -14, 19, 15); fs(g, fl ? '#fff' : '#dfe9f2', INK, 3);
+    g.fillStyle = fl ? '#fff' : 'rgba(255,255,255,0.7)'; for (let i = 0; i < 5; i++) { ellipse(g, -16 + i * 7, -23 + (i % 2) * 3, 5, 3.5); g.fill(); }
+    ellipse(g, 15, -16, 11, 10); fs(g, fl ? '#fff' : '#eef5fb', INK, 3);
+    poly(g, [22, -15, 34, -12, 22, -9]); fs(g, fl ? '#fff' : '#f4b8c0', INK, 2.4);                // snout
+    g.fillStyle = INK; ellipse(g, 16, -20, 2.2, 2.6); g.fill();
+    for (const cx of [4, 14]) { poly(g, [cx, -4, cx + 8, -2, cx + 12, 2, cx + 3, 1]); fs(g, fl ? '#fff' : '#9fb4c8', INK, 2); }       // digging claws
+  } else {                                                               // the worm
+    for (let i = 4; i >= 0; i--) {
+      const x = -22 + i * 11, y = -10 - Math.sin(t * 6 + i * 0.9) * 3 - (i > 2 ? 6 : 0), r = 8 + i * 1.4;
+      ellipse(g, x, y, r, r - 1); fs(g, fl ? '#fff' : '#3a1a14', INK, 2.8);
+      g.fillStyle = fl ? '#fff' : 'rgba(255,130,50,' + (0.55 + 0.25 * Math.sin(t * 5 + i)) + ')'; ellipse(g, x - 1, y + 1, r * 0.45, r * 0.3); g.fill();
+    }
+    bloom(g, 14, -18, 50, '#ff7a30', 0.35);
+    poly(g, [22, -24, 34, -18, 22, -12]); fs(g, fl ? '#fff' : '#ff9a50', INK, 2.4);
+    g.fillStyle = '#fff1a0'; ellipse(g, 20, -20, 2.2, 2.6); g.fill();
+  }
+  g.restore();
+};
+
+// Bomber: a small imp with a lit bomb
+Art.enemy.imp = function (g, e, t) {
+  const st = e.currentState, wind = st === 'anticipation', fl = e.flash > 0, w = wind ? clamp(e.stateT / 0.5, 0, 1) : 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  const walk = Math.abs(e.vx) > 10 ? Math.sin(t * 14) * 3 : 0;
+  g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-5, -10); g.lineTo(-6 + walk, 0); g.moveTo(5, -10); g.lineTo(6 - walk, 0); g.stroke();
+  g.beginPath(); g.moveTo(-9, -14); g.quadraticCurveTo(-24, -10, -20 + Math.sin(t * 5) * 3, -28); g.stroke();            // tail
+  g.strokeStyle = '#c0391f'; g.lineWidth = 2; g.stroke();
+  ellipse(g, 0, -20, 11, 12); fs(g, fl ? '#fff' : '#a52d1c', INK, 3);                                                // body
+  ellipse(g, 3, -34, 9, 8.5); fs(g, fl ? '#fff' : '#c0391f', INK, 3);                                                // head
+  poly(g, [-2, -40, -7, -52, 2, -42]); fs(g, fl ? '#fff' : '#f0d8a0', INK, 2); poly(g, [8, -41, 13, -52, 12, -39]); fs(g, fl ? '#fff' : '#f0d8a0', INK, 2);
+  g.fillStyle = '#fff1a0'; ellipse(g, 6, -35, 2, 2.6); g.fill(); ellipse(g, 11, -34, 1.8, 2.4); g.fill();
+  g.save(); g.translate(8, -22); g.rotate(wind ? -1.9 * w - 0.5 : -0.2);                                              // throwing arm
+  g.strokeStyle = INK; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(11, 0); g.stroke();
+  if (st === 'anticipation' || st === 'chase' && e.cool < 0.5) { ellipse(g, 15, 0, 6.5, 6.5); fs(g, '#2a2024', INK, 2.4); bloom(g, 15, -6, 22, '#ffb060', 0.5 + 0.3 * Math.sin(t * 30)); g.fillStyle = '#fff1a0'; ellipse(g, 17, -8, 2.4, 2.4); g.fill(); }
+  g.restore();
+  g.restore();
+};
+
+// Blinker: a veiled wraith, half faded until it chooses to strike
+Art.enemy.veil = function (g, e, t) {
+  const st = e.currentState, a = clamp(e.alpha, 0, 1), fl = e.flash > 0;
+  if (a < 0.02) return;
+  g.save(); g.translate(e.cx, e.cy + 8); g.scale(e.face, 1); g.globalAlpha *= a;
+  bloom(g, 0, -10, 70, '#bfe6ff', 0.25 * a);
+  // the veil: a tall tapering cloak with trailing tatters
+  g.beginPath(); g.moveTo(-14, -34); g.quadraticCurveTo(-22, -4, -18 + Math.sin(t * 4) * 3, 24);
+  for (let i = 0; i <= 5; i++) g.lineTo(-18 + i * 7 + Math.sin(t * 5 + i) * 2, 24 + (i % 2) * 9);
+  g.quadraticCurveTo(22, -4, 14, -34); g.closePath(); fs(g, fl ? '#fff' : 'rgba(150,185,225,0.82)', INK, 2.8);
+  g.fillStyle = fl ? '#fff' : 'rgba(210,235,255,0.35)'; ellipse(g, -4, -14, 6, 18, -0.1); g.fill();
+  ellipse(g, 0, -36, 11, 12); fs(g, fl ? '#fff' : '#26334a', INK, 2.8);                                         // the hood's hollow
+  const wake = st === 'appear' || st === 'attack' || st === 'vulnerable';
+  g.fillStyle = wake ? '#e8fbff' : '#8fb4d8'; ellipse(g, 3, -37, 2.4, 3.4); g.fill(); ellipse(g, 10, -37, 2.2, 3.2); g.fill();
+  if (st === 'attack') {                                                                                     // the slash
+    g.strokeStyle = 'rgba(235,250,255,0.95)'; g.lineWidth = 5; g.beginPath(); g.arc(18, -10, 50, -1.0, 0.9); g.stroke();
+    g.strokeStyle = 'rgba(160,210,255,0.5)'; g.lineWidth = 11; g.stroke();
+  }
+  g.restore();
+};
+
+// Roller: an armoured beast that curls into a ball
+Art.enemy.roller = function (g, e, t) {
+  const st = e.currentState, ball = st === 'attack' || st === 'anticipation', fl = e.flash > 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  if (ball) {
+    const sh = st === 'anticipation' ? Math.sin(t * 50) * 1.6 : 0;
+    g.translate(sh, -15); if (st === 'attack') g.rotate(e.face * t * 14);
+    ellipse(g, 0, 0, 16, 16); fs(g, fl ? '#fff' : '#9a8460', INK, 3);
+    g.strokeStyle = INK; g.lineWidth = 2.4; for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(0, 0, 16, i * 1.57 + 0.2, i * 1.57 + 1.3); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(i * 1.57) * 16, Math.sin(i * 1.57) * 16); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,0.25)'; ellipse(g, -5, -6, 6, 4, -0.4); g.fill();
+  } else {
+    const walk = Math.abs(e.vx) > 5 ? Math.sin(t * 9) * 2 : 0, dz = st === 'dizzy' ? Math.sin(t * 8) * 0.12 : 0;
+    g.rotate(dz);
+    g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-10, -8); g.lineTo(-11 + walk, 0); g.moveTo(10, -8); g.lineTo(11 - walk, 0); g.stroke();
+    ellipse(g, -2, -15, 20, 13); fs(g, fl ? '#fff' : '#9a8460', INK, 3);
+    g.save(); ellipse(g, -2, -15, 20, 13); g.clip(); g.strokeStyle = INK; g.lineWidth = 2.2; for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(-2 + i * 6, -30); g.quadraticCurveTo(-2 + i * 6 + 4, -15, -2 + i * 6, 0); g.stroke(); } g.restore();
+    ellipse(g, 17, -12, 8, 7); fs(g, fl ? '#fff' : '#c8b088', INK, 2.8); g.fillStyle = INK; ellipse(g, 19, -14, 1.8, 2.2); g.fill();
+    if (st === 'dizzy') { g.strokeStyle = '#ffe9a0'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { const a = t * 6 + i * 2.1; g.beginPath(); g.arc(Math.cos(a) * 12 + 12, -28 + Math.sin(a) * 3, 2, 0, 7); g.stroke(); } }
+  }
+  g.restore();
+};
+
+// Slime: a see-through jelly that squashes before it hops
+Art.enemy.slime = Art.enemy.slimelet = function (g, e, t) {
+  const st = e.currentState, sq = st === 'anticipation' ? 1 - 0.3 * clamp(e.stateT / 0.3, 0, 1) : (!e.onGround ? 1.18 : 1 + Math.sin(t * 3 + e.x) * 0.04), fl = e.flash > 0;
+  const W = e.w * 0.5, H = e.h;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale((2 - sq) * 1, sq);
+  g.beginPath(); g.moveTo(-W, 0); g.bezierCurveTo(-W - 3, -H * 0.9, W + 3, -H * 0.9, W, 0); g.closePath();
+  fs(g, fl ? '#fff' : 'rgba(120,200,255,0.82)', INK, 3);
+  g.fillStyle = fl ? '#fff' : 'rgba(40,110,190,0.45)'; ellipse(g, 0, -H * 0.28, W * 0.7, H * 0.2); g.fill();            // the core
+  g.fillStyle = 'rgba(255,255,255,0.7)'; ellipse(g, -W * 0.4, -H * 0.62, W * 0.22, H * 0.12, -0.5); g.fill();
+  g.fillStyle = INK; ellipse(g, -W * 0.25, -H * 0.38, e.small ? 1.6 : 2.4, e.small ? 2.2 : 3.2); g.fill(); ellipse(g, W * 0.25, -H * 0.38, e.small ? 1.6 : 2.4, e.small ? 2.2 : 3.2); g.fill();
+  g.restore();
+};
+
+// Chainman: a heavy guard whirling a spiked ball on a chain
+Art.enemy.chainman = function (g, e, t) {
+  const st = e.currentState, fl = e.flash > 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  const walk = Math.abs(e.vx) > 5 ? Math.sin(t * 8) * 2.4 : 0;
+  g.strokeStyle = INK; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-8, -16); g.lineTo(-9 + walk, 0); g.moveTo(8, -16); g.lineTo(9 - walk, 0); g.stroke();
+  poly(g, [-17, -14, 17, -14, 19, -2, -19, -2]); fs(g, fl ? '#fff' : '#4a3a38', INK, 2.8);
+  ellipse(g, 0, -32, 17, 19); fs(g, fl ? '#fff' : '#6a6a74', INK, 3.2);
+  g.strokeStyle = INK; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-17, -28); g.quadraticCurveTo(0, -24, 17, -28); g.moveTo(-14, -38); g.quadraticCurveTo(0, -35, 14, -38); g.stroke();
+  g.fillStyle = fl ? '#fff' : '#8a8a96'; ellipse(g, -6, -42, 7, 4, -0.3); g.fill();
+  poly(g, [-10, -52, 10, -52, 12, -40, -12, -40]); fs(g, fl ? '#fff' : '#7a7a86', INK, 2.8);                    // helm
+  g.fillStyle = '#ff9c5a'; g.fillRect(-1, -49, 2, 9); g.fillRect(-6, -45, 12, 2);
+  g.restore();
+  if (e.ball) {                                                                                                // the chain and the ball
+    const hx = e.cx + e.face * 12, hy = e.y + e.h - 36;
+    g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.moveTo(hx, hy); g.lineTo(e.ball.x, e.ball.y); g.stroke();
+    g.strokeStyle = '#8a8a96'; g.lineWidth = 2; g.stroke();
+    g.save(); g.translate(e.ball.x, e.ball.y); g.rotate(e.ang * 2);
+    if (st === 'attack') bloom(g, 0, 0, 40, '#ff9c5a', 0.25);
+    ellipse(g, 0, 0, 12, 12); fs(g, fl ? '#fff' : '#3a3a44', INK, 2.8);
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; poly(g, [Math.cos(a - 0.2) * 11, Math.sin(a - 0.2) * 11, Math.cos(a) * 19, Math.sin(a) * 19, Math.cos(a + 0.2) * 11, Math.sin(a + 0.2) * 11]); fs(g, fl ? '#fff' : '#9a9aa6', INK, 1.8); }
+    g.restore();
+  }
+};
+
+// Moth: flutters around light, and glows with its own
+Art.enemy.moth = function (g, e, t) {
+  const st = e.currentState, fl = e.flash > 0, flap = Math.sin(t * (st === 'attack' ? 38 : 22) + e.ph);
+  const gl = st === 'anticipation' ? 0.45 + e.stateT * 0.9 : 0.35;
+  g.save(); g.translate(e.cx, e.cy); g.scale(e.face || 1, 1);
+  bloom(g, 0, 0, 80 + (st === 'anticipation' ? e.stateT * 120 : 0), '#ffd890', gl);
+  for (const sgn of [-1, 1]) {                                                                                  // wings
+    g.save(); g.translate(-2, -2); g.rotate(sgn * (0.35 + flap * 0.5));
+    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-18, sgn * -22, -4, sgn * -26); g.quadraticCurveTo(10, sgn * -14, 0, 0); g.closePath();
+    fs(g, fl ? '#fff' : 'rgba(255,226,160,0.88)', INK, 2.4);
+    g.fillStyle = fl ? '#fff' : 'rgba(210,140,70,0.55)'; ellipse(g, -3, sgn * -14, 3.4, 4.4); g.fill();
+    g.restore();
+  }
+  ellipse(g, 0, 0, 6, 10, 0); fs(g, fl ? '#fff' : '#6a4a38', INK, 2.4);
+  ellipse(g, 6, -6, 4.4, 4.4); fs(g, fl ? '#fff' : '#8a5a42', INK, 2.2);
+  g.fillStyle = '#fff6c0'; ellipse(g, 8, -7, 1.4, 1.8); g.fill();
+  g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(7, -10); g.quadraticCurveTo(10, -18, 15, -17); g.moveTo(5, -10); g.quadraticCurveTo(5, -19, 9, -22); g.stroke();
+  g.restore();
+};
+
+// Icicle: a hanging spike of ice (or basalt in Cinderdeep) that trembles before it falls
+Art.enemy.icicle = function (g, e, t) {
+  if (e.gone) return;
+  const ember = G.level && G.level.def.theme === 'ember', fl = e.flash > 0, tre = e.currentState === 'anticipation';
+  g.save(); g.translate(e.x + e.w / 2, e.y);
+  const lit = tre ? 0.5 + 0.5 * Math.sin(t * 40) : 0;
+  poly(g, [-9, 0, 9, 0, 5, 24, 0, e.h, -4, 24]); fs(g, fl ? '#fff' : (ember ? '#3a2428' : 'rgba(200,236,255,0.92)'), INK, 3);
+  g.fillStyle = fl ? '#fff' : (ember ? 'rgba(255,120,50,0.5)' : 'rgba(255,255,255,0.75)'); poly(g, [-5, 3, -2, 3, -1, 24, -3, 28]); g.fill();
+  if (e.currentState === 'attack') { g.strokeStyle = 'rgba(220,245,255,0.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -4); g.lineTo(0, -34); g.stroke(); }
+  if (tre) bloom(g, 0, e.h * 0.6, 34, ember ? '#ff8a4a' : '#bfe8ff', 0.2 + lit * 0.2);
+  g.restore();
+};
+
+// ---------------------------------------------------------------- the bosses of Rimecrest and Cinderdeep
+Art.boss.queen = function (g, b, t) {              // a floating sovereign of frost: gown of icicles, tall jagged crown
+  const fl = b.flash > 0, tele = b.tele > 0;
+  g.save(); g.globalAlpha = b.alpha; g.translate(b.cx, b.cy + Math.sin(t * 2.2) * 3);
+  if (b.state === 'dying') g.translate(Math.sin(t * 70) * 2.5, 0);
+  bloom(g, 0, -8, 160, '#9fdcff', 0.2 + (tele ? 0.3 : 0) + (b.phase - 1) * 0.05);
+  g.scale(b.face, 1);
+  if (b.sweeping) g.rotate(0.35);
+  // orbiting shards of ice
+  for (let i = 0; i < 4; i++) {
+    const a = t * 1.7 + i * Math.PI / 2, x = Math.cos(a) * 66, y = -10 + Math.sin(a) * 20;
+    g.save(); g.translate(x, y); g.rotate(a * 2);
+    poly(g, [-8, 0, 0, -4, 12, 0, 0, 4]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 2.2); g.restore();
+  }
+  // flowing veil behind the crown
+  g.strokeStyle = fl ? '#fff' : 'rgba(170,220,255,0.55)'; g.lineWidth = 4; g.lineCap = 'round';
+  for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-6 + i * 5, -54); g.quadraticCurveTo(-30 - i * 8, -34 + Math.sin(t * 3 + i) * 5, -40 - i * 9, -4 + Math.sin(t * 2.4 + i) * 6); g.stroke(); }
+  // the gown: a bell of ice that ends in hanging points
+  g.beginPath(); g.moveTo(-17, -12);
+  for (let i = 0; i <= 8; i++) g.lineTo(-38 + i * 9.5, 48 + (i % 2 ? 16 : 0) + Math.sin(t * 3 + i * 1.3) * 3);
+  g.lineTo(17, -12); g.closePath();
+  const gr = g.createLinearGradient(0, -12, 0, 62); gr.addColorStop(0, fl ? '#fff' : '#6a9ad4'); gr.addColorStop(1, fl ? '#fff' : '#1c3866');
+  fs(g, gr, INK, 3.6);
+  g.save(); g.beginPath(); g.moveTo(-17, -12); for (let i = 0; i <= 8; i++) g.lineTo(-38 + i * 9.5, 48 + (i % 2 ? 16 : 0)); g.lineTo(17, -12); g.closePath(); g.clip();
+  g.strokeStyle = fl ? '#fff' : 'rgba(225,246,255,0.55)'; g.lineWidth = 1.8;
+  for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 4, -12); g.lineTo(i * 12, 64); g.stroke(); }
+  g.restore();
+  // torso and shoulder spikes
+  poly(g, [-15, -34, 15, -34, 19, -8, 12, 4, -12, 4, -19, -8]); fs(g, fl ? '#fff' : '#3a64a0', INK, 3.2);
+  poly(g, [-15, -34, -30, -50, -22, -30]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 2.6);
+  poly(g, [15, -34, 30, -50, 22, -30]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 2.6);
+  bloom(g, 0, -16, 16, '#dff6ff', tele ? 0.8 : 0.35);
+  g.fillStyle = tele ? '#ffffff' : '#bfeaff'; ellipse(g, 0, -16, 4.5, 6); g.fill();
+  // arms: raised and cupped around a spark of cold when she gathers it
+  const up = tele ? 1 : 0;
+  g.strokeStyle = INK; g.lineWidth = 6.5; g.lineCap = 'round';
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 14, -30); g.lineTo(s * 32, -22 - up * 22); g.lineTo(s * (24 - up * 8), -46 - up * 34 + Math.sin(t * 4 + s) * 2); g.stroke(); }
+  g.strokeStyle = fl ? '#fff' : '#9cc6ec'; g.lineWidth = 2.6;
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 14, -30); g.lineTo(s * 32, -22 - up * 22); g.lineTo(s * (24 - up * 8), -46 - up * 34 + Math.sin(t * 4 + s) * 2); g.stroke(); }
+  if (tele) { bloom(g, 0, -80, 50, '#dff6ff', 0.6 + 0.2 * Math.sin(t * 18)); g.save(); g.translate(0, -80); g.rotate(t * 3); for (let i = 0; i < 3; i++) { g.rotate(Math.PI / 3); g.strokeStyle = '#f4fcff'; g.lineWidth = 2; g.beginPath(); g.moveTo(-14, 0); g.lineTo(14, 0); g.stroke(); } g.restore(); }
+  // head: pale mask, glowing eyes
+  mask(g, 0, -50, 12.5, 14.5, 1.1, 0.6, fl ? '#fff' : '#e4f2ff');
+  g.fillStyle = tele ? '#ffffff' : '#7fe8ff'; ellipse(g, -5, -49, 1.8, 3.4, 0.12); g.fill(); ellipse(g, 6, -49, 1.8, 3.4, -0.12); g.fill();
+  // the crown
+  poly(g, [-17, -58, -14, -86, -7, -67, -2, -100, 3, -67, 9, -90, 13, -64, 18, -58]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 3);
+  poly(g, [-14, -86, -7, -67, -9, -58, -14, -58]); fs(g, fl ? '#fff' : '#f4fcff', null);
+  poly(g, [-2, -100, 3, -67, 0, -58, -4, -58]); fs(g, fl ? '#fff' : '#f4fcff', null);
+  g.restore();
+};
+
+Art.boss.colossus = function (g, b, t) {           // a walking furnace of basalt, cracked and glowing
+  const fl = b.flash > 0, tele = b.tele > 0, heat = 0.55 + 0.25 * Math.sin(t * 3) + (b.phase - 1) * 0.12;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 3, 0);
+  bloom(g, 0, -80, 190, '#ff7a2a', 0.14 + 0.06 * heat + (tele ? 0.25 : 0));
+  const rock = fl ? '#ffffff' : '#34303a', rockL = fl ? '#ffffff' : '#5a5262', rockD = fl ? '#ffffff' : '#1c1920';
+  const crack = (pts, w) => { g.strokeStyle = fl ? '#fff' : 'rgba(255,208,112,' + (0.55 + 0.4 * heat) + ')'; g.lineWidth = w || 2.2; g.lineJoin = 'round'; g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); };
+  if (b.rolling) {                                  // curled into a ball of rock
+    g.translate(0, -62); g.rotate(t * 11);
+    const pts = []; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, r = 60 + (i % 2) * 7; pts.push(Math.cos(a) * r, Math.sin(a) * r); }
+    poly(g, pts); fs(g, rock, INK, 4);
+    poly(g, [pts[0], pts[1], pts[2], pts[3], 0, 0, pts[18], pts[19]]); fs(g, rockL, null);
+    crack([-40, -10, -16, 0, -4, 24, 20, 30, 44, 8]); crack([0, -52, 8, -22, -6, -4], 2);
+    bloom(g, 0, 0, 44, '#ff8a3a', 0.4);
+    g.restore(); return;
+  }
+  const step = Math.abs(b.vx) > 20 ? Math.sin(t * 8) * 3 : 0;
+  // legs
+  for (const [x0, s] of [[-34, 1], [8, -1]]) {
+    poly(g, [x0, -58, x0 + 28, -58, x0 + 32 + s * step, 0, x0 - 4 + s * step, 0]); fs(g, rock, INK, 3.6);
+    poly(g, [x0, -58, x0 + 10, -58, x0 + 8 + s * step, 0, x0 - 4 + s * step, 0]); fs(g, rockL, null);
+    crack([x0 + 14, -50, x0 + 10, -30, x0 + 18, -12]);
+  }
+  // back arm hangs behind
+  g.save(); g.translate(-38, -108); g.rotate(b.stunned ? 1.3 : 1.55 + Math.sin(t * 2) * 0.05);
+  poly(g, [0, -13, 58, -15, 60, 15, 0, 13]); fs(g, rockD, INK, 3.4);
+  poly(g, [54, -22, 90, -20, 92, 22, 54, 24]); fs(g, rock, INK, 3.6); crack([62, -8, 76, 0, 84, 10]);
+  g.restore();
+  // torso
+  poly(g, [-56, -64, 52, -64, 60, -112, 40, -130, -40, -130, -62, -112]); fs(g, rock, INK, 4.2);
+  poly(g, [-56, -64, -20, -64, -26, -130, -40, -130, -62, -112]); fs(g, rockL, null);
+  poly(g, [20, -64, 52, -64, 60, -112, 40, -130, 30, -130]); fs(g, rockD, null);
+  poly(g, [-56, -64, 52, -64, 60, -112, 40, -130, -40, -130, -62, -112]); fs(g, null, INK, 4.2);
+  crack([-44, -118, -30, -96, -38, -80, -20, -68]); crack([34, -122, 24, -100, 40, -84, 30, -68]); crack([-6, -126, 2, -104]);
+  // the furnace in the chest
+  bloom(g, 0, -92, 56, '#ff7a2a', 0.35 + 0.35 * heat + (tele ? 0.3 : 0));
+  ellipse(g, 0, -92, 16, 20); fs(g, '#ffb050', INK, 3.2); ellipse(g, 0, -92, 8, 11); fs(g, '#fff2b0', null);
+  // shoulders: broken spikes
+  poly(g, [-60, -112, -72, -140, -46, -126]); fs(g, rock, INK, 3);
+  poly(g, [58, -112, 70, -144, 44, -126]); fs(g, rock, INK, 3);
+  // the head: a slab with two slits of fire
+  poly(g, [-20, -126, 22, -126, 16, -152, -14, -152]); fs(g, rock, INK, 3.6);
+  poly(g, [-20, -126, -4, -126, -6, -152, -14, -152]); fs(g, rockL, null);
+  g.fillStyle = tele ? '#ffffff' : '#ffd070'; poly(g, [-9, -142, 0, -140, 0, -136, -9, -138]); g.fill(); poly(g, [5, -141, 14, -143, 14, -139, 5, -137]); g.fill();
+  bloom(g, 4, -140, 30, '#ffb050', tele ? 0.7 : 0.35);
+  // the striking arm: up on the wind-up, forward on the blow, hanging otherwise
+  let ang = 0.95;
+  if (tele) ang = -2.25 + Math.sin(t * 18) * 0.05; else if (b.melee) ang = 0.1; else if (b.stunned) ang = 1.2;
+  g.save(); g.translate(40, -108); g.rotate(ang);
+  poly(g, [0, -14, 62, -16, 64, 16, 0, 14]); fs(g, rock, INK, 3.6); poly(g, [0, -14, 62, -16, 62, -6, 0, -4]); fs(g, rockL, null);
+  poly(g, [58, -26, 98, -24, 100, 26, 58, 28]); fs(g, rock, INK, 4); poly(g, [58, -26, 98, -24, 98, -12, 58, -10]); fs(g, rockL, null);
+  crack([66, 4, 80, 10, 92, 4]); bloom(g, 88, 0, 34, '#ff7a2a', tele ? 0.55 : 0.2);
+  g.restore();
+  g.restore();
+  // embers shed by the body
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) { const u = (t * 0.6 + i * 0.37) % 1; g.fillStyle = 'rgba(255,170,80,' + (0.8 * (1 - u)) + ')'; g.fillRect(b.cx + Math.sin(i * 7 + t) * 40, b.y + b.h - 40 - u * 150, 3, 3); }
+  g.restore();
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#ffe98a'; g.fillRect(b.cx + Math.cos(a) * 30 - 3, b.y - 6 + Math.sin(a) * 6, 6, 6); }
 };
 
 </script>
@@ -2900,6 +3533,365 @@ const SLASH_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAICAYAAAD
 </script>
 <script>
 'use strict';
+// Lumen: the WebGL lighting pass. The game still draws with the 2D canvas, but into two layers:
+//   scene  everything that does not move much (painted sky, tiles, props, items), opaque
+//   ents   enemies, bosses and the hero, with transparency
+// Lumen then lights them in one fragment shader, per pixel:
+//   * rock gets a normal map baked once per room from its tiles (a rounded relief that catches light),
+//   * every creature gets normals from the soft shape of its own silhouette (alpha blurred into a dome),
+//   * point lights give diffuse, a glint and, for creatures, a cool rim light,
+//   * the strongest lights cast shadows: the terrain really blocks them (a short ray march through the
+//     tile mask), so a lantern behind a pillar leaves the far side dark,
+//   * then bloom, light shafts, a chromatic kick when the hero is hurt and heat haze in the foundry.
+// If WebGL2 is missing or fails, usable() is false and the old 2D lighting is used instead.
+const Lumen = (() => {
+  const MAXL = 24, SHADOWED = 4, HALF = 0.5;
+  let canvas = null, gl = null, ok = false, quality = 2, mode = 'auto';     // quality: 0 off, 1 lit, 2 lit + shadows
+  let sceneC = null, sceneG = null, entC = null, entG = null, W = 0, H = 0, S = 1;
+  const P = {}, T = {}, F = {};                                // programs, textures, framebuffers
+  let quad = null, room = { level: null, dirty: false, pw: 1, ph: 1 };
+  try { const q = localStorage.getItem('duskwell_gfx'); if (q === '0' || q === '1' || q === '2') { mode = +q; quality = +q; } } catch (e) { /* ignore */ }
+  let slow = 0, frames = 0;
+
+  // ------------------------------------------------------------------ shaders
+  const VERT = `#version 300 es
+in vec2 aPos; out vec2 vUv;
+void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+  // a separable blur of the creatures' alpha: it becomes a soft dome whose slope is the creature's normal
+  const FRAG_HEIGHT = `#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uDir; uniform int uMode;
+in vec2 vUv; out vec4 o;
+float src(vec2 uv) { vec4 c = texture(uTex, uv); return uMode == 0 ? smoothstep(0.55, 0.95, c.a) : c.r; }
+void main() {
+  float s = 0.0, ws = 0.0;
+  for (int i = -7; i <= 7; i++) { float w = exp(-float(i * i) / 22.0); s += w * src(vUv + uDir * float(i)); ws += w; }
+  o = vec4(vec3(s / ws), 1.0);
+}`;
+
+  const FRAG_LIGHT = `#version 300 es
+precision highp float;
+uniform sampler2D uScene, uEnt, uHeight, uNorm;
+uniform vec2 uLog, uCam, uRoom, uTexel;
+uniform int uNL, uNS;
+uniform vec4 uL[${MAXL}];
+uniform vec3 uLC[${MAXL}];
+uniform float uDark, uSpec, uShadow, uTime, uCaustic;
+uniform vec3 uTint;
+in vec2 vUv; out vec4 o;
+
+vec4 normAt(vec2 wp) {
+  vec2 n = wp / uRoom;
+  if (n.x < 0.0 || n.y < 0.0 || n.x > 1.0 || n.y > 1.0) return vec4(0.5, 0.5, 1.0, 0.0);
+  return texture(uNorm, n);
+}
+float solidAt(vec2 wp) { return smoothstep(0.78, 0.95, normAt(wp).a); }
+
+// how much of the light reaches p: a short march through the tile mask
+float lightReach(vec2 p, vec2 lp) {
+  float occ = 0.0;
+  float jit = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));     // dither: no visible banding
+  for (int s = 1; s <= 12; s++) {
+    float t = (float(s) + jit - 0.5) / 13.0;
+    vec2 q = mix(p, lp, t);
+    if (distance(q, lp) < 26.0) continue;
+    occ += solidAt(q + uCam);
+  }
+  return 1.0 - clamp(occ * 0.5, 0.0, 1.0);
+}
+
+// nStr: how much the normal matters (0 = flat, as the old darkness map); shadowed: terrain blocks the light
+vec3 shade(vec3 albedo, vec3 N, vec2 p, float nStr, float specK, bool shadowed) {
+  float cut = 0.0; vec3 tint = vec3(0.0), spec = vec3(0.0);
+  for (int i = 0; i < ${MAXL}; i++) {
+    if (i >= uNL) break;
+    vec4 L = uL[i]; vec2 d = L.xy - p; float dist = length(d) / L.z;
+    if (dist >= 1.0) continue;
+    float f = dist < 0.45 ? mix(1.0, 0.62, dist / 0.45) : mix(0.62, 0.0, (dist - 0.45) / 0.55);
+    float w = L.w * f, sh = 1.0;
+    if (shadowed && uShadow > 0.5 && i < uNS && w > 0.03) sh = lightReach(p, L.xy);
+    vec3 L3 = normalize(vec3(d, 55.0));
+    float lam = mix(1.0, clamp(dot(N, L3), 0.0, 1.0) * 1.55 + 0.1, nStr);
+    cut += w * lam * sh;
+    tint += uLC[i] * w * lam * sh;
+    vec3 Hh = normalize(L3 + vec3(0.0, 0.0, 1.0));
+    spec += uLC[i] * pow(max(dot(N, Hh), 0.0), 20.0) * w * sh;
+  }
+  float b = (1.0 - uDark) + uDark * clamp(cut, 0.0, 1.25);
+  return albedo * b + albedo * tint * 0.38 + spec * specK;
+}
+
+void main() {
+  vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uLog;                // logical screen pixels, y down
+  vec4 sc = texture(uScene, vUv), en = texture(uEnt, vUv);
+  vec2 wp = p + uCam;
+  // ---- the scene: rock has a baked relief, everything else is flat
+  vec4 nm = normAt(wp);
+  float rock = smoothstep(0.3, 0.9, nm.a);
+  vec3 Nr = normalize(nm.rgb * 2.0 - 1.0);
+  float ao = mix(1.0, mix(0.6, 1.0, Nr.z), rock);
+  vec3 col = shade(sc.rgb * ao, mix(vec3(0.0, 0.0, 1.0), Nr, rock), p, 0.95 * rock, uSpec * rock, nm.a < 0.6);
+  if (uCaustic > 0.0) {                                       // light wobbling through water: drifting bright threads
+    float v = sin(wp.x * 0.045 + uTime * 0.8 + sin(wp.y * 0.03 + uTime * 0.5) * 2.0) * sin(wp.y * 0.05 - uTime * 0.6 + sin(wp.x * 0.025 + uTime * 0.4) * 2.0);
+    col += uTint * smoothstep(0.55, 0.95, v) * 0.16 * clamp(dot(col, vec3(1.0)) * 2.2, 0.0, 1.0) * uCaustic;
+  }
+  // ---- creatures: normals from the slope of the blurred silhouette
+  if (en.a > 0.01) {
+    vec2 e = uTexel * 2.2;
+    float hl = texture(uHeight, vUv - vec2(e.x, 0.0)).r, hr = texture(uHeight, vUv + vec2(e.x, 0.0)).r;
+    float hu = texture(uHeight, vUv + vec2(0.0, e.y)).r, hd = texture(uHeight, vUv - vec2(0.0, e.y)).r;
+    vec3 Ne = normalize(vec3((hl - hr) * 5.5, (hu - hd) * 5.5, 1.0));       // screen y points down; v points up
+    // luminance gives a little fine relief on top of the dome
+    float lum = dot(en.rgb, vec3(0.3, 0.59, 0.11));
+    vec3 lit = shade(en.rgb, Ne, p, 0.8, 0.55 * smoothstep(0.35, 0.9, lum) + 0.08, true);
+    float rim = pow(1.0 - Ne.z, 2.2);
+    lit += rim * (uTint * 0.9 + 0.12) * 0.55 * en.rgb + rim * uTint * 0.18;
+    // a creature in the dark is not quite invisible: keep a floor of the albedo
+    lit = max(lit, en.rgb * 0.16);
+    col = mix(col, lit, en.a);
+  }
+  o = vec4(col, 1.0);
+}`;
+
+  const FRAG_BRIGHT = `#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform float uThr;
+in vec2 vUv; out vec4 o;
+void main() { vec3 c = texture(uTex, vUv).rgb; vec3 b = max(c - uThr, 0.0) * 1.7; o = vec4(b, 1.0); }`;
+
+  const FRAG_BLUR = `#version 300 es
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uDir;
+in vec2 vUv; out vec4 o;
+void main() {
+  vec3 s = vec3(0.0); float ws = 0.0;
+  for (int i = -8; i <= 8; i++) { float w = exp(-float(i * i) / 24.0); s += w * texture(uTex, vUv + uDir * float(i)).rgb; ws += w; }
+  o = vec4(s / ws, 1.0);
+}`;
+
+  const FRAG_FINAL = `#version 300 es
+precision highp float;
+uniform sampler2D uLit, uBloom;
+uniform vec2 uLog;
+uniform float uBloomK, uAberr, uHaze, uTime;
+uniform vec4 uShaft;
+in vec2 vUv; out vec4 o;
+void main() {
+  vec2 uv = vUv;
+  if (uHaze > 0.0) { uv.x += sin(uv.y * 46.0 + uTime * 3.2) * 0.0011 * uHaze * smoothstep(0.1, 0.9, 1.0 - uv.y); uv.y += cos(uv.x * 28.0 + uTime * 1.6) * 0.0006 * uHaze; }
+  vec3 c;
+  if (uAberr > 0.0) { vec2 dir = (uv - 0.5) * uAberr; c = vec3(texture(uLit, uv + dir).r, texture(uLit, uv).g, texture(uLit, uv - dir).b); }
+  else c = texture(uLit, uv).rgb;
+  vec3 bl = texture(uBloom, uv).rgb;
+  if (uShaft.w > 0.0) {                                      // light shafts: bright things smeared toward the light
+    vec2 sp = vec2(uShaft.x / uLog.x, 1.0 - uShaft.y / uLog.y); vec3 acc = vec3(0.0);
+    for (int i = 0; i < 20; i++) acc += texture(uBloom, mix(uv, sp, float(i) / 20.0 * 0.7)).rgb;
+    bl += acc / 20.0 * uShaft.w;
+  }
+  c += bl * uBloomK;
+  c = mix(c, 0.85 + (c - 0.85) / (1.0 + (c - 0.85) * 2.2), step(0.85, c));       // soft shoulder instead of a hard clip
+  o = vec4(c, 1.0);
+}`;
+
+  // ------------------------------------------------------------------ plumbing
+  function compile(type, src) {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function program(frag, names) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, VERT)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, frag));
+    gl.bindAttribLocation(p, 0, 'aPos'); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}; for (const n of names) u[n] = gl.getUniformLocation(p, n);
+    return { p, u };
+  }
+  function texture(filter) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  function target(w, h) {
+    const t = texture(gl.LINEAR); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    return { t, f, w, h };
+  }
+  function init() {
+    // opened straight from disk the painted backgrounds taint the canvas, and WebGL may not read it
+    if (location.protocol === 'file:') return false;
+    try {
+      canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 36;
+      gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+      if (!gl) return false;
+      canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); ok = false; });
+      P.height = program(FRAG_HEIGHT, ['uTex', 'uDir', 'uMode']);
+      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint', 'uCaustic']);
+      P.bright = program(FRAG_BRIGHT, ['uTex', 'uThr']);
+      P.blur = program(FRAG_BLUR, ['uTex', 'uDir']);
+      P.final = program(FRAG_FINAL, ['uLit', 'uBloom', 'uLog', 'uBloomK', 'uAberr', 'uHaze', 'uTime', 'uShaft']);
+      quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      T.scene = texture(gl.LINEAR); T.ent = texture(gl.LINEAR);
+      T.norm = texture(gl.LINEAR);                                  // until a room is baked: no rock anywhere
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 255, 0]));
+      sceneC = document.createElement('canvas'); entC = document.createElement('canvas');
+      sceneG = sceneC.getContext('2d', { alpha: false }); entG = entC.getContext('2d');
+      ok = true;
+    } catch (e) { console.error('Lumen: ' + e.message); ok = false; }
+    return ok;
+  }
+
+  // the render size follows the screen (up to 1.5x), so the 2D layers and the GL canvas match
+  function resize(k) {
+    const s = clamp(k, 1, 1.5), w = Math.ceil(VW * s), h = Math.ceil(VH * s);
+    if (w === W && h === H) return;
+    W = w; H = h; S = s;
+    for (const k2 of Object.keys(F)) { gl.deleteTexture(F[k2].t); gl.deleteFramebuffer(F[k2].f); delete F[k2]; }
+    sceneC.width = entC.width = canvas.width = w; sceneC.height = entC.height = canvas.height = h;
+    const hw = Math.ceil(w * HALF), hh = Math.ceil(h * HALF), qw = Math.ceil(w / 4), qh = Math.ceil(h / 4);
+    F.hA = target(hw, hh); F.hB = target(hw, hh); F.lit = target(w, h); F.bA = target(qw, qh); F.bB = target(qw, qh); F.bC = target(qw, qh);
+  }
+
+  // ------------------------------------------------------------------ the rock's relief, baked once per room
+  function bakeRoom(L) {
+    if (!ok || (room.level === L && !room.dirty)) return;
+    const cell = 2, w = Math.ceil(L.pw / cell), h = Math.ceil(L.ph / cell), n = w * h;
+    const solid = new Uint8Array(n), thin = new Uint8Array(n), D = new Float32Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const tx = Math.floor(x * cell / TILE), ty = Math.floor(y * cell / TILE), v = L.get(tx, ty);
+      if (v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK) solid[y * w + x] = 1;
+      else if (v === T_ONEWAY && (y * cell) % TILE < 10) thin[y * w + x] = 1;
+    }
+    // distance to the nearest air cell, inside the rock (a two-pass chamfer)
+    const INF = 1e4;
+    for (let i = 0; i < n; i++) D[i] = solid[i] ? INF : 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x; if (!D[i]) continue;
+      let d = D[i];
+      if (x > 0) d = Math.min(d, D[i - 1] + 1); if (y > 0) d = Math.min(d, D[i - w] + 1);
+      if (x > 0 && y > 0) d = Math.min(d, D[i - w - 1] + 1.41); if (x < w - 1 && y > 0) d = Math.min(d, D[i - w + 1] + 1.41);
+      D[i] = d;
+    }
+    for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+      const i = y * w + x; if (!D[i]) continue;
+      let d = D[i];
+      if (x < w - 1) d = Math.min(d, D[i + 1] + 1); if (y < h - 1) d = Math.min(d, D[i + w] + 1);
+      if (x < w - 1 && y < h - 1) d = Math.min(d, D[i + w + 1] + 1.41); if (x > 0 && y < h - 1) d = Math.min(d, D[i + w - 1] + 1.41);
+      D[i] = d;
+    }
+    // a rounded dome (steep at the rim, flat inside) with a little grain
+    const hgt = new Float32Array(n), DEPTH = 9, noise = (x, y) => hash2(Math.floor(x / 5), Math.floor(y / 5), 31) * 0.8 + hash2(Math.floor(x / 2), Math.floor(y / 2), 17) * 0.4;
+    for (let i = 0; i < n; i++) {
+      if (solid[i]) { const t = Math.min(D[i], DEPTH) / DEPTH; hgt[i] = (1 - (1 - t) * (1 - t)) * 5.5 + noise(i % w, (i / w) | 0) * 0.5; }
+      else if (thin[i]) hgt[i] = 1.2;
+    }
+    // a light blur, then Sobel slopes -> normals
+    const sm = new Float32Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let s = 0, c = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < w && yy < h) { s += hgt[yy * w + xx]; c++; } }
+      sm[y * w + x] = s / c;
+    }
+    const px = new Uint8Array(n * 4), K = 1.15;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, g = (xx, yy) => sm[Math.min(h - 1, Math.max(0, yy)) * w + Math.min(w - 1, Math.max(0, xx))];
+      const dx = (g(x + 1, y - 1) + 2 * g(x + 1, y) + g(x + 1, y + 1)) - (g(x - 1, y - 1) + 2 * g(x - 1, y) + g(x - 1, y + 1));
+      const dy = (g(x - 1, y + 1) + 2 * g(x, y + 1) + g(x + 1, y + 1)) - (g(x - 1, y - 1) + 2 * g(x, y - 1) + g(x + 1, y - 1));
+      let nx = -dx * K * 0.25, ny = -dy * K * 0.25, nz = 1; const len = Math.hypot(nx, ny, nz); nx /= len; ny /= len; nz /= len;
+      px[i * 4] = Math.round((nx * 0.5 + 0.5) * 255); px[i * 4 + 1] = Math.round((ny * 0.5 + 0.5) * 255); px[i * 4 + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+      px[i * 4 + 3] = solid[i] ? 255 : thin[i] ? 128 : 0;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, T.norm);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    room = { level: L, dirty: false, pw: L.pw, ph: L.ph };
+  }
+
+  // ------------------------------------------------------------------ drawing
+  function bindTex(unit, tex) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); }
+  function pass(prog, fbo, w, h) {
+    gl.useProgram(prog.p);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo ? fbo.f : null); gl.viewport(0, 0, w, h);
+    return prog.u;
+  }
+  function upload(t, src) {
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  }
+
+  // o: { lights: [{x,y,r,a,c}] (screen space), cx, cy, dark, tint:[r,g,b], spec, time, aberr, haze, shaft:{x,y,k} }
+  function render(o) {
+    try { return renderNow(o); } catch (e) { console.error('Lumen: ' + e.message); ok = false; return null; }      // fall back to the 2D lighting for good
+  }
+  function renderNow(o) {
+    const lights = o.lights.filter(l => l.x > -l.r && l.y > -l.r && l.x < VW + l.r && l.y < VH + l.r && l.a > 0).sort((a, b) => b.a * b.r - a.a * a.r).slice(0, MAXL);
+    const Lu = new Float32Array(MAXL * 4), Lc = new Float32Array(MAXL * 3);
+    lights.forEach((l, i) => { Lu.set([l.x, l.y, l.r, l.a], i * 4); Lc.set(l.c ? hexToRgb(l.c).map(v => v / 255) : [1, 0.95, 0.85], i * 3); });
+    gl.disable(gl.BLEND);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    upload(T.scene, sceneC); upload(T.ent, entC);
+    const hw = F.hA.w, hh = F.hA.h;
+    // 1) the creatures' silhouette as a soft dome (horizontal, then vertical)
+    let u = pass(P.height, F.hA, hw, hh); bindTex(0, T.ent); gl.uniform1i(u.uTex, 0); gl.uniform1i(u.uMode, 0); gl.uniform2f(u.uDir, 1.6 / hw, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    u = pass(P.height, F.hB, hw, hh); bindTex(0, F.hA.t); gl.uniform1i(u.uTex, 0); gl.uniform1i(u.uMode, 1); gl.uniform2f(u.uDir, 0, 1.6 / hh); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // 2) lighting
+    u = pass(P.light, F.lit, W, H);
+    bindTex(0, T.scene); gl.uniform1i(u.uScene, 0); bindTex(1, T.ent); gl.uniform1i(u.uEnt, 1);
+    bindTex(2, F.hB.t); gl.uniform1i(u.uHeight, 2); bindTex(3, T.norm); gl.uniform1i(u.uNorm, 3);
+    gl.uniform2f(u.uLog, VW, VH); gl.uniform2f(u.uCam, o.cx, o.cy); gl.uniform2f(u.uRoom, room.pw, room.ph); gl.uniform2f(u.uTexel, 1 / hw, 1 / hh);
+    gl.uniform1i(u.uNL, lights.length); gl.uniform1i(u.uNS, SHADOWED); gl.uniform4fv(u.uL, Lu); gl.uniform3fv(u.uLC, Lc);
+    gl.uniform1f(u.uDark, o.dark); gl.uniform1f(u.uSpec, o.spec); gl.uniform1f(u.uShadow, quality >= 2 ? 1 : 0); gl.uniform1f(u.uTime, o.time); gl.uniform1f(u.uCaustic, o.caustic || 0);
+    gl.uniform3f(u.uTint, o.tint[0], o.tint[1], o.tint[2]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // 3) bloom: bright parts, blurred at quarter size
+    const qw = F.bA.w, qh = F.bA.h;
+    u = pass(P.bright, F.bA, qw, qh); bindTex(0, F.lit.t); gl.uniform1i(u.uTex, 0); gl.uniform1f(u.uThr, 0.62); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    u = pass(P.blur, F.bB, qw, qh); bindTex(0, F.bA.t); gl.uniform1i(u.uTex, 0); gl.uniform2f(u.uDir, 1.5 / qw, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    u = pass(P.blur, F.bC, qw, qh); bindTex(0, F.bB.t); gl.uniform1i(u.uTex, 0); gl.uniform2f(u.uDir, 0, 1.5 / qh); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // 4) the final image
+    u = pass(P.final, null, W, H);
+    bindTex(0, F.lit.t); gl.uniform1i(u.uLit, 0); bindTex(1, F.bC.t); gl.uniform1i(u.uBloom, 1);
+    gl.uniform2f(u.uLog, VW, VH); gl.uniform1f(u.uBloomK, 0.5); gl.uniform1f(u.uAberr, o.aberr || 0); gl.uniform1f(u.uHaze, o.haze || 0); gl.uniform1f(u.uTime, o.time);
+    const sh = o.shaft; gl.uniform4f(u.uShaft, sh ? sh.x : 0, sh ? sh.y : 0, 0, sh ? sh.k : 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    return canvas;
+  }
+
+  return {
+    init,
+    usable: () => ok && quality > 0,
+    ready: () => ok,
+    quality: () => quality,
+    mode: () => mode,
+    // 'auto' starts high and steps down if the game runs slowly; 0, 1 and 2 pin a level (0 = the old 2D lighting)
+    setMode(m) { mode = m; quality = m === 'auto' ? 2 : m; slow = frames = 0; try { localStorage.setItem('duskwell_gfx', String(m)); } catch (e) { /* ignore */ } },
+    setQuality(q) { mode = q; quality = q; },
+    // called every frame with the time since the last one; in auto mode, 90 slow frames in a row lower the quality
+    adapt(dtMs) {
+      if (mode !== 'auto' || !ok || quality === 0 || dtMs > 250) return;
+      slow = dtMs > 25 ? slow + 1 : Math.max(0, slow - 1); frames++;
+      if (slow > 90 && frames > 120) { quality--; slow = frames = 0; }
+    },
+    // sizes the layers and returns their 2D contexts, already scaled to logical coordinates and cleared
+    begin(k) {
+      resize(k);
+      sceneG.setTransform(S, 0, 0, S, 0, 0); entG.setTransform(1, 0, 0, 1, 0, 0); entG.clearRect(0, 0, W, H); entG.setTransform(S, 0, 0, S, 0, 0);
+      return { sg: sceneG, eg: entG };
+    },
+    bakeRoom, render, layers: () => [sceneC, entC],
+    invalidate() { room.dirty = true; },        // a wall broke or a gate moved: bake the relief again
+  };
+})();
+
+</script>
+<script>
+'use strict';
 // Pixel-art sprites (from the artist's Aseprite files, see tools/sprites) drawn with real-time 3D
 // lighting. When a sheet loads, every frame gets a height map from its silhouette (a pixel stands
 // out more the further it is from the edge) and a normal map from that height. Each draw then
@@ -2911,6 +3903,7 @@ const Pixel = (() => {
   const sheets = {};
   let lights = [], ambient = [0.5, 0.52, 0.6];
   let work = null, wg = null;                 // scratch canvas a frame is lit into
+  let flat = false, shadowG = null;           // Lumen mode: no lighting here, shadows go to another context
 
   // ---------------------------------------------------------------- loading and normal maps
   function load(name, meta) {
@@ -2978,6 +3971,17 @@ const Pixel = (() => {
     const s = sheets[name]; if (!s || !s.ready) return false;
     o = o || {};
     const F = s.frames[frame % s.frames.length], m = s.meta, k = o.scale || SCALE, face = o.face || 1;
+    if (flat) {                                   // Lumen lights everything on screen: draw the plain pixels
+      const [cw, ch] = m.cell;
+      g.save(); g.imageSmoothingEnabled = false;
+      if (o.alpha != null) g.globalAlpha *= o.alpha;
+      g.translate(fx, fy); if (o.rot) g.rotate(o.rot);
+      g.scale(face * k * (o.sx || 1), k * (o.sy || 1));
+      g.drawImage(s.img, (frame % s.frames.length) * cw, 0, cw, ch, -m.mid, -m.feet, cw, ch);
+      g.restore();
+      if (o.flash > 0) silhouette(g, name, frame, fx, fy, { tint: '#ffffff', alpha: Math.min(1, o.flash), face, scale: k, sx: o.sx, sy: o.sy });
+      return true;
+    }
     if (!work || work.width < F.w || work.height < F.h) { work = document.createElement('canvas'); work.width = 64; work.height = 64; wg = work.getContext('2d'); }
     const img = wg.createImageData(F.w, F.h), out = img.data;
     // the strongest few lights at this sprite
@@ -3049,6 +4053,7 @@ const Pixel = (() => {
   // soft contact shadow on the ground under a body; fades and shrinks as it rises
   function shadow(g, cx, feetY, w) {
     const L = G.level; if (!L) return;
+    if (shadowG) g = shadowG;                     // under Lumen the shadow belongs to the scene layer, below the creatures
     const tx = Math.floor(cx / TILE);
     let ty = Math.floor((feetY + 2) / TILE), lift = 0;
     while (ty < L.h && !L.ground(tx, ty) && lift < 8) { ty++; lift++; }
@@ -3069,7 +4074,7 @@ const Pixel = (() => {
   }
 
   for (const k in SPRITE_META) load(k, SPRITE_META[k]);
-  return { draw, silhouette, shadow, setScene, frameOf, ready: n => !!(sheets[n] && sheets[n].ready), meta: n => sheets[n] && sheets[n].meta, SCALE };
+  return { setFlat(on, g) { flat = !!on; shadowG = on ? g : null; }, draw, silhouette, shadow, setScene, frameOf, ready: n => !!(sheets[n] && sheets[n].ready), meta: n => sheets[n] && sheets[n].meta, SCALE };
 })();
 
 </script>
@@ -3178,12 +4183,19 @@ class Level {
     this.def = def; this.id = def.id; this.w = def.w; this.h = def.h;
     this.t = Uint8Array.from(def.t);
     this.pw = def.w * TILE; this.ph = def.h * TILE;
+    this.ice = def.iceCells || new Set();
   }
+  isIce(tx, ty) { return this.ice.size > 0 && tx >= 0 && ty >= 0 && tx < this.w && ty < this.h && this.ice.has(ty * this.w + tx); }
   get(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return T_SOLID;
     return this.t[ty * this.w + tx];
   }
-  set(tx, ty, v) { if (tx >= 0 && ty >= 0 && tx < this.w && ty < this.h) this.t[ty * this.w + tx] = v; }
+  set(tx, ty, v) {
+    if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return;
+    const rock = a => a === T_SOLID || a === T_BREAK || a === T_GATE || a === T_CRACK, old = this.t[ty * this.w + tx];
+    this.t[ty * this.w + tx] = v;
+    if (rock(old) !== rock(v)) Lumen.invalidate();          // the baked relief of the rock is out of date
+  }
   solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK || v === T_CRUMBLE; }
   hazard(tx, ty) { const v = this.get(tx, ty); return v === T_HAZARD || v === T_ACID; }
   solidAtPx(x, y) { return this.solid(Math.floor(x / TILE), Math.floor(y / TILE)); }
@@ -3260,6 +4272,7 @@ class Player {
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
+  onIce() { const L = G.level, ty = Math.floor((this.y + this.h + 2) / TILE); return L.isIce(Math.floor((this.x + 4) / TILE), ty) || L.isIce(Math.floor((this.x + this.w - 4) / TILE), ty); }
   // ---- numbers the charms change (see charms.js) ----
   spellCost() { return Charms.has('thrift') ? 24 : 33; }
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1); }
@@ -3358,7 +4371,8 @@ class Player {
         this.vx = 0;
       } else {
         const target = ix * (Charms.has('boots') ? 305 : 250);
-        this.vx = approach(this.vx, target, (ix === 0 ? 4200 : 3600) * dt * (this.onGround ? 1 : 0.85));
+        const grip = this.onGround && this.onIce() && !Charms.has('soles') ? 0.14 : 1;          // ice: slow to start, slower to stop
+        this.vx = approach(this.vx, target, (ix === 0 ? 4200 : 3600) * dt * (this.onGround ? grip : 0.85));
         if (ix !== 0 && this.atkT <= 0) this.face = ix;
         else if (ix !== 0 && this.atkT > 0 && this.atkDir !== 'side') this.face = ix;
       }
@@ -3468,7 +4482,10 @@ class Player {
         this.hits.add(e);
         const dir = this.atkDir === 'side' ? this.face : (e.cx > cx ? 1 : -1);
         const landed = e.hurt(this.nailDamage(), dir, this.atkDir);      // false: a shield turned it aside
-        if (landed !== false) this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
+        if (landed !== false) {
+          this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
+          if (Charms.has('cinder') && !e.dead) e.burnT = 0.6;        // Cinder Edge: a burn lands a moment after the blow
+        }
         connected = true;
       }
     }
@@ -3674,6 +4691,22 @@ class Proj {
       if (this.active && !G.player.dead && overlap(G.player.hurtbox(), this.rect())) G.player.hurt(this.dmg, this.x);
       return;
     }
+    if (this.kind === 'blast') {              // an expanding ring of fire that wounds once
+      this.r = this.r0 * (0.45 + 0.8 * clamp(this.t / 0.18, 0, 1));
+      const pl = G.player;
+      if (!this.hurtDone && !pl.dead && this.t < 0.3 && overlap(pl.hurtbox(), this.rect())) { this.hurtDone = true; pl.hurt(this.dmg, this.x); }
+      return;
+    }
+    if (this.kind === 'bomb') {               // lobbed: bursts on touching the ground or a wall, on the hero, or when the fuse ends
+      this.vy += this.grav * dt; this.x += this.vx * dt; this.y += this.vy * dt;
+      const pl = G.player;
+      if (L.solidAtPx(this.x, this.y + this.r) || L.solidAtPx(this.x + sign(this.vx) * this.r, this.y) || this.t > this.fuse || (!pl.dead && overlap(pl.hurtbox(), this.rect()))) {
+        this.dead = true; Sound.play('slam'); G.shake(4, 0.15);
+        G.projs.push(new Proj({ kind: 'blast', x: this.x, y: this.y, r: 20, r0: this.blastR || 66, dmg: 1, life: 0.45, pierce: true, passWalls: true, color: this.color }));
+        G.burst(this.x, this.y, 16, { color: this.color, speed: 260, life: 0.5, size: 4 });
+      }
+      return;
+    }
     this.vy += this.grav * dt;
     this.x += this.vx * dt; this.y += this.vy * dt;
     if (this.kind === 'cloud') {
@@ -3763,6 +4796,12 @@ class Enemy {
   tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; }
   hurt(dmg, dir, how) {
     if (this.dead) return;
+    if (how === 'burn') {                                     // a burn: no flinch, no stop, just the wound
+      this.hp -= dmg; this.flash = 0.1; Sound.play('hit');
+      G.burst(this.cx, this.cy, 10, { color: pick(['#ff8a3a', '#ffd070']), speed: 150, life: 0.45, size: 3, vy: -60 });
+      if (this.hp <= 0) this.kill();
+      return;
+    }
     this.hp -= dmg; this.flash = 0.12; Sound.play('hit'); G.hitstop(how === 'spell' ? 0.03 : 0.06);
     G.burst(this.cx, this.cy, 8, { color: this.blood || '#ffd59a', speed: 220, life: 0.35, size: 3 });
     G.burst(this.cx, this.cy, 3, { color: '#ffffff', speed: 260, life: 0.15, size: 2 });
@@ -4256,7 +5295,373 @@ class Ram extends Enemy {
   }
 }
 
-const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly, warden: Warden, ram: Ram };
+// ============================== CREATURES OF RIMECREST AND CINDERDEEP ==============================
+// Burrower: lies buried under the floor, tracks the hero by the dust it raises, erupts, then digs back in.
+class Burrower extends Enemy {
+  constructor(d) {
+    super(d, 36, 30); this.hp = 16; this.geo = 5; this.kb = 0.5; this.type = d.type; this.blood = d.type === 'lavaworm' ? '#ff9a50' : '#d8e6f0';
+    this.buried = true; this.ghostly = true; this.dust = d.type === 'lavaworm' ? '#ff9a50' : '#cfe0ee';
+  }
+  body() { return this.buried ? { x: this.cx - 1, y: this.y + this.h - 2, w: 2, h: 2 } : this.hb(); }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, dx = p.cx - this.cx, near = Math.abs(dx) < 240 && Math.abs(p.cy - this.cy) < 110 && !p.dead;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.buried = true; this.ghostly = true; this.vx = 0;
+        if (near && this.stateT > 0.6) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:                // shuffles under the floor toward the hero
+        this.face = dx > 0 ? 1 : -1;
+        this.vx = this.edgeAhead(this.face) ? 0 : this.face * 120;
+        if (Math.random() < 0.5) G.burst(this.cx, this.y + this.h, 1, { color: this.dust, speed: 40, life: 0.4, size: 3, vy: -30 });
+        if (Math.abs(dx) < 64) this.setState(ST.ANTICIPATION);
+        else if (!near && this.stateT > 1.2) this.setState(ST.IDLE);
+        break;
+      case ST.ANTICIPATION:         // the ground trembles
+        this.vx = 0;
+        if (Math.random() < 0.8) G.burst(this.cx + rand(-14, 14), this.y + this.h, 1, { color: this.dust, speed: 70, life: 0.35, size: 3, vy: -60 });
+        if (this.stateT >= 0.55) {
+          this.buried = false; this.ghostly = false; this.vy = -560; this.vx = this.face * 90; this.onGround = false;
+          Sound.play('break'); G.shake(3, 0.12); G.burst(this.cx, this.y + this.h, 14, { color: this.dust, speed: 220, life: 0.5, size: 4, vy: -80 });
+          this.setState(ST.ATTACK);
+        }
+        break;
+      case ST.ATTACK:               // out of the ground: wounds on touch until it lands
+        if (this.onGround && this.stateT > 0.15) { this.vx = 0; this.setState('emerged'); }
+        break;
+      case 'emerged':               // out in the open and slow: the time to strike
+        this.face = dx > 0 ? 1 : -1; this.vx = this.edgeAhead(this.face) ? 0 : this.face * 56;
+        if (this.stateT > 1.4) this.setState('digging');
+        break;
+      case 'digging':
+        this.vx = 0;
+        if (Math.random() < 0.6) G.burst(this.cx, this.y + this.h, 1, { color: this.dust, speed: 60, life: 0.4, size: 3, vy: -50 });
+        if (this.stateT > 0.45) { this.buried = true; this.ghostly = true; this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.22) this.setState('emerged');
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL || this.hitR) this.vx = 0;
+  }
+}
+
+// Bomber: an imp that keeps its distance and lobs bombs that burst in a ring of fire.
+class Bomber extends Enemy {
+  constructor(d) { super(d, 28, 34); this.hp = 14; this.geo = 5; this.kb = 0.9; this.blood = '#ff9a50'; this.cool = rand(0.8, 1.8); this.glowR = 80; }
+  update(dt) {
+    this.tick(dt); this.cool -= dt;
+    const p = G.player, dx = p.cx - this.cx, ad = Math.abs(dx), sees = this.seesPlayer(440) && Math.abs(p.cy - this.cy) < 220;
+    if (sees) this.lastSeen = this.t;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE: {              // holds the hero at bomb range
+        this.face = dx > 0 ? 1 : -1;
+        const want = ad < 170 ? -this.face : ad > 330 ? this.face : 0;
+        this.vx = want && !this.edgeAhead(want) ? want * 95 : 0;
+        if (this.cool <= 0 && sees && ad < 400) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.t - this.lastSeen > 2.5) this.setState(ST.IDLE);
+        break;
+      }
+      case ST.ANTICIPATION:         // the arm goes up with a lit bomb
+        this.vx = 0; this.face = dx > 0 ? 1 : -1;
+        if (this.stateT >= 0.5) {
+          const x = this.cx + this.face * 10, y = this.y + 6, T = clamp(ad / 320, 0.45, 1.1), g = 1100;
+          G.projs.push(new Proj({ kind: 'bomb', x, y, r: 9, vx: clamp(dx / T, -380, 380), vy: (p.cy - y - 0.5 * g * T * T) / T, grav: g, fuse: 1.7, life: 4, dmg: 1, color: '#ff9a50' }));
+          Sound.play('shoot'); this.cool = rand(1.6, 2.6); this.setState('throw');
+        }
+        break;
+      case 'throw':
+        this.vx = 0;
+        if (this.stateT > 0.4) this.setState(ST.CHASE);
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL || this.hitR) this.vx = 0;
+  }
+}
+
+// Blinker: a half-faded wraith. It fades out, appears beside the hero, slashes, and can be struck only while solid.
+class Blinker extends Enemy {
+  constructor(d) { super(d, 30, 50); this.hp = 18; this.geo = 6; this.kb = 0.6; this.blood = '#bfe6ff'; this.alpha = 0.5; this.ghostly = true; this.glowR = 90; this.ph = rand(0, 6); this.melee = null; this.y -= 14; this.home = { x: this.cx, y: this.cy }; }
+  placeBeside() {
+    const L = G.level, p = G.player;
+    for (const side of [-p.face, p.face]) for (const dy of [-10, -24, 0]) {          // beside the hero, a little above the floor
+      const x = p.cx + side * 86, y = p.cy + dy;
+      let free = true; for (let k = -1; k <= 1; k++) if (L.solidAtPx(x, y + k * 24) || L.solidAtPx(x + side * 16, y + k * 24)) free = false;
+      if (free) { this.x = x - this.w / 2; this.y = y - this.h / 2; this.face = -side; this.vx = this.vy = 0; return true; }
+    }
+    return false;
+  }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(400);
+    this.melee = null;
+    switch (this.currentState) {
+      case ST.IDLE: {               // drifting, faint, harmless
+        this.alpha = approach(this.alpha, 0.5 + 0.08 * Math.sin(this.t * 3), 2 * dt); this.ghostly = true;
+        const tx = this.home.x + Math.sin(this.t * 0.7 + this.ph) * 50, ty = this.home.y + Math.sin(this.t * 1.3 + this.ph) * 16;
+        this.vx = approach(this.vx, clamp(tx - this.cx, -1, 1) * 50, 200 * dt); this.vy = approach(this.vy, clamp(ty - this.cy, -1, 1) * 30, 200 * dt);
+        if (sees && this.stateT > 1.1 && !p.dead) this.setState('fadeout');
+        break;
+      }
+      case 'fadeout':
+        this.vx = this.vy = 0; this.alpha = Math.max(0, 0.5 - this.stateT / 0.3 * 0.5); this.ghostly = true;
+        if (this.stateT >= 0.3) { if (this.placeBeside()) this.setState('appear'); else this.setState(ST.IDLE); }
+        break;
+      case 'appear':                // eyes first, then the body: a readable warning
+        this.vx = this.vy = 0; this.alpha = clamp(this.stateT / 0.5, 0, 1); this.ghostly = this.alpha < 0.6;
+        this.face = p.cx > this.cx ? 1 : -1;
+        if (this.stateT >= 0.5) { this.setState(ST.ATTACK); Sound.play('slash'); }
+        break;
+      case ST.ATTACK:               // the slash
+        this.alpha = 1; this.ghostly = false;
+        this.melee = { x: this.face > 0 ? this.cx : this.cx - 80, y: this.y + 2, w: 80, h: 52 };
+        if (!p.dead && overlap(p.hurtbox(), this.melee)) p.hurt(1, this.cx);
+        if (this.stateT >= 0.22) this.setState('vulnerable');
+        break;
+      case 'vulnerable':            // solid for a moment: the time to strike back
+        this.alpha = 1; this.ghostly = false; this.vx = this.vy = 0;
+        if (this.stateT >= 0.9) this.setState('fadeback');
+        break;
+      case 'fadeback':
+        this.alpha = Math.max(0.5, 1 - this.stateT / 0.4 * 0.5); this.ghostly = this.alpha < 0.6;
+        if (this.stateT >= 0.4) { this.home = { x: this.cx, y: this.cy }; this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.9; this.vy *= 0.9;
+        if (this.stateT > 0.2) this.setState('vulnerable');
+        break;
+    }
+    this.physics(dt, false);
+    if (this.hitL || this.hitR) this.vx = 0; if (this.hitU || this.onGround) this.vy = 0;
+  }
+}
+
+// Roller: patrols, then curls into a ball and rolls from wall to wall. Armoured while rolling (jump on it); dazed afterwards.
+class Roller extends Enemy {
+  constructor(d) { super(d, 40, 30); this.hp = 24; this.geo = 8; this.kb = 0.3; this.blood = '#e0c89a'; this.rolls = 0; }
+  hurt(dmg, dir, how) {
+    if (this.dead) return;
+    if (this.currentState === ST.ATTACK && (how === 'side' || how === 'up')) {            // the curled shell turns blades aside
+      Sound.play('clank'); G.hitstop(0.04); G.burst(this.cx, this.cy - 6, 8, { color: '#fff3c4', speed: 220, life: 0.25, size: 2 });
+      return false;
+    }
+    return super.hurt(dmg, dir, how);
+  }
+  onHurt(dir, how) { if (this.currentState === ST.ATTACK) return; super.onHurt(dir, how); }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(440) && Math.abs(p.cy - this.cy) < 90;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees && this.stateT > 0.4) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.stateT > 1) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL:
+        this.vx = this.face * 38;
+        if (this.edgeAhead(this.face)) { this.face = -this.face; this.setState(ST.IDLE); }
+        if (sees) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        break;
+      case ST.ANTICIPATION:         // curls up and shivers
+        this.vx = 0;
+        if (this.stateT >= 0.55) { this.rolls = 0; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK: {
+        this.vx = this.face * 400;
+        const wall = this.face > 0 ? this.hitR : this.hitL;
+        if (wall || this.edgeAhead(this.face)) { this.face = -this.face; this.rolls++; this.vx = this.face * 400; G.shake(3, 0.1); Sound.play('clunk'); }
+        if (this.rolls >= 3 || this.stateT > 3.2) { this.vx = 0; this.setState('dizzy'); }
+        break;
+      }
+      case 'dizzy':
+        this.vx = 0;
+        if (this.stateT > 1.2) this.setState(ST.IDLE);
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.IDLE);
+        break;
+    }
+    this.physics(dt);
+  }
+}
+
+// Slime: hops toward the hero and splits into two small slimes when it dies.
+class Slime extends Enemy {
+  constructor(d) {
+    super(d, d.small ? 22 : 40, d.small ? 18 : 32); this.small = !!d.small;
+    this.hp = this.small ? 6 : 20; this.geo = this.small ? 1 : 6; this.kb = this.small ? 1.2 : 0.6; this.blood = '#9fd8ff'; this.wait = rand(0.5, 1.4); this.born = 0.3;
+    if (this.small) this.ghostly = true;                // a newborn cannot be struck for a moment, so the blow that split its parent is not spent on it
+  }
+  kill() {
+    super.kill();
+    if (this.small) return;
+    for (const dir of [-1, 1]) {
+      const s = new Slime({ x: 0, y: 0, small: true }); s.kind = 'slimelet';
+      s.x = this.cx - s.w / 2; s.y = this.y + this.h - s.h; s.vx = dir * 170; s.vy = -300; s.face = dir;
+      G.enemies.push(s);
+    }
+  }
+  update(dt) {
+    this.tick(dt);
+    if (this.small && this.born > 0) { this.born -= dt; if (this.born <= 0) this.ghostly = false; }
+    const p = G.player;
+    switch (this.currentState) {
+      case ST.IDLE:
+        if (this.onGround) this.vx *= 0.8;
+        if (this.onGround && this.stateT > this.wait && this.seesPlayer(360)) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); }
+        break;
+      case ST.ANTICIPATION:         // squashes down
+        this.vx = 0;
+        if (this.stateT > (this.small ? 0.18 : 0.32)) { this.vy = this.small ? -430 : -470; this.vx = this.face * (this.small ? 190 : 150); this.onGround = false; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK:
+        if (this.onGround && this.stateT > 0.1) { this.wait = rand(0.5, 1.2); this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        if (this.onGround) this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.IDLE);
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL || this.hitR) this.vx = -this.vx * 0.4;
+  }
+}
+
+// Chainman: swings a spiked ball on a chain in a wide circle. The ball wounds; the man can be struck while it retracts.
+class Chainman extends Enemy {
+  constructor(d) { super(d, 38, 56); this.hp = 30; this.geo = 12; this.kb = 0.2; this.blood = '#d8c8a0'; this.ang = 0; this.reach = 36; this.ball = null; this.wp = null; }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(300) && Math.abs(p.cy - this.cy) < 120;
+    if (sees) this.lastSeen = this.t;
+    let spin = 1.5, reach = 36;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees) this.setState(ST.CHASE);
+        else if (this.stateT > 1) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL:
+        this.vx = this.face * 30;
+        if (this.edgeAhead(this.face)) { this.face = -this.face; this.setState(ST.IDLE); }
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:
+        this.face = p.cx > this.cx ? 1 : -1; this.vx = this.edgeAhead(this.face) ? 0 : this.face * 52;
+        if (Math.abs(p.cx - this.cx) < 150) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.t - this.lastSeen > 1.6) this.setState(ST.PATROL);
+        break;
+      case ST.ANTICIPATION:         // the ball starts to spin
+        this.vx = 0; spin = 3 + this.stateT * 6; reach = 36 + this.stateT / 0.7 * 60;
+        if (this.stateT >= 0.7) this.setState(ST.ATTACK);
+        break;
+      case ST.ATTACK:               // full swing, creeping toward the hero
+        spin = 7.5; reach = 112; this.face = p.cx > this.cx ? 1 : -1; this.vx = this.edgeAhead(this.face) ? 0 : this.face * 46;
+        if (this.stateT >= 1.7) this.setState(ST.RECOIL);
+        break;
+      case ST.RECOIL:               // the chain winds back in: struck freely now
+        this.vx *= 0.8; spin = 2.5; reach = Math.max(36, 112 - this.stateT * 130);
+        if (this.stateT > 0.85) this.setState(ST.CHASE);
+        break;
+    }
+    this.ang += spin * dt; this.reach = approach(this.reach, reach, 220 * dt);
+    this.ball = { x: this.cx + Math.cos(this.ang) * this.reach, y: this.cy - 6 + Math.sin(this.ang) * this.reach * 0.75, r: 13 };
+    if (this.reach > 60 && !p.dead && overlap(p.hurtbox(), { x: this.ball.x - 13, y: this.ball.y - 13, w: 26, h: 26 })) p.hurt(1, this.ball.x);
+    this.physics(dt);
+    if (this.hitL || this.hitR) { this.vx = 0; if (this.currentState === ST.PATROL) this.face = -this.face; }
+  }
+}
+
+// Moth: drawn to the hero's light; it circles, then dives. It carries a little light of its own.
+class Moth extends Enemy {
+  constructor(d) { super(d, 26, 22); this.hp = 12; this.geo = 4; this.kb = 1.4; this.blood = '#ffe7a0'; this.glowR = 130; this.ph = rand(0, 6); this.orbit = rand(0, 6); this.diveCD = rand(1.4, 2.4); }
+  steer(tx, ty, sp, acc, dt) {
+    const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1;
+    this.vx = approach(this.vx, dx / d * sp, acc * dt); this.vy = approach(this.vy, dy / d * sp, acc * dt);
+    if (Math.abs(this.vx) > 10) this.face = sign(this.vx);
+  }
+  update(dt) {
+    this.tick(dt); this.diveCD -= dt;
+    const p = G.player, sees = this.seesPlayer(340);
+    if (sees) this.lastSeen = this.t;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.steer(this.home.x + Math.sin(this.t * 0.9 + this.ph) * 50, this.home.y + Math.sin(this.t * 2.1 + this.ph) * 18, 55, 220, dt);
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:                // flutters around the light
+        this.orbit += dt * 1.7;
+        this.steer(p.cx + Math.cos(this.orbit) * 120, p.cy - 30 + Math.sin(this.orbit * 1.3) * 50, 140, 420, dt);
+        if (this.diveCD <= 0 && sees) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (p.dead || this.t - this.lastSeen > 2.2) this.setState(ST.IDLE);
+        break;
+      case ST.ANTICIPATION:         // wings up, glow brightens
+        this.vx *= 0.9; this.vy *= 0.9; this.face = p.cx > this.cx ? 1 : -1;
+        if (this.stateT >= 0.4) { const d = Math.hypot(p.cx - this.cx, p.cy - this.cy) || 1; this.vx = (p.cx - this.cx) / d * 380; this.vy = (p.cy - this.cy) / d * 380; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK:
+        if (this.stateT > 0.55 || this.hitL || this.hitR || this.hitU || this.onGround) { this.diveCD = rand(1.6, 2.8); this.setState(ST.CHASE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.94; this.vy *= 0.94;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
+    }
+    this.glowR = this.currentState === ST.ANTICIPATION ? 130 + this.stateT * 160 : 130;
+    this.physics(dt, false);
+    if (this.hitL || this.hitR) this.vx = 0; if (this.hitU || this.onGround) this.vy = 0;
+  }
+}
+
+// Icicle: hangs from the ceiling, shakes when the hero passes under it, falls, shatters, and grows back.
+class Icicle extends Enemy {
+  constructor(d) { super(d, 18, 44); this.y = d.y * TILE; this.hp = 5; this.geo = 0; this.kb = 0; this.type = d.type; this.blood = '#dff4ff'; this.ox = this.x; this.oy = this.y; this.gone = false; }
+  shatter() {
+    G.burst(this.cx, this.cy, 14, { color: this.blood, speed: 240, life: 0.5, size: 3 }); Sound.play('break');
+    this.gone = true; this.ghostly = true; this.vx = this.vy = 0; this.setState('gone');
+  }
+  kill() { this.shatter(); }                    // struck: it breaks (and grows back)
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, under = Math.abs(p.cx - this.cx) < 38 && p.cy > this.cy && p.cy < this.y + 460 && !p.dead && G.level.lineOfSight(this.cx, this.y + this.h, this.cx, p.cy);
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.x = this.ox; this.y = this.oy; this.vx = this.vy = 0; this.ghostly = false; this.gone = false; this.dmg = 0;
+        if (under) { this.setState(ST.ANTICIPATION); Sound.play('creak'); }
+        return;
+      case ST.ANTICIPATION:         // a tremor, then it lets go
+        this.x = this.ox + Math.sin(this.stateT * 70) * 1.6;
+        if (this.stateT >= 0.55) { this.dmg = 1; this.setState(ST.ATTACK); }
+        return;
+      case ST.ATTACK:
+        this.vy = Math.min(this.vy + 2000 * dt, 820);
+        this.y += this.vy * dt;
+        if (G.level.solidAtPx(this.cx, this.y + this.h)) { this.y = Math.floor((this.y + this.h) / TILE) * TILE - this.h; this.shatter(); }
+        return;
+      case 'gone':                  // grows back after a few seconds, if the hero is not right under it
+        this.ghostly = true; this.dmg = 0;
+        if (this.stateT > 4 && !under) this.setState(ST.IDLE);
+        return;
+      case ST.RECOIL: this.setState(ST.IDLE); return;
+    }
+  }
+  body() { return this.gone ? { x: -999, y: -999, w: 1, h: 1 } : this.hb(); }
+}
+
+const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly, warden: Warden, ram: Ram, mole: Burrower, lavaworm: Burrower, imp: Bomber, veil: Blinker, roller: Roller, slime: Slime, chainman: Chainman, moth: Moth, icicle: Icicle };
 
 </script>
 <script>
@@ -4528,18 +5933,21 @@ const Mech = {
 function spawnShock(x, y, dir, speed, color, life) {
   G.projs.push(new Proj({ kind: 'shock', x, y, vx: dir * speed, vy: 0, w: 46, h: 36, dmg: 1, color: color || '#c9d3de', life: life || 1.8, pierce: true, passWalls: true }));
 }
-function spawnRock(x, tele) {
+// `pal` re-colours a projectile for the other areas: { fill, fill2, glow, rgb } (see Art.drawProj)
+function spawnRock(x, tele, pal) {
   const y0 = 2 * TILE;
-  G.projs.push(new Proj({ kind: 'rock', x, y: y0, y0, r: 17, vx: 0, vy: 0, grav: 1500, dmg: 1, tele: tele || 0.7, life: 4, color: '#8d97a3', passWalls: true }));
+  G.projs.push(new Proj({ kind: 'rock', x, y: y0, y0, r: 17, vx: 0, vy: 0, grav: 1500, dmg: 1, tele: tele || 0.7, life: 4, color: (pal && pal.glow) || '#8d97a3', passWalls: true, pal }));
 }
-function spawnBeam(x, tele, dur, w) {
+function spawnBeam(x, tele, dur, w, pal) {
   Sound.play('tele');
-  G.projs.push(new Proj({ kind: 'beam', x, y: 0, bw: w || 44, tele, dur: dur || 0.3, dmg: 1, life: 5, color: '#dff3ff', pierce: true, passWalls: true }));
+  G.projs.push(new Proj({ kind: 'beam', x, y: 0, bw: w || 44, tele, dur: dur || 0.3, dmg: 1, life: 5, color: '#dff3ff', pierce: true, passWalls: true, pal }));
 }
-function spawnPillar(x, y, tele, dur, h) {
+function spawnPillar(x, y, tele, dur, h, pal) {
   Sound.play('tele');
-  G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: '#ff9bd6', pierce: true, passWalls: true }));
+  G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: (pal && pal.glow) || '#ff9bd6', pierce: true, passWalls: true, pal }));
 }
+const ICE = { fill: '#bfe8ff', fill2: '#f4fcff', glow: '#9fdcff', rgb: '170,225,255', spike: true };
+const SLAG = { fill: '#ff8a3a', fill2: '#ffe08a', glow: '#ff7a2a', rgb: '255,150,70' };
 
 class Boss extends Enemy {
   constructor(def, w, h, cfg) {
@@ -4562,12 +5970,23 @@ class Boss extends Enemy {
     return { x: m.face > 0 ? this.cx + m.ox : this.cx - m.ox - m.w, y: this.y + m.oy, w: m.w, h: m.h };
   }
   *brain() { while (true) yield* this.chooseAttack(); }
+  *flyTo(tx, ty, speed, maxT) {
+    let t = maxT || 2;
+    while (t > 0) {
+      const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy);
+      if (d < 14) break;
+      this.vx = dx / d * speed; this.vy = dy / d * speed; this.face = sign(dx) || this.face; t -= this.dt; yield;
+    }
+    this.vx = this.vy = 0;
+  }
+  *hover(s) { let t = s; while (t > 0) { this.vy = Math.sin(this.t * 3) * 30; this.vx = 0; this.facePlayer(); t -= this.dt; yield; } this.vy = 0; }
 
   hurt(dmg, dir, how) {
     if (this.dead || this.state !== 'fight' || this.invul || this.ghostly) { if (!this.invul && this.state === 'fight') Sound.play('hit'); return; }
-    this.hp -= dmg; this.flash = 0.1; Sound.play('bossHit'); G.hitstop(0.05);
-    G.burst(this.cx + rand(-14, 14), this.cy + rand(-20, 20), 8, { color: this.blood, speed: 230, life: 0.4, size: 3 });
-    G.slashFx(this.cx, this.cy, dir);
+    const burn = how === 'burn';
+    this.hp -= dmg; this.flash = 0.1; if (!burn) { Sound.play('bossHit'); G.hitstop(0.05); }
+    G.burst(this.cx + rand(-14, 14), this.cy + rand(-20, 20), 8, { color: burn ? pick(['#ff8a3a', '#ffd070']) : this.blood, speed: burn ? 150 : 230, life: 0.4, size: 3 });
+    if (!burn) G.slashFx(this.cx, this.cy, dir);
     if (this.hp <= 0) { this.hp = 0; this.kill(); return; }
     const th = this.phases[this.phase - 1];
     if (th !== undefined && this.hp < this.maxHp * th) { this.phase++; this.spd = Math.max(0.55, this.spd * 0.78); this.co = this.shiftRoutine(); }
@@ -4734,16 +6153,6 @@ class Wraith extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
-  *flyTo(tx, ty, speed, maxT) {
-    let t = maxT || 2;
-    while (t > 0) {
-      const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy);
-      if (d < 14) break;
-      this.vx = dx / d * speed; this.vy = dy / d * speed; this.face = sign(dx) || this.face; t -= this.dt; yield;
-    }
-    this.vx = this.vy = 0;
-  }
-  *hover(s) { let t = s; while (t > 0) { this.vy = Math.sin(this.t * 3) * 30; this.vx = 0; this.facePlayer(); t -= this.dt; yield; } this.vy = 0; }
   *volley() {
     const L = G.level;
     const tx = clamp(G.player.cx + pick([-1, 1]) * rand(160, 280), 4 * TILE, L.pw - 4 * TILE);
@@ -5087,7 +6496,206 @@ class Brood extends Boss {
   }
 }
 
-const BOSS_TYPES = { guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };
+// ---------------------------------------------------------------- The Rime Queen
+// A floating sovereign of frost. She never touches the ground: fans of ice shards, falling icicles, rings of
+// cold, a low sweep across the hall and (from the second wound on) columns of killing light.
+class Queen extends Boss {
+  constructor(d) { super(d, 72, 100, { key: 'queen', hp: 210, geo: 240, phases: [0.66, 0.33], blood: '#cfeeff' }); this.grav = false; this.last = ''; }
+  get hoverY() { return this.floorY - 6 * TILE; }
+  *chooseAttack() {
+    yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.4 : 0.28);
+    const opts = ['shards', 'icefall', 'ring'];
+    if (this.phase >= 2) opts.push('sweep', 'beams');
+    if (this.phase >= 3) opts.push('blink');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  fan(n, spread, speed) {
+    const a = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx);
+    for (let i = 0; i < n; i++) {
+      const o = (i - (n - 1) / 2) * spread;
+      G.projs.push(new Proj({ kind: 'shard', x: this.cx, y: this.cy, vx: Math.cos(a + o) * speed, vy: Math.sin(a + o) * speed, r: 7, dmg: 1, color: '#9fdcff', life: 3, rot: a + o, pal: ICE }));
+    }
+  }
+  *shards() {
+    const L = G.level;
+    yield* this.flyTo(clamp(G.player.cx + pick([-1, 1]) * rand(170, 290), 4 * TILE, L.pw - 4 * TILE), this.hoverY, 380);
+    const rounds = this.phase >= 3 ? 4 : this.phase >= 2 ? 3 : 2;
+    for (let r = 0; r < rounds; r++) {
+      this.facePlayer(); this.tele = 1; Sound.play('tele');
+      yield* this.hover(0.45 * this.spd);
+      this.tele = 0; Sound.play('shoot');
+      this.fan(this.phase >= 2 ? 5 : 3, 0.26, 360);
+      yield* this.hover(0.32);
+    }
+    yield* this.wait(0.25);
+  }
+  *icefall() {
+    const L = G.level;
+    yield* this.flyTo(L.pw / 2, this.hoverY - 50, 380);
+    this.tele = 1; Sound.play('roar');
+    const n = this.phase >= 3 ? 9 : this.phase >= 2 ? 7 : 5;
+    for (let i = 0; i < n; i++) {
+      spawnRock(clamp(G.player.cx + rand(-280, 280), 3 * TILE, L.pw - 3 * TILE), 0.85, ICE);
+      yield* this.hover(0.2);
+    }
+    yield* this.hover(0.9);
+    this.tele = 0;
+  }
+  *ring() {
+    const L = G.level;
+    yield* this.flyTo(clamp(L.pw / 2 + rand(-120, 120), 5 * TILE, L.pw - 5 * TILE), this.hoverY - 20, 360);
+    this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.6 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    const rings = this.phase >= 2 ? 2 : 1, n = this.phase >= 3 ? 14 : 10;
+    for (let r = 0; r < rings; r++) {
+      const off = r * Math.PI / n + (this.phase >= 3 ? this.t : 0);
+      for (let i = 0; i < n; i++) {
+        const a = off + i * Math.PI * 2 / n;
+        G.projs.push(new Proj({ kind: 'orb', x: this.cx, y: this.cy, vx: Math.cos(a) * 210, vy: Math.sin(a) * 210, r: 10, dmg: 1, color: '#bfe8ff', life: 3.2, pal: ICE }));
+      }
+      yield* this.hover(0.55);
+    }
+    yield* this.hover(0.4);
+  }
+  *sweep() {                                   // a low pass across the hall: jump it, then the cold bursts up behind her
+    const L = G.level, side = this.cx < L.pw / 2 ? 1 : -1;
+    yield* this.flyTo(side > 0 ? 4 * TILE : L.pw - 4 * TILE, this.floorY - 50, 420);
+    this.face = side; this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.55 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.sweeping = true;
+    let t = 2.2;
+    while (t > 0 && ((side > 0 && this.cx < L.pw - 4 * TILE) || (side < 0 && this.cx > 4 * TILE))) {
+      this.vx = side * (this.phase >= 3 ? 640 : 540); this.vy = 0; this.doMelee(-this.w / 2 - 8, 6, this.w + 16, this.h - 6, 1, 0.05);
+      if (Math.random() < 0.5) G.burst(this.cx - side * 20, this.cy + rand(-20, 30), 1, { color: '#dff3ff', speed: 60, life: 0.4, size: 3 });
+      t -= this.dt; yield;
+    }
+    this.sweeping = false; this.vx = 0; Sound.play('slam'); G.shake(6, 0.2);
+    this.fan(5, 0.4, 340);
+    yield* this.flyTo(this.cx, this.hoverY, 380);
+  }
+  *beams() {
+    const L = G.level, n = 2 + this.phase;
+    yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
+    this.tele = 1;
+    for (let i = 0; i < n; i++) {
+      spawnBeam(i % 2 === 0 ? G.player.cx : clamp(G.player.cx + rand(-240, 240), 3 * TILE, L.pw - 3 * TILE), 0.8, 0.3, 44, ICE);
+      yield* this.hover(0.5);
+    }
+    yield* this.hover(0.9);
+    this.tele = 0;
+  }
+  *blink() {
+    const L = G.level;
+    this.ghostly = true;
+    for (let a = 1; a > 0; a -= 0.1) { this.alpha = a; yield; }
+    this.alpha = 0; yield* this.wait(0.3);
+    this.x = clamp(G.player.cx + pick([-1, 1]) * rand(140, 300), 4 * TILE, L.pw - 4 * TILE) - this.w / 2; this.y = this.hoverY - rand(0, 70);
+    for (let a = 0; a < 1; a += 0.1) { this.alpha = a; yield; }
+    this.alpha = 1; this.ghostly = false;
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.35);
+    this.tele = 0; Sound.play('shoot'); this.fan(7, 0.2, 400);
+    yield* this.hover(0.3);
+  }
+}
+
+// ---------------------------------------------------------------- The Cinder Colossus
+// A walking furnace of basalt. Slow, huge and honest: every blow is announced. It lobs bombs of slag, rolls
+// into walls, calls geysers up under the hero's feet and, when nearly spent, shakes the whole floor.
+class Colossus extends Boss {
+  constructor(d) { super(d, 118, 150, { key: 'colossus', hp: 300, geo: 340, phases: [0.66, 0.33], blood: '#ffb070' }); this.last = ''; this.rolling = false; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.8 : this.phase === 2 ? 0.55 : 0.38);
+    const opts = ['smash', 'lob', 'roll'];
+    if (this.phase >= 2) opts.push('geysers', 'rain');
+    if (this.phase >= 3) opts.push('quake');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  slagDrops(n) {
+    const L = G.level;
+    for (let i = 0; i < n; i++) spawnRock(clamp(G.player.cx + rand(-280, 280), 3 * TILE, L.pw - 3 * TILE), 0.75 + i * 0.12, SLAG);
+  }
+  *smash() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.85 * this.spd);
+    this.tele = 0; this.doMelee(24, 18, 150, 112, 2, 0.25);
+    Sound.play('slam'); G.shake(9, 0.3);
+    spawnShock(this.cx + this.face * 80, this.y + this.h, this.face, 440, '#ff9a50');
+    if (this.phase >= 2) spawnShock(this.cx - this.face * 80, this.y + this.h, -this.face, 440, '#ff9a50');
+    G.burst(this.cx + this.face * 70, this.y + this.h, 16, { color: '#ff9a50', speed: 220, life: 0.6, size: 4, vy: -80 });
+    if (this.phase >= 2) this.slagDrops(this.phase >= 3 ? 4 : 2);
+    yield* this.wait(0.9 * this.spd);
+  }
+  *lob() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.55 * this.spd);
+    this.tele = 0;
+    const n = this.phase >= 3 ? 3 : this.phase >= 2 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      this.facePlayer(); Sound.play('shoot');
+      const x = this.cx + this.face * 40, y = this.y + 30, p = G.player, g = 1100, T = 0.95 + i * 0.12;
+      G.projs.push(new Proj({ kind: 'bomb', x, y, r: 11, vx: clamp((p.cx - x + rand(-40, 40)) / T, -420, 420), vy: (p.cy - y - 0.5 * g * T * T) / T, grav: g, fuse: 2.2, life: 4, dmg: 1, color: '#ff8a3a', blastR: 74 }));
+      yield* this.wait(0.35);
+    }
+    yield* this.wait(0.55 * this.spd);
+  }
+  *roll() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.6 * this.spd);
+    this.tele = 0; this.rolling = true;
+    let t = 1.8;
+    while (t > 0) {
+      this.vx = this.face * (this.phase >= 3 ? 560 : 480); this.doMelee(-this.w / 2, 24, this.w, this.h - 24, 1, 0.05);
+      t -= this.dt; if (this.hitL || this.hitR) break;
+      if (Math.random() < 0.4) G.burst(this.cx - this.face * 40, this.y + this.h - 6, 1, { color: '#ff9a50', speed: 80, life: 0.4, size: 3, vy: -40 });
+      yield;
+    }
+    this.vx = 0; this.rolling = false; Sound.play('slam'); G.shake(8, 0.3); this.stunned = true;
+    this.slagDrops(this.phase >= 2 ? 3 : 2);
+    yield* this.wait(1.15);
+    this.stunned = false;
+  }
+  *geysers() {
+    const L = G.level, n = this.phase >= 3 ? 5 : 3;
+    this.tele = 1; Sound.play('roar');
+    yield* this.wait(0.4);
+    for (let i = 0; i < n; i++) {
+      spawnPillar(clamp(G.player.cx + (i - (n - 1) / 2) * 110 + rand(-30, 30), 3 * TILE, L.pw - 3 * TILE), this.floorY, 0.9, 0.45, 300, SLAG);
+      yield* this.wait(0.2);
+    }
+    yield* this.wait(1.1);
+    this.tele = 0;
+  }
+  *rain() {
+    this.tele = 1; Sound.play('roar');
+    const n = this.phase >= 3 ? 10 : 7;
+    for (let i = 0; i < n; i++) { this.slagDrops(1); yield* this.wait(0.22); }
+    yield* this.wait(1.0);
+    this.tele = 0;
+  }
+  *quake() {                                   // a great leap; the landing sends fire along the floor both ways
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.55 * this.spd);
+    this.tele = 0;
+    this.vy = -860; this.vx = clamp((G.player.cx - this.cx) / 0.78, -440, 440); this.onGround = false;
+    yield; yield;
+    yield* this.until(() => this.onGround, 2);
+    this.vx = 0; Sound.play('slam'); G.shake(12, 0.45); G.flash = 0.25;
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 60, this.y + this.h, d, 420, '#ff9a50');
+    for (let i = 1; i <= 4; i++) {
+      for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'blast', x: this.cx + d * (60 + i * 78), y: this.y + this.h - 12, r: 20, r0: 62, dmg: 1, life: 0.45, pierce: true, passWalls: true, color: '#ff8a3a' }));
+      Sound.play('slam');
+      yield* this.wait(0.14);
+    }
+    yield* this.wait(0.7 * this.spd);
+  }
+}
+
+const BOSS_TYPES = { queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };
 
 </script>
 <script>
@@ -5107,6 +6715,9 @@ const Skins = (() => {
     ['boss_weaver', 'زعيم: حائكة الأشواك', 'Boss: Thorn Weaver'], ['boss_drowned', 'زعيم: العملاق الغريق', 'Boss: Drowned Giant'],
     ['boss_wraith', 'زعيم: شبح البلّور', 'Boss: Crystal Wraith'], ['boss_brood', 'زعيم: أم الحضنة', 'Boss: Brood Mother'],
     ['boss_king', 'زعيم: الملك المجوّف', 'Boss: Hollow King'],
+    ['mole', 'الخلد', 'Mole'], ['lavaworm', 'دودة الحمم', 'Lava Worm'], ['imp', 'عفريت القنابل', 'Bomb Imp'], ['veil', 'الحجاب', 'Veil'],
+    ['roller', 'المدحرج', 'Roller'], ['slime', 'الهلام', 'Slime'], ['chainman', 'حامل السلسلة', 'Chain Bearer'], ['moth', 'فراشة الليل', 'Night Moth'], ['icicle', 'الجليدة', 'Icicle'],
+    ['boss_queen', 'زعيم: ملكة الصقيع', 'Boss: Rime Queen'], ['boss_colossus', 'زعيم: العملاق الجمري', 'Boss: Cinder Colossus'],
   ];
   const imgs = {};          // slot -> HTMLImageElement
   let data = {};            // slot -> data URL
@@ -5240,6 +6851,9 @@ const Charms = (() => {
     magnet:     { cost: 1, color: '#ffe9a0', ar: 'مغناطيس الجيو', en: 'Geo Magnet', dAr: 'ينجذب الجيو إليك من بعيد.', dEn: 'Geo drifts toward you from afar.' },
     thrift:     { cost: 2, color: '#8fe0ff', ar: 'اقتصاد الروح', en: 'Soul Thrift', dAr: 'التعاويذ والشفاء يكلّفون روحاً أقل.', dEn: 'Spells and healing cost less soul.' },
     fury:       { cost: 2, color: '#ff6a5a', ar: 'غضب الأخير', en: 'Last Fury', dAr: 'حين يبقى لك قناع واحد تصير ضربتك أقوى بكثير.', dEn: 'With a single mask left, your strike hits far harder.' },
+    soles:      { cost: 1, color: '#bfe8ff', ar: 'نعل المسامير', en: 'Spiked Soles', dAr: 'تثبت قدماك على الجليد فلا تنزلق.', dEn: 'Your feet grip the ice: no more sliding.' },
+    wick:       { cost: 1, color: '#ffd890', ar: 'فتيل الفانوس', en: 'Lantern Wick', dAr: 'يتسع ضوء فانوسك فترى أبعد في العتمة.', dEn: 'Your lantern burns wider: you see further in the dark.' },
+    cinder:     { cost: 2, color: '#ff8a4a', ar: 'نصل الجمر', en: 'Cinder Edge', dAr: 'ضرباتك تترك حرقاً يؤذي العدو بعد لحظة.', dEn: 'Your strikes leave a burn that wounds the enemy a moment later.' },
     shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
   };
   const ORDER = Object.keys(DEFS);
@@ -5362,6 +6976,21 @@ Art.drawCharm = function (g, id, x, y, r, o) {
       g.beginPath(); g.moveTo(0.05, -1); g.bezierCurveTo(0.95, -0.15, 0.95, 0.95, 0, 0.95); g.bezierCurveTo(-0.95, 0.95, -0.75, 0.1, -0.3, -0.25); g.bezierCurveTo(-0.28, 0.2, -0.1, 0.3, 0, 0.05); g.bezierCurveTo(0.2, -0.3, -0.1, -0.6, 0.05, -1); g.closePath(); fs(g, fill, ink, lw);
       g.fillStyle = 'rgba(255,240,200,0.85)'; ellipse(g, 0.05, 0.55, 0.28, 0.34); g.fill();
       break;
+    case 'soles':      // a boot sole with cleats
+      shape([-0.95, 0.15, 0.95, 0.15, 0.95, 0.55, -0.95, 0.55]);
+      for (const x of [-0.7, -0.25, 0.2, 0.65]) shape([x - 0.16, 0.55, x + 0.16, 0.55, x, 1.0], dim ? '#aab4c4' : '#ffffff');
+      shape([-0.55, -0.9, 0.35, -0.9, 0.35, 0.15, -0.55, 0.15]);
+      break;
+    case 'wick':       // a flame in a ring of light
+      ellipse(g, 0, 0.1, 0.92, 0.92); g.strokeStyle = fill; g.lineWidth = 0.1; g.stroke();
+      g.beginPath(); g.moveTo(0, -0.8); g.bezierCurveTo(0.6, -0.1, 0.55, 0.7, 0, 0.7); g.bezierCurveTo(-0.55, 0.7, -0.5, -0.1, 0, -0.8); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,255,255,0.85)'; ellipse(g, 0, 0.3, 0.2, 0.28); g.fill();
+      break;
+    case 'cinder':     // a blade edge wreathed in flame
+      shape([-0.13, -0.05, 0.13, -0.05, 0.1, 0.7, 0, 0.98, -0.1, 0.7]); shape([-0.5, 0.7, 0.5, 0.7, 0.5, 0.86, -0.5, 0.86]);
+      g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(0.5, -0.6, 0.5, -0.2, 0.12, -0.05); g.lineTo(-0.12, -0.05); g.bezierCurveTo(-0.5, -0.25, -0.35, -0.6, 0, -1); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,255,255,0.8)'; ellipse(g, 0, -0.32, 0.1, 0.22); g.fill();
+      break;
     case 'shell':      // a ward shield
       g.beginPath(); g.moveTo(0, -0.98); g.lineTo(0.88, -0.6); g.bezierCurveTo(0.88, 0.4, 0.42, 0.82, 0, 1); g.bezierCurveTo(-0.42, 0.82, -0.88, 0.4, -0.88, -0.6); g.closePath(); fs(g, fill, ink, lw);
       g.strokeStyle = 'rgba(30,24,16,0.6)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(0, -0.7); g.lineTo(0, 0.75); g.moveTo(-0.6, -0.15); g.lineTo(0.6, -0.15); g.stroke();
@@ -5377,7 +7006,7 @@ Art.drawCharm = function (g, id, x, y, r, o) {
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
+const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
@@ -5713,6 +7342,14 @@ function updatePlay(dt) {
     }
   }
 
+  // Cinder Edge: a struck enemy smoulders, then takes the burn
+  for (const e of G.enemies) {
+    if (!(e.burnT > 0) || e.dead) continue;
+    e.burnT -= dt;
+    if (Math.random() < 0.45) G.burst(e.cx + rand(-10, 10), e.cy + rand(-16, 10), 1, { color: pick(['#ff8a3a', '#ffd070']), speed: 40, life: 0.5, size: 2, vy: -55 });
+    if (e.burnT <= 0) e.hurt(3, 0, 'burn');
+  }
+
   // arena trigger
   const a = G.arena;
   if (a && a.state === 'idle' && ((a.def.triggerDir || 1) > 0 ? P.cx > a.def.trigger * TILE : P.cx < a.def.trigger * TILE) && P.onGround) {
@@ -5809,10 +7446,15 @@ function titleItems() {
   a.push({ id: 'lang', label: tr('lang') });
   return a;
 }
+function gfxLabel() {
+  const m = Lumen.mode(), ar = LANG.cur === 'ar';
+  if (!Lumen.ready()) return ar ? 'قديمة (WebGL غير متاح)' : 'Classic (no WebGL)';
+  return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
+}
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
-    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 function updatePause() {
   const items = pauseItems();
@@ -5828,6 +7470,7 @@ function updatePause() {
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
+    else if (id === 'gfx' && Lumen.ready()) Lumen.setMode({ auto: 2, 2: 1, 1: 0, 0: 'auto' }[Lumen.mode()]);
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
 }
@@ -6041,49 +7684,71 @@ function drawMenu(g, items, sel, y0, step) {
   });
 }
 
+// colour of the air, specular shine of the rock and how much the heat shimmers, per area
+const SHINE = { frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
-  Art.drawBackground(g, L, G.cam.x, G.cam.y, t);
+  const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
+  let lumFailed = false;
+  const lay = lum ? lum.begin(G.k) : null;
+  const gs = lay ? lay.sg : g, ge = lay ? lay.eg : g;         // scene layer, creature layer
+  Art.drawBackground(gs, L, G.cam.x, G.cam.y, t);
   let sx = 0, sy = 0;
   if (G.shakeT > 0) { const a = G.shakeA * Math.min(1, G.shakeT * 3); sx = rand(-a, a); sy = rand(-a, a); }
   const cx = Math.round(G.cam.x + sx), cy = Math.round(G.cam.y + sy);
-  g.save(); g.translate(-cx, -cy);
+  gs.save(); gs.translate(-cx, -cy);
+  if (ge !== gs) { ge.save(); ge.translate(-cx, -cy); }
   for (const d of L.def.deco) {
-    if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(g, d, t, th);
-    else if (d.type === 'gear') Art.drawGear(g, d, t, th);
-    else if (d.type === 'chimney') Art.drawChimney(g, d, t, th);
+    if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(gs, d, t, th);
+    else if (d.type === 'gear') Art.drawGear(gs, d, t, th);
+    else if (d.type === 'chimney') Art.drawChimney(gs, d, t, th);
   }
   // tile layer
-  Art.mechBack(g, t);
+  Art.mechBack(gs, t);
   const s = Math.min(G.k, 1.5);
   if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.renderLevel(L, s); G.tileScale = s; G.tileRoom = L.id; }
   const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW, L.pw - vx), vh = Math.min(VH, L.ph - vy);
-  if (vw > 0 && vh > 0) g.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
-  for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(g, d, t, th);
-    else if (d.type === 'seals') Art.drawSeals(g, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
+  if (vw > 0 && vh > 0) gs.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
+  for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(gs, d, t, th);
+    else if (d.type === 'seals') Art.drawSeals(gs, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
   // breakable walls and gates
   const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE)), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const v = L.get(x, y);
-    if (v === T_BREAK) Art.drawBreak(g, x, y, th, t); else if (v === T_GATE) Art.drawGate(g, x, y, th, t);
-    else if (v === T_CRACK) Art.drawCrack(g, x, y, th, t);
-    else if (v === T_ACID) Art.drawAcid(g, x, y, L.get(x, y - 1) !== T_ACID, t);
+    if (v === T_BREAK) Art.drawBreak(gs, x, y, th, t); else if (v === T_GATE) Art.drawGate(gs, x, y, th, t);
+    else if (v === T_CRACK) Art.drawCrack(gs, x, y, th, t);
+    else if (v === T_ACID) Art.drawAcid(gs, x, y, L.get(x, y - 1) !== T_ACID, t, th);
   }
-  Art.mechFront(g, t, th);
-  for (const b of G.benches) Art.drawBench(g, b, t, P.sitting === b);
-  for (const n of G.npcs) Art.drawNPC(g, n, t);
-  for (const s2 of G.stations) Art.drawStation(g, s2, t, stationLit(s2.room));
-  for (const s2 of G.signs) Art.drawSign(g, s2, t);
-  for (const it of G.items) Art.drawItem(g, it, t);
-  for (const c of G.geos) Art.drawGeo(g, c, t);
-  Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
+  Art.mechFront(gs, t, th);
+  for (const b of G.benches) Art.drawBench(gs, b, t, P.sitting === b);
+  for (const n of G.npcs) Art.drawNPC(gs, n, t);
+  for (const s2 of G.stations) Art.drawStation(gs, s2, t, stationLit(s2.room));
+  for (const s2 of G.signs) Art.drawSign(gs, s2, t);
+  for (const it of G.items) Art.drawItem(gs, it, t);
+  for (const c of G.geos) Art.drawGeo(gs, c, t);
+  if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
   for (const e of G.enemies) {
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
-    if (skin) Skins.draw(g, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
-    else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](g, e, t); }
-    else if (Art.enemy[e.kind]) Art.enemy[e.kind](g, e, t);
+    if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
+    else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](ge, e, t); }
+    else if (Art.enemy[e.kind]) Art.enemy[e.kind](ge, e, t);
   }
-  Art.drawPlayer(g, P, t);
+  Art.drawPlayer(ge, P, t);
+  if (lum) Pixel.setFlat(false);
+  gs.restore(); if (ge !== gs) ge.restore();
+  if (lum) {
+    lum.bakeRoom(L);
+    const fogc = hexToRgb(th.fog).map(v => v / 255);
+    const sun = L.def.theme === 'town' ? { x: VW * 0.72 - G.cam.x * 0.02, y: 200, k: 0.28 } : L.def.theme === 'throne' ? { x: VW * 0.5 - G.cam.x * 0.04, y: 190, k: 0.3 } : null;
+    const img = lum.render({
+      lights: collectLights(cx, cy), cx, cy, time: t,
+      dark: DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme], tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
+      aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
+    });
+    if (img) g.drawImage(img, 0, 0, VW, VH);
+    else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
+  }
+  g.save(); g.translate(-cx, -cy);
   if (P.wailT > 0) Art.drawWail(g, P, t);
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
@@ -6097,7 +7762,7 @@ function drawWorld(g) {
   }
   g.globalAlpha = 1;
   g.restore();
-  Art.drawLighting(g, G.k, L.def.theme, collectLights(cx, cy));
+  if (!lum || lumFailed) Art.drawLighting(g, G.k, L.def.theme, collectLights(cx, cy));
   Art.drawFog(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawForeground(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawAmbient(g, STEP, L.def.theme, G.cam.x, G.cam.y, t);
@@ -6112,7 +7777,7 @@ function drawWorld(g) {
 function collectLights(cx, cy, skipPlayer) {
   const L = G.level, th = THEMES[L.def.theme], out = [];
   const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
-  if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
+  if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, (P.focusT > 0 ? 300 : 250) * (Charms.has('wick') ? 1.4 : 1), 1, '#cfe8ff');
   if (P.wailT > 0) add(P.cx, (P.wailTop + P.y) / 2, 320, 1, '#dff3ff');
   for (const d of L.def.deco) {
     if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
@@ -6132,6 +7797,10 @@ function collectLights(cx, cy, skipPlayer) {
     else if (e.glowR) add(e.cx, e.cy, e.glowR, 0.7, e.blood);
   }
   for (const d of L.def.doors) add((d.x + d.w / 2) * TILE, (d.y + d.h / 2) * TILE, 170, 0.55, th.fog);
+  if (th.name === 'ember') {                    // lava glows: a light along every few surface tiles that are on screen
+    const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE) - 1), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (L.get(x, y) === T_ACID && L.get(x, y - 1) !== T_ACID && (x + y) % 4 === 0) add(x * TILE + 16, y * TILE, 120, 0.7, '#ff7a30');
+  }
   Mech.lights(add, th);
   return out;
 }
@@ -6350,7 +8019,7 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 168, 44); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 152, 40); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
@@ -6369,7 +8038,7 @@ function resize() {
 }
 function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
-  Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
+  Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
   const wake = () => Sound.init();
   // tapping the picture focuses it for the keyboard and works as "confirm" on menus
   G.canvas.addEventListener('pointerdown', () => {
@@ -6385,7 +8054,8 @@ function boot() {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
     Input.poll();
     let guard = 0;
-    if (G.manual) { acc = 0; draw(); return; }
+    if (G.manual) { acc = 0; return; }     // bots step the game themselves and ask for a picture with DW.draw()
+    Lumen.adapt(dt * 1000);
     while (acc >= STEP && guard++ < 6) { update(STEP); acc -= STEP; Input.endStep(); }
     if (guard >= 6) acc = 0;
     draw();
@@ -6404,7 +8074,7 @@ function refreshTouchLabels() {
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;
-window.DW = { G, P, Charms, enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
+window.DW = { G, P, Charms, Lumen, draw: () => draw(), enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
 window.addEventListener('DOMContentLoaded', boot);
 
 </script>

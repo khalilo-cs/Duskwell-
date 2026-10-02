@@ -785,6 +785,23 @@ Art.drawProj = function (g, p, t) {
     }
     return;
   }
+  if (p.kind === 'bomb') {
+    g.save(); g.translate(p.x, p.y); g.rotate(p.t * 7);
+    bloom(g, 0, 0, 40, '#ff9a50', 0.3 + 0.2 * Math.sin(p.t * 22));
+    ellipse(g, 0, 0, p.r + 2, p.r + 2); fs(g, '#2a2024', INK, 2.6);
+    g.fillStyle = 'rgba(255,255,255,0.35)'; ellipse(g, -3, -3.5, 3, 2); g.fill();
+    g.strokeStyle = '#d8b878'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -p.r - 1); g.quadraticCurveTo(5, -p.r - 7, 9, -p.r - 6); g.stroke();
+    g.fillStyle = '#fff1a0'; ellipse(g, 9, -p.r - 6, 2.6 + Math.sin(p.t * 40), 2.6); g.fill();
+    g.restore();
+    return;
+  }
+  if (p.kind === 'blast') {
+    const k = clamp(p.t / 0.45, 0, 1), a = 1 - k;
+    const gr = g.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.r * 1.2); gr.addColorStop(0, 'rgba(255,240,170,' + 0.95 * a + ')'); gr.addColorStop(0.45, 'rgba(255,130,40,' + 0.75 * a + ')'); gr.addColorStop(1, 'rgba(120,20,10,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.r * 1.2, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(255,200,120,' + a + ')'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 7); g.stroke();
+    return;
+  }
   if (p.kind === 'web') {
     g.save(); g.translate(p.x, p.y); g.rotate(p.t * 4);
     bloom(g, 0, 0, 24, '#e6e0ff', 0.35);
@@ -794,8 +811,66 @@ Art.drawProj = function (g, p, t) {
     g.restore();
     return;
   }
+  if (p.pal && tintedProj(g, p, t)) return;
   baseDrawProj(g, p, t);
 };
+
+// the boss projectiles of Rimecrest and Cinderdeep: the same shapes, drawn in ice or in slag (p.pal, see bosses.js)
+function tintedProj(g, p, t) {
+  const pal = p.pal, k = p.kind;
+  if (k === 'shard') {
+    g.save(); g.translate(p.x, p.y); g.rotate(p.rot || Math.atan2(p.vy, p.vx));
+    bloom(g, 0, 0, 26, pal.glow, 0.45);
+    poly(g, [-14, 0, -2, -5, 17, 0, -2, 5]); fs(g, pal.fill, INK, 2.4);
+    poly(g, [-14, 0, -2, -5, 17, 0]); fs(g, pal.fill2, null);
+    g.restore(); return true;
+  }
+  if (k === 'orb') {
+    bloom(g, p.x, p.y, 34, pal.glow, 0.55);
+    g.save(); g.translate(p.x, p.y); g.rotate(t * 2 + p.t);
+    for (let i = 0; i < 3; i++) { g.rotate(Math.PI / 3); poly(g, [-p.r - 3, -1.6, p.r + 3, -1.6, p.r + 3, 1.6, -p.r - 3, 1.6]); fs(g, pal.fill, INK, 1.6); }
+    ellipse(g, 0, 0, p.r * 0.55, p.r * 0.55); fs(g, pal.fill2, INK, 1.8);
+    g.restore(); return true;
+  }
+  if (k === 'rock') {
+    if (p.t < p.tele) {
+      const a = 0.25 + 0.35 * Math.abs(Math.sin(p.t * 14));
+      const gr = g.createLinearGradient(0, p.y0, 0, G.floorY); gr.addColorStop(0, 'rgba(' + pal.rgb + ',0)'); gr.addColorStop(1, 'rgba(' + pal.rgb + ',' + a + ')');
+      g.fillStyle = gr; g.fillRect(p.x - 16, p.y0, 32, G.floorY - p.y0);
+    }
+    g.save(); g.translate(p.x + (p.t < p.tele ? Math.sin(p.t * 60) * 1.5 : 0), p.y);
+    bloom(g, 0, 0, 34, pal.glow, p.t < p.tele ? 0.25 : 0.5);
+    if (pal.spike) { poly(g, [-11, -18, 11, -18, 5, 6, 0, 26, -5, 6]); fs(g, pal.fill, INK, 3); poly(g, [-11, -18, -1, -18, 0, 26, -5, 6]); fs(g, pal.fill2, null); }
+    else { g.rotate(p.t * 3); poly(g, [-16, -4, -6, -16, 10, -12, 17, 2, 8, 15, -10, 13]); fs(g, '#2c2228', INK, 3.2); poly(g, [-6, -16, 10, -12, 2, -2]); fs(g, pal.fill, null); poly(g, [-3, 4, 8, 2, 3, 11]); fs(g, pal.fill2, null); }
+    g.restore(); return true;
+  }
+  if (k === 'pillar') {
+    if (p.t < p.tele) {
+      const f = p.t / p.tele;
+      bloom(g, p.x, p.y - 4, 40 + f * 20, pal.glow, 0.3 + f * 0.4);
+      g.strokeStyle = 'rgba(' + pal.rgb + ',' + (0.4 + f * 0.5) + ')'; g.lineWidth = 3; g.beginPath(); g.moveTo(p.x - 24, p.y - 2); g.lineTo(p.x + 24, p.y - 2); g.stroke();
+    } else {
+      const h = p.ph * clamp((p.t - p.tele) / 0.08, 0, 1);
+      bloom(g, p.x, p.y - h * 0.5, 80, pal.glow, 0.35);
+      poly(g, [p.x - 23, p.y, p.x - 14, p.y - h * 0.7, p.x - 6, p.y - h, p.x + 4, p.y - h * 0.75, p.x + 23, p.y]); fs(g, pal.fill, INK, 3.4);
+      poly(g, [p.x - 6, p.y, p.x - 6, p.y - h, p.x + 4, p.y - h * 0.75, p.x + 4, p.y]); fs(g, pal.fill2, null);
+    }
+    return true;
+  }
+  if (k === 'beam') {
+    const rgb = pal.rgb;
+    if (p.t < p.tele) {
+      const f = p.t / p.tele, w = 2 + f * 6;
+      g.fillStyle = 'rgba(' + rgb + ',' + (0.25 + 0.4 * f) + ')'; g.fillRect(p.x - w / 2, 0, w, G.level.ph);
+    } else {
+      const gr = g.createLinearGradient(p.x - p.bw / 2, 0, p.x + p.bw / 2, 0);
+      gr.addColorStop(0, 'rgba(' + rgb + ',0)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.7, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+      g.fillStyle = gr; g.fillRect(p.x - p.bw / 2 - 10, 0, p.bw + 20, G.level.ph);
+    }
+    return true;
+  }
+  return false;
+}
 
 // Dusk Cry: a column of pale light from the Wanderer's feet to the ceiling, flickering as it fades
 Art.drawWail = function (g, p, t) {
@@ -872,4 +947,284 @@ Art.enemy.ram = function (g, e, t) {
   g.restore();
   if (wind) bloom(g, 28, -20, 60, '#ff7a5a', 0.2);
   g.restore();
+};
+
+// ================================================= creatures of Rimecrest and Cinderdeep
+// Burrower: a mound while buried; a furred digger (frost) or a glowing worm (ember) when it erupts
+Art.enemy.mole = Art.enemy.lavaworm = function (g, e, t) {
+  const lava = e.kind === 'lavaworm', fl = e.flash > 0, st = e.currentState;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  if (e.buried) {
+    const tre = st === 'anticipation', k = tre ? 1 + e.stateT * 0.7 : 1, sh = tre ? Math.sin(t * 60) * 1.6 : 0;
+    g.translate(sh, 0);
+    ellipse(g, 0, 1, 22 * k, 8 * k); fs(g, lava ? '#2c1a16' : '#cfe0ee', INK, 2.6);
+    ellipse(g, -4, -2, 11, 3.5); g.fillStyle = lava ? '#6a3018' : '#f6fbff'; g.fill();
+    if (lava) bloom(g, 0, -4, 28, '#ff7a30', 0.3 + (tre ? 0.3 : 0));
+    g.restore(); return;
+  }
+  const rise = st === 'digging' ? clamp(1 - e.stateT / 0.45, 0, 1) : 1;
+  g.translate(0, (1 - rise) * 24); g.rotate(st === 'attack' ? -0.25 : 0);
+  if (!lava) {                                                           // the digger
+    ellipse(g, -4, -14, 19, 15); fs(g, fl ? '#fff' : '#dfe9f2', INK, 3);
+    g.fillStyle = fl ? '#fff' : 'rgba(255,255,255,0.7)'; for (let i = 0; i < 5; i++) { ellipse(g, -16 + i * 7, -23 + (i % 2) * 3, 5, 3.5); g.fill(); }
+    ellipse(g, 15, -16, 11, 10); fs(g, fl ? '#fff' : '#eef5fb', INK, 3);
+    poly(g, [22, -15, 34, -12, 22, -9]); fs(g, fl ? '#fff' : '#f4b8c0', INK, 2.4);                // snout
+    g.fillStyle = INK; ellipse(g, 16, -20, 2.2, 2.6); g.fill();
+    for (const cx of [4, 14]) { poly(g, [cx, -4, cx + 8, -2, cx + 12, 2, cx + 3, 1]); fs(g, fl ? '#fff' : '#9fb4c8', INK, 2); }       // digging claws
+  } else {                                                               // the worm
+    for (let i = 4; i >= 0; i--) {
+      const x = -22 + i * 11, y = -10 - Math.sin(t * 6 + i * 0.9) * 3 - (i > 2 ? 6 : 0), r = 8 + i * 1.4;
+      ellipse(g, x, y, r, r - 1); fs(g, fl ? '#fff' : '#3a1a14', INK, 2.8);
+      g.fillStyle = fl ? '#fff' : 'rgba(255,130,50,' + (0.55 + 0.25 * Math.sin(t * 5 + i)) + ')'; ellipse(g, x - 1, y + 1, r * 0.45, r * 0.3); g.fill();
+    }
+    bloom(g, 14, -18, 50, '#ff7a30', 0.35);
+    poly(g, [22, -24, 34, -18, 22, -12]); fs(g, fl ? '#fff' : '#ff9a50', INK, 2.4);
+    g.fillStyle = '#fff1a0'; ellipse(g, 20, -20, 2.2, 2.6); g.fill();
+  }
+  g.restore();
+};
+
+// Bomber: a small imp with a lit bomb
+Art.enemy.imp = function (g, e, t) {
+  const st = e.currentState, wind = st === 'anticipation', fl = e.flash > 0, w = wind ? clamp(e.stateT / 0.5, 0, 1) : 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  const walk = Math.abs(e.vx) > 10 ? Math.sin(t * 14) * 3 : 0;
+  g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-5, -10); g.lineTo(-6 + walk, 0); g.moveTo(5, -10); g.lineTo(6 - walk, 0); g.stroke();
+  g.beginPath(); g.moveTo(-9, -14); g.quadraticCurveTo(-24, -10, -20 + Math.sin(t * 5) * 3, -28); g.stroke();            // tail
+  g.strokeStyle = '#c0391f'; g.lineWidth = 2; g.stroke();
+  ellipse(g, 0, -20, 11, 12); fs(g, fl ? '#fff' : '#a52d1c', INK, 3);                                                // body
+  ellipse(g, 3, -34, 9, 8.5); fs(g, fl ? '#fff' : '#c0391f', INK, 3);                                                // head
+  poly(g, [-2, -40, -7, -52, 2, -42]); fs(g, fl ? '#fff' : '#f0d8a0', INK, 2); poly(g, [8, -41, 13, -52, 12, -39]); fs(g, fl ? '#fff' : '#f0d8a0', INK, 2);
+  g.fillStyle = '#fff1a0'; ellipse(g, 6, -35, 2, 2.6); g.fill(); ellipse(g, 11, -34, 1.8, 2.4); g.fill();
+  g.save(); g.translate(8, -22); g.rotate(wind ? -1.9 * w - 0.5 : -0.2);                                              // throwing arm
+  g.strokeStyle = INK; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(11, 0); g.stroke();
+  if (st === 'anticipation' || st === 'chase' && e.cool < 0.5) { ellipse(g, 15, 0, 6.5, 6.5); fs(g, '#2a2024', INK, 2.4); bloom(g, 15, -6, 22, '#ffb060', 0.5 + 0.3 * Math.sin(t * 30)); g.fillStyle = '#fff1a0'; ellipse(g, 17, -8, 2.4, 2.4); g.fill(); }
+  g.restore();
+  g.restore();
+};
+
+// Blinker: a veiled wraith, half faded until it chooses to strike
+Art.enemy.veil = function (g, e, t) {
+  const st = e.currentState, a = clamp(e.alpha, 0, 1), fl = e.flash > 0;
+  if (a < 0.02) return;
+  g.save(); g.translate(e.cx, e.cy + 8); g.scale(e.face, 1); g.globalAlpha *= a;
+  bloom(g, 0, -10, 70, '#bfe6ff', 0.25 * a);
+  // the veil: a tall tapering cloak with trailing tatters
+  g.beginPath(); g.moveTo(-14, -34); g.quadraticCurveTo(-22, -4, -18 + Math.sin(t * 4) * 3, 24);
+  for (let i = 0; i <= 5; i++) g.lineTo(-18 + i * 7 + Math.sin(t * 5 + i) * 2, 24 + (i % 2) * 9);
+  g.quadraticCurveTo(22, -4, 14, -34); g.closePath(); fs(g, fl ? '#fff' : 'rgba(150,185,225,0.82)', INK, 2.8);
+  g.fillStyle = fl ? '#fff' : 'rgba(210,235,255,0.35)'; ellipse(g, -4, -14, 6, 18, -0.1); g.fill();
+  ellipse(g, 0, -36, 11, 12); fs(g, fl ? '#fff' : '#26334a', INK, 2.8);                                         // the hood's hollow
+  const wake = st === 'appear' || st === 'attack' || st === 'vulnerable';
+  g.fillStyle = wake ? '#e8fbff' : '#8fb4d8'; ellipse(g, 3, -37, 2.4, 3.4); g.fill(); ellipse(g, 10, -37, 2.2, 3.2); g.fill();
+  if (st === 'attack') {                                                                                     // the slash
+    g.strokeStyle = 'rgba(235,250,255,0.95)'; g.lineWidth = 5; g.beginPath(); g.arc(18, -10, 50, -1.0, 0.9); g.stroke();
+    g.strokeStyle = 'rgba(160,210,255,0.5)'; g.lineWidth = 11; g.stroke();
+  }
+  g.restore();
+};
+
+// Roller: an armoured beast that curls into a ball
+Art.enemy.roller = function (g, e, t) {
+  const st = e.currentState, ball = st === 'attack' || st === 'anticipation', fl = e.flash > 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  if (ball) {
+    const sh = st === 'anticipation' ? Math.sin(t * 50) * 1.6 : 0;
+    g.translate(sh, -15); if (st === 'attack') g.rotate(e.face * t * 14);
+    ellipse(g, 0, 0, 16, 16); fs(g, fl ? '#fff' : '#9a8460', INK, 3);
+    g.strokeStyle = INK; g.lineWidth = 2.4; for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(0, 0, 16, i * 1.57 + 0.2, i * 1.57 + 1.3); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(i * 1.57) * 16, Math.sin(i * 1.57) * 16); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,0.25)'; ellipse(g, -5, -6, 6, 4, -0.4); g.fill();
+  } else {
+    const walk = Math.abs(e.vx) > 5 ? Math.sin(t * 9) * 2 : 0, dz = st === 'dizzy' ? Math.sin(t * 8) * 0.12 : 0;
+    g.rotate(dz);
+    g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-10, -8); g.lineTo(-11 + walk, 0); g.moveTo(10, -8); g.lineTo(11 - walk, 0); g.stroke();
+    ellipse(g, -2, -15, 20, 13); fs(g, fl ? '#fff' : '#9a8460', INK, 3);
+    g.save(); ellipse(g, -2, -15, 20, 13); g.clip(); g.strokeStyle = INK; g.lineWidth = 2.2; for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(-2 + i * 6, -30); g.quadraticCurveTo(-2 + i * 6 + 4, -15, -2 + i * 6, 0); g.stroke(); } g.restore();
+    ellipse(g, 17, -12, 8, 7); fs(g, fl ? '#fff' : '#c8b088', INK, 2.8); g.fillStyle = INK; ellipse(g, 19, -14, 1.8, 2.2); g.fill();
+    if (st === 'dizzy') { g.strokeStyle = '#ffe9a0'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { const a = t * 6 + i * 2.1; g.beginPath(); g.arc(Math.cos(a) * 12 + 12, -28 + Math.sin(a) * 3, 2, 0, 7); g.stroke(); } }
+  }
+  g.restore();
+};
+
+// Slime: a see-through jelly that squashes before it hops
+Art.enemy.slime = Art.enemy.slimelet = function (g, e, t) {
+  const st = e.currentState, sq = st === 'anticipation' ? 1 - 0.3 * clamp(e.stateT / 0.3, 0, 1) : (!e.onGround ? 1.18 : 1 + Math.sin(t * 3 + e.x) * 0.04), fl = e.flash > 0;
+  const W = e.w * 0.5, H = e.h;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale((2 - sq) * 1, sq);
+  g.beginPath(); g.moveTo(-W, 0); g.bezierCurveTo(-W - 3, -H * 0.9, W + 3, -H * 0.9, W, 0); g.closePath();
+  fs(g, fl ? '#fff' : 'rgba(120,200,255,0.82)', INK, 3);
+  g.fillStyle = fl ? '#fff' : 'rgba(40,110,190,0.45)'; ellipse(g, 0, -H * 0.28, W * 0.7, H * 0.2); g.fill();            // the core
+  g.fillStyle = 'rgba(255,255,255,0.7)'; ellipse(g, -W * 0.4, -H * 0.62, W * 0.22, H * 0.12, -0.5); g.fill();
+  g.fillStyle = INK; ellipse(g, -W * 0.25, -H * 0.38, e.small ? 1.6 : 2.4, e.small ? 2.2 : 3.2); g.fill(); ellipse(g, W * 0.25, -H * 0.38, e.small ? 1.6 : 2.4, e.small ? 2.2 : 3.2); g.fill();
+  g.restore();
+};
+
+// Chainman: a heavy guard whirling a spiked ball on a chain
+Art.enemy.chainman = function (g, e, t) {
+  const st = e.currentState, fl = e.flash > 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  const walk = Math.abs(e.vx) > 5 ? Math.sin(t * 8) * 2.4 : 0;
+  g.strokeStyle = INK; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(-8, -16); g.lineTo(-9 + walk, 0); g.moveTo(8, -16); g.lineTo(9 - walk, 0); g.stroke();
+  poly(g, [-17, -14, 17, -14, 19, -2, -19, -2]); fs(g, fl ? '#fff' : '#4a3a38', INK, 2.8);
+  ellipse(g, 0, -32, 17, 19); fs(g, fl ? '#fff' : '#6a6a74', INK, 3.2);
+  g.strokeStyle = INK; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-17, -28); g.quadraticCurveTo(0, -24, 17, -28); g.moveTo(-14, -38); g.quadraticCurveTo(0, -35, 14, -38); g.stroke();
+  g.fillStyle = fl ? '#fff' : '#8a8a96'; ellipse(g, -6, -42, 7, 4, -0.3); g.fill();
+  poly(g, [-10, -52, 10, -52, 12, -40, -12, -40]); fs(g, fl ? '#fff' : '#7a7a86', INK, 2.8);                    // helm
+  g.fillStyle = '#ff9c5a'; g.fillRect(-1, -49, 2, 9); g.fillRect(-6, -45, 12, 2);
+  g.restore();
+  if (e.ball) {                                                                                                // the chain and the ball
+    const hx = e.cx + e.face * 12, hy = e.y + e.h - 36;
+    g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.moveTo(hx, hy); g.lineTo(e.ball.x, e.ball.y); g.stroke();
+    g.strokeStyle = '#8a8a96'; g.lineWidth = 2; g.stroke();
+    g.save(); g.translate(e.ball.x, e.ball.y); g.rotate(e.ang * 2);
+    if (st === 'attack') bloom(g, 0, 0, 40, '#ff9c5a', 0.25);
+    ellipse(g, 0, 0, 12, 12); fs(g, fl ? '#fff' : '#3a3a44', INK, 2.8);
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; poly(g, [Math.cos(a - 0.2) * 11, Math.sin(a - 0.2) * 11, Math.cos(a) * 19, Math.sin(a) * 19, Math.cos(a + 0.2) * 11, Math.sin(a + 0.2) * 11]); fs(g, fl ? '#fff' : '#9a9aa6', INK, 1.8); }
+    g.restore();
+  }
+};
+
+// Moth: flutters around light, and glows with its own
+Art.enemy.moth = function (g, e, t) {
+  const st = e.currentState, fl = e.flash > 0, flap = Math.sin(t * (st === 'attack' ? 38 : 22) + e.ph);
+  const gl = st === 'anticipation' ? 0.45 + e.stateT * 0.9 : 0.35;
+  g.save(); g.translate(e.cx, e.cy); g.scale(e.face || 1, 1);
+  bloom(g, 0, 0, 80 + (st === 'anticipation' ? e.stateT * 120 : 0), '#ffd890', gl);
+  for (const sgn of [-1, 1]) {                                                                                  // wings
+    g.save(); g.translate(-2, -2); g.rotate(sgn * (0.35 + flap * 0.5));
+    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-18, sgn * -22, -4, sgn * -26); g.quadraticCurveTo(10, sgn * -14, 0, 0); g.closePath();
+    fs(g, fl ? '#fff' : 'rgba(255,226,160,0.88)', INK, 2.4);
+    g.fillStyle = fl ? '#fff' : 'rgba(210,140,70,0.55)'; ellipse(g, -3, sgn * -14, 3.4, 4.4); g.fill();
+    g.restore();
+  }
+  ellipse(g, 0, 0, 6, 10, 0); fs(g, fl ? '#fff' : '#6a4a38', INK, 2.4);
+  ellipse(g, 6, -6, 4.4, 4.4); fs(g, fl ? '#fff' : '#8a5a42', INK, 2.2);
+  g.fillStyle = '#fff6c0'; ellipse(g, 8, -7, 1.4, 1.8); g.fill();
+  g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(7, -10); g.quadraticCurveTo(10, -18, 15, -17); g.moveTo(5, -10); g.quadraticCurveTo(5, -19, 9, -22); g.stroke();
+  g.restore();
+};
+
+// Icicle: a hanging spike of ice (or basalt in Cinderdeep) that trembles before it falls
+Art.enemy.icicle = function (g, e, t) {
+  if (e.gone) return;
+  const ember = G.level && G.level.def.theme === 'ember', fl = e.flash > 0, tre = e.currentState === 'anticipation';
+  g.save(); g.translate(e.x + e.w / 2, e.y);
+  const lit = tre ? 0.5 + 0.5 * Math.sin(t * 40) : 0;
+  poly(g, [-9, 0, 9, 0, 5, 24, 0, e.h, -4, 24]); fs(g, fl ? '#fff' : (ember ? '#3a2428' : 'rgba(200,236,255,0.92)'), INK, 3);
+  g.fillStyle = fl ? '#fff' : (ember ? 'rgba(255,120,50,0.5)' : 'rgba(255,255,255,0.75)'); poly(g, [-5, 3, -2, 3, -1, 24, -3, 28]); g.fill();
+  if (e.currentState === 'attack') { g.strokeStyle = 'rgba(220,245,255,0.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -4); g.lineTo(0, -34); g.stroke(); }
+  if (tre) bloom(g, 0, e.h * 0.6, 34, ember ? '#ff8a4a' : '#bfe8ff', 0.2 + lit * 0.2);
+  g.restore();
+};
+
+// ---------------------------------------------------------------- the bosses of Rimecrest and Cinderdeep
+Art.boss.queen = function (g, b, t) {              // a floating sovereign of frost: gown of icicles, tall jagged crown
+  const fl = b.flash > 0, tele = b.tele > 0;
+  g.save(); g.globalAlpha = b.alpha; g.translate(b.cx, b.cy + Math.sin(t * 2.2) * 3);
+  if (b.state === 'dying') g.translate(Math.sin(t * 70) * 2.5, 0);
+  bloom(g, 0, -8, 160, '#9fdcff', 0.2 + (tele ? 0.3 : 0) + (b.phase - 1) * 0.05);
+  g.scale(b.face, 1);
+  if (b.sweeping) g.rotate(0.35);
+  // orbiting shards of ice
+  for (let i = 0; i < 4; i++) {
+    const a = t * 1.7 + i * Math.PI / 2, x = Math.cos(a) * 66, y = -10 + Math.sin(a) * 20;
+    g.save(); g.translate(x, y); g.rotate(a * 2);
+    poly(g, [-8, 0, 0, -4, 12, 0, 0, 4]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 2.2); g.restore();
+  }
+  // flowing veil behind the crown
+  g.strokeStyle = fl ? '#fff' : 'rgba(170,220,255,0.55)'; g.lineWidth = 4; g.lineCap = 'round';
+  for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-6 + i * 5, -54); g.quadraticCurveTo(-30 - i * 8, -34 + Math.sin(t * 3 + i) * 5, -40 - i * 9, -4 + Math.sin(t * 2.4 + i) * 6); g.stroke(); }
+  // the gown: a bell of ice that ends in hanging points
+  g.beginPath(); g.moveTo(-17, -12);
+  for (let i = 0; i <= 8; i++) g.lineTo(-38 + i * 9.5, 48 + (i % 2 ? 16 : 0) + Math.sin(t * 3 + i * 1.3) * 3);
+  g.lineTo(17, -12); g.closePath();
+  const gr = g.createLinearGradient(0, -12, 0, 62); gr.addColorStop(0, fl ? '#fff' : '#6a9ad4'); gr.addColorStop(1, fl ? '#fff' : '#1c3866');
+  fs(g, gr, INK, 3.6);
+  g.save(); g.beginPath(); g.moveTo(-17, -12); for (let i = 0; i <= 8; i++) g.lineTo(-38 + i * 9.5, 48 + (i % 2 ? 16 : 0)); g.lineTo(17, -12); g.closePath(); g.clip();
+  g.strokeStyle = fl ? '#fff' : 'rgba(225,246,255,0.55)'; g.lineWidth = 1.8;
+  for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 4, -12); g.lineTo(i * 12, 64); g.stroke(); }
+  g.restore();
+  // torso and shoulder spikes
+  poly(g, [-15, -34, 15, -34, 19, -8, 12, 4, -12, 4, -19, -8]); fs(g, fl ? '#fff' : '#3a64a0', INK, 3.2);
+  poly(g, [-15, -34, -30, -50, -22, -30]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 2.6);
+  poly(g, [15, -34, 30, -50, 22, -30]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 2.6);
+  bloom(g, 0, -16, 16, '#dff6ff', tele ? 0.8 : 0.35);
+  g.fillStyle = tele ? '#ffffff' : '#bfeaff'; ellipse(g, 0, -16, 4.5, 6); g.fill();
+  // arms: raised and cupped around a spark of cold when she gathers it
+  const up = tele ? 1 : 0;
+  g.strokeStyle = INK; g.lineWidth = 6.5; g.lineCap = 'round';
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 14, -30); g.lineTo(s * 32, -22 - up * 22); g.lineTo(s * (24 - up * 8), -46 - up * 34 + Math.sin(t * 4 + s) * 2); g.stroke(); }
+  g.strokeStyle = fl ? '#fff' : '#9cc6ec'; g.lineWidth = 2.6;
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 14, -30); g.lineTo(s * 32, -22 - up * 22); g.lineTo(s * (24 - up * 8), -46 - up * 34 + Math.sin(t * 4 + s) * 2); g.stroke(); }
+  if (tele) { bloom(g, 0, -80, 50, '#dff6ff', 0.6 + 0.2 * Math.sin(t * 18)); g.save(); g.translate(0, -80); g.rotate(t * 3); for (let i = 0; i < 3; i++) { g.rotate(Math.PI / 3); g.strokeStyle = '#f4fcff'; g.lineWidth = 2; g.beginPath(); g.moveTo(-14, 0); g.lineTo(14, 0); g.stroke(); } g.restore(); }
+  // head: pale mask, glowing eyes
+  mask(g, 0, -50, 12.5, 14.5, 1.1, 0.6, fl ? '#fff' : '#e4f2ff');
+  g.fillStyle = tele ? '#ffffff' : '#7fe8ff'; ellipse(g, -5, -49, 1.8, 3.4, 0.12); g.fill(); ellipse(g, 6, -49, 1.8, 3.4, -0.12); g.fill();
+  // the crown
+  poly(g, [-17, -58, -14, -86, -7, -67, -2, -100, 3, -67, 9, -90, 13, -64, 18, -58]); fs(g, fl ? '#fff' : '#bfe8ff', INK, 3);
+  poly(g, [-14, -86, -7, -67, -9, -58, -14, -58]); fs(g, fl ? '#fff' : '#f4fcff', null);
+  poly(g, [-2, -100, 3, -67, 0, -58, -4, -58]); fs(g, fl ? '#fff' : '#f4fcff', null);
+  g.restore();
+};
+
+Art.boss.colossus = function (g, b, t) {           // a walking furnace of basalt, cracked and glowing
+  const fl = b.flash > 0, tele = b.tele > 0, heat = 0.55 + 0.25 * Math.sin(t * 3) + (b.phase - 1) * 0.12;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 3, 0);
+  bloom(g, 0, -80, 190, '#ff7a2a', 0.14 + 0.06 * heat + (tele ? 0.25 : 0));
+  const rock = fl ? '#ffffff' : '#34303a', rockL = fl ? '#ffffff' : '#5a5262', rockD = fl ? '#ffffff' : '#1c1920';
+  const crack = (pts, w) => { g.strokeStyle = fl ? '#fff' : 'rgba(255,208,112,' + (0.55 + 0.4 * heat) + ')'; g.lineWidth = w || 2.2; g.lineJoin = 'round'; g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); };
+  if (b.rolling) {                                  // curled into a ball of rock
+    g.translate(0, -62); g.rotate(t * 11);
+    const pts = []; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, r = 60 + (i % 2) * 7; pts.push(Math.cos(a) * r, Math.sin(a) * r); }
+    poly(g, pts); fs(g, rock, INK, 4);
+    poly(g, [pts[0], pts[1], pts[2], pts[3], 0, 0, pts[18], pts[19]]); fs(g, rockL, null);
+    crack([-40, -10, -16, 0, -4, 24, 20, 30, 44, 8]); crack([0, -52, 8, -22, -6, -4], 2);
+    bloom(g, 0, 0, 44, '#ff8a3a', 0.4);
+    g.restore(); return;
+  }
+  const step = Math.abs(b.vx) > 20 ? Math.sin(t * 8) * 3 : 0;
+  // legs
+  for (const [x0, s] of [[-34, 1], [8, -1]]) {
+    poly(g, [x0, -58, x0 + 28, -58, x0 + 32 + s * step, 0, x0 - 4 + s * step, 0]); fs(g, rock, INK, 3.6);
+    poly(g, [x0, -58, x0 + 10, -58, x0 + 8 + s * step, 0, x0 - 4 + s * step, 0]); fs(g, rockL, null);
+    crack([x0 + 14, -50, x0 + 10, -30, x0 + 18, -12]);
+  }
+  // back arm hangs behind
+  g.save(); g.translate(-38, -108); g.rotate(b.stunned ? 1.3 : 1.55 + Math.sin(t * 2) * 0.05);
+  poly(g, [0, -13, 58, -15, 60, 15, 0, 13]); fs(g, rockD, INK, 3.4);
+  poly(g, [54, -22, 90, -20, 92, 22, 54, 24]); fs(g, rock, INK, 3.6); crack([62, -8, 76, 0, 84, 10]);
+  g.restore();
+  // torso
+  poly(g, [-56, -64, 52, -64, 60, -112, 40, -130, -40, -130, -62, -112]); fs(g, rock, INK, 4.2);
+  poly(g, [-56, -64, -20, -64, -26, -130, -40, -130, -62, -112]); fs(g, rockL, null);
+  poly(g, [20, -64, 52, -64, 60, -112, 40, -130, 30, -130]); fs(g, rockD, null);
+  poly(g, [-56, -64, 52, -64, 60, -112, 40, -130, -40, -130, -62, -112]); fs(g, null, INK, 4.2);
+  crack([-44, -118, -30, -96, -38, -80, -20, -68]); crack([34, -122, 24, -100, 40, -84, 30, -68]); crack([-6, -126, 2, -104]);
+  // the furnace in the chest
+  bloom(g, 0, -92, 56, '#ff7a2a', 0.35 + 0.35 * heat + (tele ? 0.3 : 0));
+  ellipse(g, 0, -92, 16, 20); fs(g, '#ffb050', INK, 3.2); ellipse(g, 0, -92, 8, 11); fs(g, '#fff2b0', null);
+  // shoulders: broken spikes
+  poly(g, [-60, -112, -72, -140, -46, -126]); fs(g, rock, INK, 3);
+  poly(g, [58, -112, 70, -144, 44, -126]); fs(g, rock, INK, 3);
+  // the head: a slab with two slits of fire
+  poly(g, [-20, -126, 22, -126, 16, -152, -14, -152]); fs(g, rock, INK, 3.6);
+  poly(g, [-20, -126, -4, -126, -6, -152, -14, -152]); fs(g, rockL, null);
+  g.fillStyle = tele ? '#ffffff' : '#ffd070'; poly(g, [-9, -142, 0, -140, 0, -136, -9, -138]); g.fill(); poly(g, [5, -141, 14, -143, 14, -139, 5, -137]); g.fill();
+  bloom(g, 4, -140, 30, '#ffb050', tele ? 0.7 : 0.35);
+  // the striking arm: up on the wind-up, forward on the blow, hanging otherwise
+  let ang = 0.95;
+  if (tele) ang = -2.25 + Math.sin(t * 18) * 0.05; else if (b.melee) ang = 0.1; else if (b.stunned) ang = 1.2;
+  g.save(); g.translate(40, -108); g.rotate(ang);
+  poly(g, [0, -14, 62, -16, 64, 16, 0, 14]); fs(g, rock, INK, 3.6); poly(g, [0, -14, 62, -16, 62, -6, 0, -4]); fs(g, rockL, null);
+  poly(g, [58, -26, 98, -24, 100, 26, 58, 28]); fs(g, rock, INK, 4); poly(g, [58, -26, 98, -24, 98, -12, 58, -10]); fs(g, rockL, null);
+  crack([66, 4, 80, 10, 92, 4]); bloom(g, 88, 0, 34, '#ff7a2a', tele ? 0.55 : 0.2);
+  g.restore();
+  g.restore();
+  // embers shed by the body
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) { const u = (t * 0.6 + i * 0.37) % 1; g.fillStyle = 'rgba(255,170,80,' + (0.8 * (1 - u)) + ')'; g.fillRect(b.cx + Math.sin(i * 7 + t) * 40, b.y + b.h - 40 - u * 150, 3, 3); }
+  g.restore();
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#ffe98a'; g.fillRect(b.cx + Math.cos(a) * 30 - 3, b.y - 6 + Math.sin(a) * 6, 6, 6); }
 };

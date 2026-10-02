@@ -488,7 +488,86 @@ def foundry():
     return s, len(prog)
 
 
-PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, boss, king]
+def frost():
+    """Rimecrest: a glacier under an aurora. F sharp minor, slow; glass-bright arpeggios over
+    long string chords, a flute that sings above them and a horn that takes the tune low at the end."""
+    s = Song('frost', 62, seed=23)
+    s.track('glock', GLOCK, vol=74, pan=34, reverb=100)
+    s.track('celesta', CELESTA, vol=70, pan=90, reverb=100)
+    s.track('strings', SLOW_STRINGS, vol=74, pan=60, reverb=100)
+    s.track('choir', CHOIR, vol=62, pan=64, reverb=100)
+    s.track('harp', HARP, vol=80, pan=48, reverb=90)
+    s.track('flute', FLUTE, vol=92, pan=70, reverb=95)
+    s.track('horn', HORN, vol=84, pan=54, reverb=95)
+    s.track('timpani', TIMPANI, vol=70, pan=64, reverb=85)
+    s.track('bass', CONTRABASS, vol=70, pan=60, reverb=70)
+    A = ['F#m', 'D', 'A', 'E', 'F#m', 'Bm', 'D', 'C#']
+    B = ['D', 'A', 'Bm', 'F#m', 'D', 'E', 'Bm', 'C#']
+    prog = A + B + A
+    for b, c in enumerate(prog):
+        s.arp('glock', b, c, [0, 2, 1, 3, 2, 1, 0, 1], step=0.5, low=79, vel=38, dur=0.6)
+        s.arp('celesta', b, c, [0, 1, 2, 3], step=1, low=67, vel=40, dur=1.4)
+        s.pad('strings', b, c, low=53, count=4, vel=44)
+        s.bass('bass', b, c, low=26, rhythm=((0, 3.9),), vel=54)
+        if b >= 8:
+            s.pad('choir', b, c, low=57, count=3, vel=38)
+            s.arp('harp', b, c, [0, 1, 2, 3, 4, 3, 2, 1], step=0.5, low=55, vel=40, dur=1.0)
+        if b % 4 == 0:
+            s.note('timpani', s.bar(b), 2.6, bass_note(c, 38), 52)
+    mel_a = ('A5:2 C#6:1 B5:1  A5:3 F#5:1  E5:1.5 A5:0.5 C#6:2  B5:3 G#5:1  '
+             'A5:2 F#5:1 A5:1  B5:1.5 D6:0.5 C#6:1 B5:1  A5:2 F#5:2  G#5:3 F5:1')
+    mel_b = ('F#5:2 A5:1 D6:1  C#6:3 E6:1  D6:2 B5:1 F#5:1  A5:3 C#6:1  '
+             'B5:2 A5:1 F#5:1  G#5:2 B5:1 E6:1  D6:1.5 C#6:0.5 B5:2  C#6:3 r:1')
+    s.melody('flute', 0, mel_a, vel=76)
+    s.melody('flute', 8, mel_b, vel=80)
+    s.melody('horn', 16, mel_a, vel=78, shift=-12)
+    s.melody('flute', 16, mel_a, vel=62, legato=0.95)
+    return s, len(prog)
+
+
+def ember():
+    """Cinderdeep: basalt and lava. C sharp minor at a walking pace: a dotted cello ostinato, taiko
+    and timpani under it, brass stabs, and a horn tune that the bassoon answers a bar later."""
+    s = Song('ember', 92, seed=24)
+    s.track('low', CELLO, vol=100, pan=56, reverb=55)
+    s.track('bass', CONTRABASS, vol=94, pan=60, reverb=45)
+    s.track('timpani', TIMPANI, vol=96, pan=64, reverb=60)
+    s.track('taiko', TAIKO, vol=88, pan=64, reverb=60)
+    s.track('brass', BRASS, vol=88, pan=72, reverb=70)
+    s.track('horn', HORN, vol=96, pan=46, reverb=80)
+    s.track('bassoon', BASSOON, vol=86, pan=70, reverb=70)
+    s.track('strings', STRINGS, vol=64, pan=60, reverb=85)
+    s.track('choir', CHOIR, vol=60, pan=64, reverb=95)
+    A = ['C#m', 'C#m', 'A', 'B', 'C#m', 'F#m', 'A', 'G#7']
+    B = ['F#m', 'C#m', 'A', 'E', 'F#m', 'C#m', 'B', 'G#7']
+    prog = A + A + B + A
+    for b, c in enumerate(prog):
+        root = bass_note(c, 37)
+        for k, off in enumerate((0, 0.75, 1.5, 2, 2.75, 3.5)):          # the dotted ostinato
+            s.note('low', s.bar(b) + off, 0.5, root + (12 if k in (2, 5) else 0), 82 if k in (0, 3) else 60)
+        s.bass('bass', b, c, low=25, rhythm=((0, 0.8), (2, 0.8)), vel=70)
+        s.hits('timpani', b, bass_note(c, 38), (0, 2), dur=0.7, vel=86)
+        if b >= 4:
+            s.hits('taiko', b, 50, (1, 3), dur=0.3, vel=66)
+        if b >= 8 and b % 2 == 0:
+            for p in tones(c, 53, 3):
+                s.note('brass', s.bar(b), 0.6, p, 84)
+        if b >= 8:
+            s.pad('strings', b, c, low=56, count=3, vel=40)
+        if b >= 16:
+            s.pad('choir', b, c, low=56, count=3, vel=44)
+    mel_a = ('C#4:1.5 E4:0.5 G#4:2  F#4:1 E4:1 C#4:2  A3:1 C#4:1 E4:2  D#4:1.5 F#4:0.5 B4:2  '
+             'G#4:1.5 E4:0.5 C#4:2  A4:1 F#4:1 C#5:2  B4:1.5 A4:0.5 E4:2  D#4:2 F#4:1 G#4:1')
+    mel_b = ('A4:2 C#5:1 F#5:1  E5:1.5 C#5:0.5 G#4:2  A4:1 C#5:1 E5:2  G#5:2 E5:2  '
+             'F#5:1.5 E5:0.5 C#5:2  G#4:1 C#5:1 E5:2  D#5:2 F#5:1 B4:1  D#5:3 r:1')
+    s.melody('horn', 4, mel_a, vel=90)
+    s.melody('bassoon', 5, mel_a, vel=62, shift=-12, legato=0.9)
+    s.melody('horn', 16, mel_b, vel=94)
+    s.melody('brass', 24, mel_a, vel=84, shift=12)
+    return s, len(prog)
+
+
+PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, boss, king]
 
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'build'

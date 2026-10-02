@@ -43,7 +43,7 @@ uniform vec2 uLog, uCam, uRoom, uTexel;
 uniform int uNL, uNS;
 uniform vec4 uL[${MAXL}];
 uniform vec3 uLC[${MAXL}];
-uniform float uDark, uSpec, uShadow, uTime;
+uniform float uDark, uSpec, uShadow, uTime, uCaustic;
 uniform vec3 uTint;
 in vec2 vUv; out vec4 o;
 
@@ -98,6 +98,10 @@ void main() {
   vec3 Nr = normalize(nm.rgb * 2.0 - 1.0);
   float ao = mix(1.0, mix(0.6, 1.0, Nr.z), rock);
   vec3 col = shade(sc.rgb * ao, mix(vec3(0.0, 0.0, 1.0), Nr, rock), p, 0.95 * rock, uSpec * rock, nm.a < 0.6);
+  if (uCaustic > 0.0) {                                       // light wobbling through water: drifting bright threads
+    float v = sin(wp.x * 0.045 + uTime * 0.8 + sin(wp.y * 0.03 + uTime * 0.5) * 2.0) * sin(wp.y * 0.05 - uTime * 0.6 + sin(wp.x * 0.025 + uTime * 0.4) * 2.0);
+    col += uTint * smoothstep(0.55, 0.95, v) * 0.16 * clamp(dot(col, vec3(1.0)) * 2.2, 0.0, 1.0) * uCaustic;
+  }
   // ---- creatures: normals from the slope of the blurred silhouette
   if (en.a > 0.01) {
     vec2 e = uTexel * 2.2;
@@ -141,7 +145,7 @@ uniform vec4 uShaft;
 in vec2 vUv; out vec4 o;
 void main() {
   vec2 uv = vUv;
-  if (uHaze > 0.0) uv.x += sin(uv.y * 46.0 + uTime * 3.2) * 0.0011 * uHaze * smoothstep(0.1, 0.9, 1.0 - uv.y);
+  if (uHaze > 0.0) { uv.x += sin(uv.y * 46.0 + uTime * 3.2) * 0.0011 * uHaze * smoothstep(0.1, 0.9, 1.0 - uv.y); uv.y += cos(uv.x * 28.0 + uTime * 1.6) * 0.0006 * uHaze; }
   vec3 c;
   if (uAberr > 0.0) { vec2 dir = (uv - 0.5) * uAberr; c = vec3(texture(uLit, uv + dir).r, texture(uLit, uv).g, texture(uLit, uv - dir).b); }
   else c = texture(uLit, uv).rgb;
@@ -191,7 +195,7 @@ void main() {
       if (!gl) return false;
       canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); ok = false; });
       P.height = program(FRAG_HEIGHT, ['uTex', 'uDir', 'uMode']);
-      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint']);
+      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint', 'uCaustic']);
       P.bright = program(FRAG_BRIGHT, ['uTex', 'uThr']);
       P.blur = program(FRAG_BLUR, ['uTex', 'uDir']);
       P.final = program(FRAG_FINAL, ['uLit', 'uBloom', 'uLog', 'uBloomK', 'uAberr', 'uHaze', 'uTime', 'uShaft']);
@@ -308,7 +312,7 @@ void main() {
     bindTex(2, F.hB.t); gl.uniform1i(u.uHeight, 2); bindTex(3, T.norm); gl.uniform1i(u.uNorm, 3);
     gl.uniform2f(u.uLog, VW, VH); gl.uniform2f(u.uCam, o.cx, o.cy); gl.uniform2f(u.uRoom, room.pw, room.ph); gl.uniform2f(u.uTexel, 1 / hw, 1 / hh);
     gl.uniform1i(u.uNL, lights.length); gl.uniform1i(u.uNS, SHADOWED); gl.uniform4fv(u.uL, Lu); gl.uniform3fv(u.uLC, Lc);
-    gl.uniform1f(u.uDark, o.dark); gl.uniform1f(u.uSpec, o.spec); gl.uniform1f(u.uShadow, quality >= 2 ? 1 : 0); gl.uniform1f(u.uTime, o.time);
+    gl.uniform1f(u.uDark, o.dark); gl.uniform1f(u.uSpec, o.spec); gl.uniform1f(u.uShadow, quality >= 2 ? 1 : 0); gl.uniform1f(u.uTime, o.time); gl.uniform1f(u.uCaustic, o.caustic || 0);
     gl.uniform3f(u.uTint, o.tint[0], o.tint[1], o.tint[2]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // 3) bloom: bright parts, blurred at quarter size

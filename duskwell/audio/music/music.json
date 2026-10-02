@@ -15,9 +15,17 @@
   "loop": 73.8462,
   "gain": 0.812
  },
+ "ember": {
+  "loop": 83.4783,
+  "gain": 0.881
+ },
  "foundry": {
   "loop": 80.0,
   "gain": 0.803
+ },
+ "frost": {
+  "loop": 92.9032,
+  "gain": 0.664
  },
  "hushvale": {
   "loop": 72.0,

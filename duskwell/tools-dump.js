@@ -1,7 +1,7 @@
 // Dev helper: prints every room as ASCII and checks door pairing. Usage: node duskwell/tools-dump.js [roomId]
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = {}; vm.createContext(ctx);
-for (const f of ['util.js', 'world.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, 'js', f), 'utf8') + (f === 'world.js' ? ';this.WORLD=WORLD;' : ''), ctx);
+for (const f of ['util.js', 'world.js', 'world_frost.js', 'world_ember.js', 'world_end.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, 'js', f), 'utf8') + (f === 'world_end.js' ? ';this.WORLD=WORLD;' : ''), ctx);
 const W = ctx.WORLD, only = process.argv[2];
 let errors = 0;
 for (const id of W.order) {
@@ -19,9 +19,10 @@ for (const id of W.order) {
   };
   r.enemies.forEach(e => {
     chk(e, 'enemy');
-    const ground = ['crawler', 'hopper', 'spitter', 'sentinel', 'shard', 'shroom', 'warden', 'ram'].includes(e.type);
+    const ground = ['crawler', 'hopper', 'spitter', 'sentinel', 'shard', 'shroom', 'warden', 'ram', 'mole', 'lavaworm', 'imp', 'roller', 'slime', 'chainman'].includes(e.type);
     if (ground) { const b = r.at(e.x, e.y + 1); if (b !== 1 && b !== 2 && b !== 4) { console.log('ENEMY NOT ON GROUND', id, e.type, e.x, e.y); errors++; } }
   });
+  r.enemies.forEach(e => { if (e.type === 'icicle' && r.at(e.x, e.y - 1) !== 1) { console.log('ICICLE NOT UNDER A CEILING', id, e.x, e.y); errors++; } });
   r.items.forEach(e => chk(e, 'item'));
   r.benches.forEach(e => { chk(e, 'bench'); const b = r.at(e.x, e.y + 1); if (b !== 1 && b !== 2 && b !== 7) { console.log('BENCH FLOATING', id, e.x, e.y); errors++; } });
   if (only && only !== id) continue;

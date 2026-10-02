@@ -18,6 +18,8 @@ const PAL = {
   webbed:   { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', hi: '#b8a8d8', fog: '#6a5a8a', glow: '#c8a8ff', light: [0.3, -0.95] },
   foundry:  { sky: ['#0d0604', '#2a120a', '#6a3014'], far: '#4a2210', mid: '#2c140a', near: '#170a05', hi: '#ffb27a', fog: '#ff7a3a', glow: '#ffa050', light: [0.35, -0.94] },
   title:    { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#2a3466', hi: '#9cc4ff', fog: '#5a6aa8', glow: '#ffe9b0', light: [0.6, -0.8] },
+  frost:    { sky: ['#030a14', '#0d2a4a', '#2c6a96'], far: '#1c4670', mid: '#12304f', near: '#091d33', hi: '#d8f2ff', fog: '#8cc8ee', glow: '#bfe8ff', light: [-0.4, -0.9] },
+  ember:    { sky: ['#0a0304', '#2b0c08', '#7a2a0c'], far: '#4a1a0c', mid: '#2c0f08', near: '#170705', hi: '#ffb070', fog: '#ff6a2a', glow: '#ff9a50', light: [0.3, -0.95] },
   throne:   { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', hi: '#c6d6f4', fog: '#5e72a0', glow: '#ffe2a8', light: [0, -1] },
 };
 
@@ -707,6 +709,132 @@ SCENES.foundry = th => {
     layers[2].push({ x, reach: 140, shape(g) { gearPath(g, x, H + 10, r, Math.round(r / 9), 0.25, rot); g.fill('evenodd'); } });
   }
   return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { haze: [1.2, 0.9, 1][li] })) };
+};
+
+// Rimecrest: a glacier under an aurora
+SCENES.frost = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (let k = 0; k < 4; k++) {                       // aurora curtains, periodic over the strip
+      const col = ['#6affc8', '#7fd8ff', '#b890ff', '#6affc8'][k], y0 = 70 + k * 80, ph = R() * 6, f = 2 + (k % 2);
+      for (const dx of [-P, 0, P]) {
+        g.save(); g.globalCompositeOperation = 'lighter'; g.filter = 'blur(' + 12 * S + 'px)';
+        const gr = g.createLinearGradient(0, y0 - 80, 0, y0 + 240); gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(0.4, rgba(col, 0.17)); gr.addColorStop(1, rgba(col, 0));
+        g.fillStyle = gr; g.beginPath(); g.moveTo(dx - 40, y0 + 240);
+        for (let x = -40; x <= P + 40; x += 20) g.lineTo(dx + x, y0 + Math.sin(x / P * Math.PI * 2 * f + ph) * 46 + Math.sin(x / P * Math.PI * 46 + ph * 2) * 12);
+        g.lineTo(dx + P + 40, y0 + 240); g.closePath(); g.fill(); g.restore();
+      }
+    }
+    for (let i = 0; i < 220; i++) { const x = R() * P, y = R() * H * 0.8, r = R() * 1.5 + 0.3; g.fillStyle = rgba('#e8f6ff', 0.25 + R() * 0.55); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, r, 0, 7); g.fill(); } }
+    for (const dx of [-P, 0, P]) glowAt(g, P * 0.7 + dx, 150, 240, '#cfeeff', 0.18);   // a pale moon behind the haze
+  });
+  const R = mulberry32(53), layers = [[], [], []];
+  // far: glacier peaks and spires of ice hanging from the roof
+  for (let i = 0; i < 9; i++) {
+    const x = i / 9 * P + R() * 60, w = 150 + R() * 140, h = 220 + R() * 260, s = i * 11;
+    layers[0].push({ x, reach: w + 40,
+      shape(g) { jagPath(g, [[x - w, H + 20], [x - w * 0.55, H - h * 0.55], [x - w * 0.14, H - h * 0.86], [x, H - h], [x + w * 0.2, H - h * 0.8], [x + w * 0.55, H - h * 0.5], [x + w, H + 20]], 6, s); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.1); g.beginPath(); g.moveTo(x, H - h); g.lineTo(x + w * 0.2, H - h * 0.8); g.lineTo(x + w * 0.55, H - h * 0.5); g.lineTo(x + w * 0.1, H); g.lineTo(x - w * 0.05, H - h * 0.4); g.closePath(); g.fill(); },
+      glow(g) { glowAt(g, x, H - h, 80, th.glow, 0.12); } });
+  }
+  for (let i = 0; i < 8; i++) {
+    const x = i / 8 * P + R() * 90, w = 40 + R() * 40, h = 120 + R() * 230;
+    layers[0].push({ x, reach: 80, shape(g) { jagPath(g, spike(x, -30, w, h, -1, i * 5), 3, i * 5 + 1); g.fill(); } });
+  }
+  // mid: frozen pines on the ridges, crystal ice formations from the ceiling, a frozen waterfall
+  for (let i = 0; i < 18; i++) {
+    const x = R() * P, h = 120 + R() * 170, w = 44 + R() * 40, base = H + 20, tiers = 4 + (R() * 3 | 0);
+    layers[1].push({ x, reach: 80,
+      shape(g) { g.fillRect(x - 3, base - h * 0.2, 6, h * 0.2); for (let t = 0; t < tiers; t++) { const y = base - h * (0.12 + 0.88 * t / tiers), ww = w * (1 - t / (tiers + 0.6)); g.beginPath(); g.moveTo(x - ww / 2, y); g.lineTo(x, y - h * 0.34); g.lineTo(x + ww / 2, y); g.closePath(); g.fill(); } },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.16); for (let t = 0; t < tiers; t++) { const y = base - h * (0.12 + 0.88 * t / tiers), ww = w * (1 - t / (tiers + 0.6)); g.beginPath(); g.moveTo(x, y - h * 0.34); g.lineTo(x + ww / 2, y); g.lineTo(x + ww * 0.1, y); g.closePath(); g.fill(); } } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = i / 9 * P + R() * 80, sc = 1 + R() * 0.8, prisms = [];
+    for (let k = 0; k < 3 + (R() * 3 | 0); k++) prisms.push({ dx: (R() - 0.5) * 90 * sc, w: (16 + R() * 26) * sc, h: (90 + R() * 200) * sc * (k ? 0.65 : 1) });
+    layers[1].push({ x, reach: 200,
+      shape(g) { for (const pr of prisms) { g.beginPath(); g.moveTo(x + pr.dx - pr.w / 2, -30); g.lineTo(x + pr.dx - pr.w / 2, pr.h * 0.7); g.lineTo(x + pr.dx, pr.h); g.lineTo(x + pr.dx + pr.w / 2, pr.h * 0.7); g.lineTo(x + pr.dx + pr.w / 2, -30); g.closePath(); g.fill(); } },
+      detail(g) { for (const pr of prisms) { g.fillStyle = rgba(th.hi, 0.16); g.beginPath(); g.moveTo(x + pr.dx, -30); g.lineTo(x + pr.dx + pr.w / 2, -30); g.lineTo(x + pr.dx + pr.w / 2, pr.h * 0.7); g.lineTo(x + pr.dx, pr.h); g.closePath(); g.fill(); } },
+      glow(g) { const pr = prisms[0]; glowAt(g, x + pr.dx, pr.h * 0.6, pr.h * 0.7, th.glow, 0.1); } });
+  }
+  layers[1].push({ x: 1100, reach: 120, shape(g) { g.globalAlpha = 0.6; for (let k = 0; k < 5; k++) g.fillRect(1060 + k * 18, 80 + k * 6, 10, H); g.globalAlpha = 1; } });
+  // near: great icicles from the roof, snow drifts, drifting mist
+  for (let i = 0; i < 7; i++) {
+    const x = i / 7 * P + R() * 90, w = 46 + R() * 50, h = 220 + R() * 300;
+    layers[2].push({ x, reach: 120, shape(g) { jagPath(g, spike(x, -40, w, h, -1, i * 3 + 100), 4, i * 3 + 101); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.2); g.beginPath(); g.moveTo(x, h - 40 - 40); g.lineTo(x + w * 0.5, -40); g.lineTo(x, -40); g.closePath(); g.fill(); },
+      glow(g) { glowAt(g, x, h - 60, 60, th.glow, 0.15); } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, rx = 120 + R() * 200, ry = 40 + R() * 50;
+    layers[2].push({ x, reach: rx + 40, shape(g) { blobPath(g, x, H + 20, rx, ry, i * 7, 0.2); g.fill(); } });
+  }
+  for (let i = 0; i < 10; i++) {
+    const x = R() * P, y = 420 + R() * 200, rx = 160 + R() * 240, ry = 18 + R() * 28;
+    layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.3; blobPath(g, x, y, rx, ry, i * 9, 0.3); g.fill(); g.globalAlpha = 1; } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { rim: 0.85, haze: [1.1, 0.8, 0.5][li] })) };
+};
+
+// Cinderdeep: basalt and lava
+SCENES.ember = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (const dx of [-P, 0, P]) { glowAt(g, P * 0.25 + dx, H - 30, 560, '#ff5a1a', 0.42); glowAt(g, P * 0.7 + dx, H - 50, 480, '#ff9a40', 0.34); }
+    for (let i = 0; i < 24; i++) {                       // smoke banks
+      const x = R() * P, y = 40 + R() * 340, rx = 150 + R() * 260, ry = 36 + R() * 60;
+      g.fillStyle = rgba('#0a0304', 0.2 + R() * 0.2); g.filter = 'blur(' + 10 * S + 'px)';
+      for (const dx of [-P, 0, P]) { g.beginPath(); g.ellipse(x + dx, y, rx, ry, 0, 0, 7); g.fill(); }
+      g.filter = 'none';
+    }
+    for (let i = 0; i < 6; i++) {                        // far volcanoes with a glowing crater
+      const x = R() * P, w = 170 + R() * 120, top = 330 + R() * 90;
+      for (const dx of [-P, 0, P]) { g.fillStyle = rgba('#1c0806', 0.7); g.beginPath(); g.moveTo(x + dx - w, H); g.lineTo(x + dx - 26, top); g.lineTo(x + dx + 26, top); g.lineTo(x + dx + w, H); g.closePath(); g.fill(); glowAt(g, x + dx, top, 70, '#ff8a3a', 0.45); }
+    }
+    for (let i = 0; i < 280; i++) { const x = R() * P, y = R() * H, r = R() * 1.5 + 0.3; g.fillStyle = rgba('#ffb878', 0.2 + R() * 0.5); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, r, 0, 7); g.fill(); } }
+  });
+  const R = mulberry32(71), layers = [[], [], []];
+  // far: a wall of basalt columns with lava seams, and stone stacks
+  for (let i = 0; i < 24; i++) {
+    const x = i / 24 * P + R() * 24, w = 40 + R() * 36, top = 150 + R() * 280;
+    layers[0].push({ x, reach: w + 20,
+      shape(g) { g.fillRect(x, top, w, H + 30 - top); g.beginPath(); g.moveTo(x, top); g.lineTo(x + w * 0.5, top - 14 - R() * 10); g.lineTo(x + w, top); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.1); g.fillRect(x + w * 0.62, top, w * 0.38, H); g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, top); g.lineTo(x, H); g.stroke(); },
+      glow(g) { if (i % 3 === 0) { g.fillStyle = rgba('#ff7a2a', 0.5); g.fillRect(x + w * 0.45, top + 30, 3, H - top - 30); glowAt(g, x + w * 0.47, H - 120, 90, '#ff7a2a', 0.2); } } });
+  }
+  // mid: basalt columns hanging from the roof, rock arches, lava falls
+  for (let i = 0; i < 12; i++) {
+    const x = i / 12 * P + R() * 50, cols = [];
+    for (let k = 0; k < 3 + (R() * 3 | 0); k++) cols.push({ dx: k * 30 - 45 + R() * 10, w: 24 + R() * 12, h: 70 + R() * 230 });
+    layers[1].push({ x, reach: 160,
+      shape(g) { for (const c of cols) { g.beginPath(); g.moveTo(x + c.dx, -30); g.lineTo(x + c.dx, c.h * 0.9); g.lineTo(x + c.dx + c.w * 0.5, c.h); g.lineTo(x + c.dx + c.w, c.h * 0.88); g.lineTo(x + c.dx + c.w, -30); g.closePath(); g.fill(); } },
+      detail(g) { for (const c of cols) { g.fillStyle = rgba(th.hi, 0.14); g.fillRect(x + c.dx + c.w * 0.6, -30, c.w * 0.4, c.h); } },
+      glow(g) { const c = cols[0]; g.fillStyle = rgba('#ff9a40', 0.6); g.beginPath(); g.arc(x + c.dx + c.w * 0.5, c.h - 4, 3.5, 0, 7); g.fill(); glowAt(g, x + c.dx + c.w * 0.5, c.h, 46, '#ff8a3a', 0.35); } });
+  }
+  for (let i = 0; i < 3; i++) {                           // lava falls
+    const x = 220 + i * 560 + R() * 80;
+    layers[1].push({ x, reach: 90, shape(g) { g.globalAlpha = 0.5; g.fillRect(x, 40, 12, H); g.globalAlpha = 1; },
+      glow(g) { g.fillStyle = rgba('#ff9a40', 0.55); g.fillRect(x + 3, 40, 6, H); glowAt(g, x + 6, H - 40, 120, '#ff7a2a', 0.3); glowAt(g, x + 6, 200, 90, '#ff9a40', 0.15); } });
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = 150 + i * 400 + R() * 90, top = 470 + R() * 60, w = 170 + R() * 60;
+    layers[1].push({ x, reach: 260, shape(g) { g.fillRect(x - w / 2, top, w, H - top); g.beginPath(); g.moveTo(x - w / 2, top); g.quadraticCurveTo(x, top - 90, x + w / 2, top); g.fill(); },
+      glow(g) { glowAt(g, x, top + 20, 110, '#ff7a2a', 0.22); } });
+  }
+  // near: heavy stalactites with glowing tips, rubble heaps, a rising haze
+  for (let i = 0; i < 7; i++) {
+    const x = i / 7 * P + R() * 90, w = 56 + R() * 56, h = 230 + R() * 300;
+    layers[2].push({ x, reach: 120, shape(g) { jagPath(g, spike(x, -40, w, h, -1, i * 3 + 200), 5, i * 3 + 201); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.16); g.beginPath(); g.moveTo(x, h - 80); g.lineTo(x + w * 0.5, -40); g.lineTo(x, -40); g.closePath(); g.fill(); },
+      glow(g) { g.fillStyle = rgba('#ffc060', 0.7); g.beginPath(); g.arc(x, h - 52, 4, 0, 7); g.fill(); glowAt(g, x, h - 50, 70, '#ff8a3a', 0.4); } });
+  }
+  for (let i = 0; i < 8; i++) {
+    const x = R() * P, rx = 100 + R() * 180, ry = 40 + R() * 70;
+    layers[2].push({ x, reach: rx + 40, shape(g) { jagPath(g, [[x - rx, H + 30], [x - rx * 0.55, H - ry * 0.6], [x - rx * 0.1, H - ry], [x + rx * 0.3, H - ry * 0.7], [x + rx, H + 30]], 5, i * 6); g.fill(); },
+      glow(g) { glowAt(g, x, H - ry * 0.5, rx * 0.8, '#ff6a2a', 0.2); } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, y = 480 + R() * 160, rx = 150 + R() * 220, ry = 20 + R() * 30;
+    layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.3; blobPath(g, x, y, rx, ry, i * 9, 0.3); g.fill(); g.globalAlpha = 1; } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { haze: [1.2, 0.9, 0.7][li] })) };
 };
 
 SCENES.title = th => {

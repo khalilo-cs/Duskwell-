@@ -7,7 +7,9 @@ class Level {
     this.def = def; this.id = def.id; this.w = def.w; this.h = def.h;
     this.t = Uint8Array.from(def.t);
     this.pw = def.w * TILE; this.ph = def.h * TILE;
+    this.ice = def.iceCells || new Set();
   }
+  isIce(tx, ty) { return this.ice.size > 0 && tx >= 0 && ty >= 0 && tx < this.w && ty < this.h && this.ice.has(ty * this.w + tx); }
   get(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return T_SOLID;
     return this.t[ty * this.w + tx];
@@ -94,6 +96,7 @@ class Player {
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
+  onIce() { const L = G.level, ty = Math.floor((this.y + this.h + 2) / TILE); return L.isIce(Math.floor((this.x + 4) / TILE), ty) || L.isIce(Math.floor((this.x + this.w - 4) / TILE), ty); }
   // ---- numbers the charms change (see charms.js) ----
   spellCost() { return Charms.has('thrift') ? 24 : 33; }
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1); }
@@ -192,7 +195,8 @@ class Player {
         this.vx = 0;
       } else {
         const target = ix * (Charms.has('boots') ? 305 : 250);
-        this.vx = approach(this.vx, target, (ix === 0 ? 4200 : 3600) * dt * (this.onGround ? 1 : 0.85));
+        const grip = this.onGround && this.onIce() && !Charms.has('soles') ? 0.14 : 1;          // ice: slow to start, slower to stop
+        this.vx = approach(this.vx, target, (ix === 0 ? 4200 : 3600) * dt * (this.onGround ? grip : 0.85));
         if (ix !== 0 && this.atkT <= 0) this.face = ix;
         else if (ix !== 0 && this.atkT > 0 && this.atkDir !== 'side') this.face = ix;
       }
@@ -302,7 +306,10 @@ class Player {
         this.hits.add(e);
         const dir = this.atkDir === 'side' ? this.face : (e.cx > cx ? 1 : -1);
         const landed = e.hurt(this.nailDamage(), dir, this.atkDir);      // false: a shield turned it aside
-        if (landed !== false) this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
+        if (landed !== false) {
+          this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
+          if (Charms.has('cinder') && !e.dead) e.burnT = 0.6;        // Cinder Edge: a burn lands a moment after the blow
+        }
         connected = true;
       }
     }
@@ -508,6 +515,22 @@ class Proj {
       if (this.active && !G.player.dead && overlap(G.player.hurtbox(), this.rect())) G.player.hurt(this.dmg, this.x);
       return;
     }
+    if (this.kind === 'blast') {              // an expanding ring of fire that wounds once
+      this.r = this.r0 * (0.45 + 0.8 * clamp(this.t / 0.18, 0, 1));
+      const pl = G.player;
+      if (!this.hurtDone && !pl.dead && this.t < 0.3 && overlap(pl.hurtbox(), this.rect())) { this.hurtDone = true; pl.hurt(this.dmg, this.x); }
+      return;
+    }
+    if (this.kind === 'bomb') {               // lobbed: bursts on touching the ground or a wall, on the hero, or when the fuse ends
+      this.vy += this.grav * dt; this.x += this.vx * dt; this.y += this.vy * dt;
+      const pl = G.player;
+      if (L.solidAtPx(this.x, this.y + this.r) || L.solidAtPx(this.x + sign(this.vx) * this.r, this.y) || this.t > this.fuse || (!pl.dead && overlap(pl.hurtbox(), this.rect()))) {
+        this.dead = true; Sound.play('slam'); G.shake(4, 0.15);
+        G.projs.push(new Proj({ kind: 'blast', x: this.x, y: this.y, r: 20, r0: this.blastR || 66, dmg: 1, life: 0.45, pierce: true, passWalls: true, color: this.color }));
+        G.burst(this.x, this.y, 16, { color: this.color, speed: 260, life: 0.5, size: 4 });
+      }
+      return;
+    }
     this.vy += this.grav * dt;
     this.x += this.vx * dt; this.y += this.vy * dt;
     if (this.kind === 'cloud') {
@@ -597,6 +620,12 @@ class Enemy {
   tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; }
   hurt(dmg, dir, how) {
     if (this.dead) return;
+    if (how === 'burn') {                                     // a burn: no flinch, no stop, just the wound
+      this.hp -= dmg; this.flash = 0.1; Sound.play('hit');
+      G.burst(this.cx, this.cy, 10, { color: pick(['#ff8a3a', '#ffd070']), speed: 150, life: 0.45, size: 3, vy: -60 });
+      if (this.hp <= 0) this.kill();
+      return;
+    }
     this.hp -= dmg; this.flash = 0.12; Sound.play('hit'); G.hitstop(how === 'spell' ? 0.03 : 0.06);
     G.burst(this.cx, this.cy, 8, { color: this.blood || '#ffd59a', speed: 220, life: 0.35, size: 3 });
     G.burst(this.cx, this.cy, 3, { color: '#ffffff', speed: 260, life: 0.15, size: 2 });
@@ -1090,4 +1119,370 @@ class Ram extends Enemy {
   }
 }
 
-const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly, warden: Warden, ram: Ram };
+// ============================== CREATURES OF RIMECREST AND CINDERDEEP ==============================
+// Burrower: lies buried under the floor, tracks the hero by the dust it raises, erupts, then digs back in.
+class Burrower extends Enemy {
+  constructor(d) {
+    super(d, 36, 30); this.hp = 16; this.geo = 5; this.kb = 0.5; this.type = d.type; this.blood = d.type === 'lavaworm' ? '#ff9a50' : '#d8e6f0';
+    this.buried = true; this.ghostly = true; this.dust = d.type === 'lavaworm' ? '#ff9a50' : '#cfe0ee';
+  }
+  body() { return this.buried ? { x: this.cx - 1, y: this.y + this.h - 2, w: 2, h: 2 } : this.hb(); }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, dx = p.cx - this.cx, near = Math.abs(dx) < 240 && Math.abs(p.cy - this.cy) < 110 && !p.dead;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.buried = true; this.ghostly = true; this.vx = 0;
+        if (near && this.stateT > 0.6) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:                // shuffles under the floor toward the hero
+        this.face = dx > 0 ? 1 : -1;
+        this.vx = this.edgeAhead(this.face) ? 0 : this.face * 120;
+        if (Math.random() < 0.5) G.burst(this.cx, this.y + this.h, 1, { color: this.dust, speed: 40, life: 0.4, size: 3, vy: -30 });
+        if (Math.abs(dx) < 64) this.setState(ST.ANTICIPATION);
+        else if (!near && this.stateT > 1.2) this.setState(ST.IDLE);
+        break;
+      case ST.ANTICIPATION:         // the ground trembles
+        this.vx = 0;
+        if (Math.random() < 0.8) G.burst(this.cx + rand(-14, 14), this.y + this.h, 1, { color: this.dust, speed: 70, life: 0.35, size: 3, vy: -60 });
+        if (this.stateT >= 0.55) {
+          this.buried = false; this.ghostly = false; this.vy = -560; this.vx = this.face * 90; this.onGround = false;
+          Sound.play('break'); G.shake(3, 0.12); G.burst(this.cx, this.y + this.h, 14, { color: this.dust, speed: 220, life: 0.5, size: 4, vy: -80 });
+          this.setState(ST.ATTACK);
+        }
+        break;
+      case ST.ATTACK:               // out of the ground: wounds on touch until it lands
+        if (this.onGround && this.stateT > 0.15) { this.vx = 0; this.setState('emerged'); }
+        break;
+      case 'emerged':               // out in the open and slow: the time to strike
+        this.face = dx > 0 ? 1 : -1; this.vx = this.edgeAhead(this.face) ? 0 : this.face * 56;
+        if (this.stateT > 1.4) this.setState('digging');
+        break;
+      case 'digging':
+        this.vx = 0;
+        if (Math.random() < 0.6) G.burst(this.cx, this.y + this.h, 1, { color: this.dust, speed: 60, life: 0.4, size: 3, vy: -50 });
+        if (this.stateT > 0.45) { this.buried = true; this.ghostly = true; this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.22) this.setState('emerged');
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL || this.hitR) this.vx = 0;
+  }
+}
+
+// Bomber: an imp that keeps its distance and lobs bombs that burst in a ring of fire.
+class Bomber extends Enemy {
+  constructor(d) { super(d, 28, 34); this.hp = 14; this.geo = 5; this.kb = 0.9; this.blood = '#ff9a50'; this.cool = rand(0.8, 1.8); this.glowR = 80; }
+  update(dt) {
+    this.tick(dt); this.cool -= dt;
+    const p = G.player, dx = p.cx - this.cx, ad = Math.abs(dx), sees = this.seesPlayer(440) && Math.abs(p.cy - this.cy) < 220;
+    if (sees) this.lastSeen = this.t;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE: {              // holds the hero at bomb range
+        this.face = dx > 0 ? 1 : -1;
+        const want = ad < 170 ? -this.face : ad > 330 ? this.face : 0;
+        this.vx = want && !this.edgeAhead(want) ? want * 95 : 0;
+        if (this.cool <= 0 && sees && ad < 400) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.t - this.lastSeen > 2.5) this.setState(ST.IDLE);
+        break;
+      }
+      case ST.ANTICIPATION:         // the arm goes up with a lit bomb
+        this.vx = 0; this.face = dx > 0 ? 1 : -1;
+        if (this.stateT >= 0.5) {
+          const x = this.cx + this.face * 10, y = this.y + 6, T = clamp(ad / 320, 0.45, 1.1), g = 1100;
+          G.projs.push(new Proj({ kind: 'bomb', x, y, r: 9, vx: clamp(dx / T, -380, 380), vy: (p.cy - y - 0.5 * g * T * T) / T, grav: g, fuse: 1.7, life: 4, dmg: 1, color: '#ff9a50' }));
+          Sound.play('shoot'); this.cool = rand(1.6, 2.6); this.setState('throw');
+        }
+        break;
+      case 'throw':
+        this.vx = 0;
+        if (this.stateT > 0.4) this.setState(ST.CHASE);
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL || this.hitR) this.vx = 0;
+  }
+}
+
+// Blinker: a half-faded wraith. It fades out, appears beside the hero, slashes, and can be struck only while solid.
+class Blinker extends Enemy {
+  constructor(d) { super(d, 30, 50); this.hp = 18; this.geo = 6; this.kb = 0.6; this.blood = '#bfe6ff'; this.alpha = 0.5; this.ghostly = true; this.glowR = 90; this.ph = rand(0, 6); this.melee = null; this.y -= 14; this.home = { x: this.cx, y: this.cy }; }
+  placeBeside() {
+    const L = G.level, p = G.player;
+    for (const side of [-p.face, p.face]) for (const dy of [-10, -24, 0]) {          // beside the hero, a little above the floor
+      const x = p.cx + side * 86, y = p.cy + dy;
+      let free = true; for (let k = -1; k <= 1; k++) if (L.solidAtPx(x, y + k * 24) || L.solidAtPx(x + side * 16, y + k * 24)) free = false;
+      if (free) { this.x = x - this.w / 2; this.y = y - this.h / 2; this.face = -side; this.vx = this.vy = 0; return true; }
+    }
+    return false;
+  }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(400);
+    this.melee = null;
+    switch (this.currentState) {
+      case ST.IDLE: {               // drifting, faint, harmless
+        this.alpha = approach(this.alpha, 0.5 + 0.08 * Math.sin(this.t * 3), 2 * dt); this.ghostly = true;
+        const tx = this.home.x + Math.sin(this.t * 0.7 + this.ph) * 50, ty = this.home.y + Math.sin(this.t * 1.3 + this.ph) * 16;
+        this.vx = approach(this.vx, clamp(tx - this.cx, -1, 1) * 50, 200 * dt); this.vy = approach(this.vy, clamp(ty - this.cy, -1, 1) * 30, 200 * dt);
+        if (sees && this.stateT > 1.1 && !p.dead) this.setState('fadeout');
+        break;
+      }
+      case 'fadeout':
+        this.vx = this.vy = 0; this.alpha = Math.max(0, 0.5 - this.stateT / 0.3 * 0.5); this.ghostly = true;
+        if (this.stateT >= 0.3) { if (this.placeBeside()) this.setState('appear'); else this.setState(ST.IDLE); }
+        break;
+      case 'appear':                // eyes first, then the body: a readable warning
+        this.vx = this.vy = 0; this.alpha = clamp(this.stateT / 0.5, 0, 1); this.ghostly = this.alpha < 0.6;
+        this.face = p.cx > this.cx ? 1 : -1;
+        if (this.stateT >= 0.5) { this.setState(ST.ATTACK); Sound.play('slash'); }
+        break;
+      case ST.ATTACK:               // the slash
+        this.alpha = 1; this.ghostly = false;
+        this.melee = { x: this.face > 0 ? this.cx : this.cx - 80, y: this.y + 2, w: 80, h: 52 };
+        if (!p.dead && overlap(p.hurtbox(), this.melee)) p.hurt(1, this.cx);
+        if (this.stateT >= 0.22) this.setState('vulnerable');
+        break;
+      case 'vulnerable':            // solid for a moment: the time to strike back
+        this.alpha = 1; this.ghostly = false; this.vx = this.vy = 0;
+        if (this.stateT >= 0.9) this.setState('fadeback');
+        break;
+      case 'fadeback':
+        this.alpha = Math.max(0.5, 1 - this.stateT / 0.4 * 0.5); this.ghostly = this.alpha < 0.6;
+        if (this.stateT >= 0.4) { this.home = { x: this.cx, y: this.cy }; this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.9; this.vy *= 0.9;
+        if (this.stateT > 0.2) this.setState('vulnerable');
+        break;
+    }
+    this.physics(dt, false);
+    if (this.hitL || this.hitR) this.vx = 0; if (this.hitU || this.onGround) this.vy = 0;
+  }
+}
+
+// Roller: patrols, then curls into a ball and rolls from wall to wall. Armoured while rolling (jump on it); dazed afterwards.
+class Roller extends Enemy {
+  constructor(d) { super(d, 40, 30); this.hp = 24; this.geo = 8; this.kb = 0.3; this.blood = '#e0c89a'; this.rolls = 0; }
+  hurt(dmg, dir, how) {
+    if (this.dead) return;
+    if (this.currentState === ST.ATTACK && (how === 'side' || how === 'up')) {            // the curled shell turns blades aside
+      Sound.play('clank'); G.hitstop(0.04); G.burst(this.cx, this.cy - 6, 8, { color: '#fff3c4', speed: 220, life: 0.25, size: 2 });
+      return false;
+    }
+    return super.hurt(dmg, dir, how);
+  }
+  onHurt(dir, how) { if (this.currentState === ST.ATTACK) return; super.onHurt(dir, how); }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(440) && Math.abs(p.cy - this.cy) < 90;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees && this.stateT > 0.4) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.stateT > 1) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL:
+        this.vx = this.face * 38;
+        if (this.edgeAhead(this.face)) { this.face = -this.face; this.setState(ST.IDLE); }
+        if (sees) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        break;
+      case ST.ANTICIPATION:         // curls up and shivers
+        this.vx = 0;
+        if (this.stateT >= 0.55) { this.rolls = 0; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK: {
+        this.vx = this.face * 400;
+        const wall = this.face > 0 ? this.hitR : this.hitL;
+        if (wall || this.edgeAhead(this.face)) { this.face = -this.face; this.rolls++; this.vx = this.face * 400; G.shake(3, 0.1); Sound.play('clunk'); }
+        if (this.rolls >= 3 || this.stateT > 3.2) { this.vx = 0; this.setState('dizzy'); }
+        break;
+      }
+      case 'dizzy':
+        this.vx = 0;
+        if (this.stateT > 1.2) this.setState(ST.IDLE);
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.IDLE);
+        break;
+    }
+    this.physics(dt);
+  }
+}
+
+// Slime: hops toward the hero and splits into two small slimes when it dies.
+class Slime extends Enemy {
+  constructor(d) {
+    super(d, d.small ? 22 : 40, d.small ? 18 : 32); this.small = !!d.small;
+    this.hp = this.small ? 6 : 20; this.geo = this.small ? 1 : 6; this.kb = this.small ? 1.2 : 0.6; this.blood = '#9fd8ff'; this.wait = rand(0.5, 1.4); this.born = 0.3;
+    if (this.small) this.ghostly = true;                // a newborn cannot be struck for a moment, so the blow that split its parent is not spent on it
+  }
+  kill() {
+    super.kill();
+    if (this.small) return;
+    for (const dir of [-1, 1]) {
+      const s = new Slime({ x: 0, y: 0, small: true }); s.kind = 'slimelet';
+      s.x = this.cx - s.w / 2; s.y = this.y + this.h - s.h; s.vx = dir * 170; s.vy = -300; s.face = dir;
+      G.enemies.push(s);
+    }
+  }
+  update(dt) {
+    this.tick(dt);
+    if (this.small && this.born > 0) { this.born -= dt; if (this.born <= 0) this.ghostly = false; }
+    const p = G.player;
+    switch (this.currentState) {
+      case ST.IDLE:
+        if (this.onGround) this.vx *= 0.8;
+        if (this.onGround && this.stateT > this.wait && this.seesPlayer(360)) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); }
+        break;
+      case ST.ANTICIPATION:         // squashes down
+        this.vx = 0;
+        if (this.stateT > (this.small ? 0.18 : 0.32)) { this.vy = this.small ? -430 : -470; this.vx = this.face * (this.small ? 190 : 150); this.onGround = false; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK:
+        if (this.onGround && this.stateT > 0.1) { this.wait = rand(0.5, 1.2); this.setState(ST.IDLE); }
+        break;
+      case ST.RECOIL:
+        if (this.onGround) this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.IDLE);
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL || this.hitR) this.vx = -this.vx * 0.4;
+  }
+}
+
+// Chainman: swings a spiked ball on a chain in a wide circle. The ball wounds; the man can be struck while it retracts.
+class Chainman extends Enemy {
+  constructor(d) { super(d, 38, 56); this.hp = 30; this.geo = 12; this.kb = 0.2; this.blood = '#d8c8a0'; this.ang = 0; this.reach = 36; this.ball = null; this.wp = null; }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(300) && Math.abs(p.cy - this.cy) < 120;
+    if (sees) this.lastSeen = this.t;
+    let spin = 1.5, reach = 36;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees) this.setState(ST.CHASE);
+        else if (this.stateT > 1) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL:
+        this.vx = this.face * 30;
+        if (this.edgeAhead(this.face)) { this.face = -this.face; this.setState(ST.IDLE); }
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:
+        this.face = p.cx > this.cx ? 1 : -1; this.vx = this.edgeAhead(this.face) ? 0 : this.face * 52;
+        if (Math.abs(p.cx - this.cx) < 150) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.t - this.lastSeen > 1.6) this.setState(ST.PATROL);
+        break;
+      case ST.ANTICIPATION:         // the ball starts to spin
+        this.vx = 0; spin = 3 + this.stateT * 6; reach = 36 + this.stateT / 0.7 * 60;
+        if (this.stateT >= 0.7) this.setState(ST.ATTACK);
+        break;
+      case ST.ATTACK:               // full swing, creeping toward the hero
+        spin = 7.5; reach = 112; this.face = p.cx > this.cx ? 1 : -1; this.vx = this.edgeAhead(this.face) ? 0 : this.face * 46;
+        if (this.stateT >= 1.7) this.setState(ST.RECOIL);
+        break;
+      case ST.RECOIL:               // the chain winds back in: struck freely now
+        this.vx *= 0.8; spin = 2.5; reach = Math.max(36, 112 - this.stateT * 130);
+        if (this.stateT > 0.85) this.setState(ST.CHASE);
+        break;
+    }
+    this.ang += spin * dt; this.reach = approach(this.reach, reach, 220 * dt);
+    this.ball = { x: this.cx + Math.cos(this.ang) * this.reach, y: this.cy - 6 + Math.sin(this.ang) * this.reach * 0.75, r: 13 };
+    if (this.reach > 60 && !p.dead && overlap(p.hurtbox(), { x: this.ball.x - 13, y: this.ball.y - 13, w: 26, h: 26 })) p.hurt(1, this.ball.x);
+    this.physics(dt);
+    if (this.hitL || this.hitR) { this.vx = 0; if (this.currentState === ST.PATROL) this.face = -this.face; }
+  }
+}
+
+// Moth: drawn to the hero's light; it circles, then dives. It carries a little light of its own.
+class Moth extends Enemy {
+  constructor(d) { super(d, 26, 22); this.hp = 12; this.geo = 4; this.kb = 1.4; this.blood = '#ffe7a0'; this.glowR = 130; this.ph = rand(0, 6); this.orbit = rand(0, 6); this.diveCD = rand(1.4, 2.4); }
+  steer(tx, ty, sp, acc, dt) {
+    const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1;
+    this.vx = approach(this.vx, dx / d * sp, acc * dt); this.vy = approach(this.vy, dy / d * sp, acc * dt);
+    if (Math.abs(this.vx) > 10) this.face = sign(this.vx);
+  }
+  update(dt) {
+    this.tick(dt); this.diveCD -= dt;
+    const p = G.player, sees = this.seesPlayer(340);
+    if (sees) this.lastSeen = this.t;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.steer(this.home.x + Math.sin(this.t * 0.9 + this.ph) * 50, this.home.y + Math.sin(this.t * 2.1 + this.ph) * 18, 55, 220, dt);
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:                // flutters around the light
+        this.orbit += dt * 1.7;
+        this.steer(p.cx + Math.cos(this.orbit) * 120, p.cy - 30 + Math.sin(this.orbit * 1.3) * 50, 140, 420, dt);
+        if (this.diveCD <= 0 && sees) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (p.dead || this.t - this.lastSeen > 2.2) this.setState(ST.IDLE);
+        break;
+      case ST.ANTICIPATION:         // wings up, glow brightens
+        this.vx *= 0.9; this.vy *= 0.9; this.face = p.cx > this.cx ? 1 : -1;
+        if (this.stateT >= 0.4) { const d = Math.hypot(p.cx - this.cx, p.cy - this.cy) || 1; this.vx = (p.cx - this.cx) / d * 380; this.vy = (p.cy - this.cy) / d * 380; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK:
+        if (this.stateT > 0.55 || this.hitL || this.hitR || this.hitU || this.onGround) { this.diveCD = rand(1.6, 2.8); this.setState(ST.CHASE); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.94; this.vy *= 0.94;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
+    }
+    this.glowR = this.currentState === ST.ANTICIPATION ? 130 + this.stateT * 160 : 130;
+    this.physics(dt, false);
+    if (this.hitL || this.hitR) this.vx = 0; if (this.hitU || this.onGround) this.vy = 0;
+  }
+}
+
+// Icicle: hangs from the ceiling, shakes when the hero passes under it, falls, shatters, and grows back.
+class Icicle extends Enemy {
+  constructor(d) { super(d, 18, 44); this.y = d.y * TILE; this.hp = 5; this.geo = 0; this.kb = 0; this.type = d.type; this.blood = '#dff4ff'; this.ox = this.x; this.oy = this.y; this.gone = false; }
+  shatter() {
+    G.burst(this.cx, this.cy, 14, { color: this.blood, speed: 240, life: 0.5, size: 3 }); Sound.play('break');
+    this.gone = true; this.ghostly = true; this.vx = this.vy = 0; this.setState('gone');
+  }
+  kill() { this.shatter(); }                    // struck: it breaks (and grows back)
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, under = Math.abs(p.cx - this.cx) < 38 && p.cy > this.cy && p.cy < this.y + 460 && !p.dead && G.level.lineOfSight(this.cx, this.y + this.h, this.cx, p.cy);
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.x = this.ox; this.y = this.oy; this.vx = this.vy = 0; this.ghostly = false; this.gone = false; this.dmg = 0;
+        if (under) { this.setState(ST.ANTICIPATION); Sound.play('creak'); }
+        return;
+      case ST.ANTICIPATION:         // a tremor, then it lets go
+        this.x = this.ox + Math.sin(this.stateT * 70) * 1.6;
+        if (this.stateT >= 0.55) { this.dmg = 1; this.setState(ST.ATTACK); }
+        return;
+      case ST.ATTACK:
+        this.vy = Math.min(this.vy + 2000 * dt, 820);
+        this.y += this.vy * dt;
+        if (G.level.solidAtPx(this.cx, this.y + this.h)) { this.y = Math.floor((this.y + this.h) / TILE) * TILE - this.h; this.shatter(); }
+        return;
+      case 'gone':                  // grows back after a few seconds, if the hero is not right under it
+        this.ghostly = true; this.dmg = 0;
+        if (this.stateT > 4 && !under) this.setState(ST.IDLE);
+        return;
+      case ST.RECOIL: this.setState(ST.IDLE); return;
+    }
+  }
+  body() { return this.gone ? { x: -999, y: -999, w: 1, h: 1 } : this.hb(); }
+}
+
+const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly, warden: Warden, ram: Ram, mole: Burrower, lavaworm: Burrower, imp: Bomber, veil: Blinker, roller: Roller, slime: Slime, chainman: Chainman, moth: Moth, icicle: Icicle };

@@ -11,6 +11,8 @@ const THEMES = {
   aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
   foundry: { sky: ['#0d0604', '#2a120a', '#5a2a12'], far: '#3a1a0e', mid: '#26120a', near: '#160a06', tile: '#24140e', hi: '#ffb27a', edge: '#060201', fog: '#ff7a3a', part: '#ffc890', glow: '#ff9a50', name: 'foundry' },
+  frost:   { sky: ['#0c1a2a', '#2a4a6a', '#8cb8d8'], far: '#5a86a8', mid: '#3a6080', near: '#1e3a54', tile: '#2b4256', hi: '#e6f8ff', edge: '#050b12', fog: '#a8d8f0', part: '#ffffff', glow: '#cfeeff', name: 'frost' },
+  ember:   { sky: ['#0a0304', '#2a0a0a', '#6a1a0a'], far: '#4a1410', mid: '#2a0c0a', near: '#150606', tile: '#201316', hi: '#ff7a3a', edge: '#050203', fog: '#ff4a1a', part: '#ffb060', glow: '#ff8a3a', name: 'ember' },
   title:   { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#060a18', tile: '#0e1430', hi: '#9cc4ff', edge: '#020308', fog: '#5a6aa8', part: '#dfe8ff', glow: '#ffe9b0', name: 'title' },
   throne:  { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', tile: '#0e121e', hi: '#c6d6f4', edge: '#010203', fog: '#5e72a0', part: '#eef4ff', glow: '#ffe2a8', name: 'throne' },
 };
@@ -67,6 +69,11 @@ Art.renderLevel = function (L, s) {
     if (eR) { g.moveTo(px + TILE + wob(x + 1, y + 3), py); g.lineTo(px + TILE + wob(x + 1, y + 4), py + TILE); }
     g.stroke();
     themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS);
+    if (L.isIce(x, y)) {                         // slippery ice: a pale glaze with a bright streak
+      g.fillStyle = 'rgba(190,235,255,0.42)'; g.fillRect(px, py, TILE, TILE);
+      g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 2; g.beginPath(); g.moveTo(px + 3, py + 4); g.lineTo(px + TILE - 8, py + 4); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(px + 6 + v * 10, py + 8); g.lineTo(px + 14 + v * 10, py + TILE - 4); g.stroke();
+    }
   }
 
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
@@ -510,20 +517,22 @@ Art.ambientInit = function () {
 Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
-    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4;
-    const fall = leafy ? 34 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : theme === 'foundry' ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
+    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4, snow = theme === 'frost';
+    const fall = leafy ? 34 : snow ? 30 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'foundry' || theme === 'ember') ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
     m.x += (Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
     m.y += (fall - rise) * dt * m.z;
     m.rot += dt * (leafy ? 2 : 0);
     if (m.y < -12) m.y = VH + 12; if (m.y > VH + 12) m.y = -12;
     if (m.x < -12) m.x = VW + 12; if (m.x > VW + 12) m.x = -12;
     const a = (0.3 + 0.5 * Math.abs(Math.sin(t * 1.3 + m.p))) * m.z;
-    if (leafy) {
+    if (snow) {
+      g.fillStyle = 'rgba(255,255,255,' + Math.min(0.9, 0.35 + a) + ')'; g.beginPath(); g.arc(m.x, m.y, 1.2 + m.s * m.z * 0.7, 0, 7); g.fill();
+    } else if (leafy) {
       g.save(); g.translate(m.x, m.y); g.rotate(m.rot); g.scale(1, Math.abs(Math.cos(m.rot * 1.3)) * 0.8 + 0.2);
       g.fillStyle = th.leaf[Math.floor(m.kind * 6.6) % th.leaf.length]; ellipse(g, 0, 0, 5 * m.z + 2, 2.6 * m.z + 1); g.fill(); g.restore();
     } else if (bubble) {
       g.strokeStyle = 'rgba(210,255,245,' + (0.25 + 0.3 * m.z) + ')'; g.lineWidth = 1.2; ellipse(g, m.x, m.y, m.s * 2.2 * m.z + 1.5, m.s * 2.2 * m.z + 1.5); g.stroke();
-    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || theme === 'foundry' || (theme === 'town' && m.kind > 0.85)) {
+    } else if (theme === 'cave' || theme === 'moss' || theme === 'spore' || theme === 'aqueduct' || theme === 'foundry' || theme === 'ember' || (theme === 'town' && m.kind > 0.85)) {
       bloom(g, m.x, m.y, 10 * m.z + 4, theme === 'town' ? '#ffb0d8' : th.part, a * 0.6);
       g.fillStyle = rgba('#ffffff', Math.min(0.9, a)); g.beginPath(); g.arc(m.x, m.y, m.s * m.z * 0.8, 0, 7); g.fill();
     } else {
@@ -578,8 +587,19 @@ Art.drawCrack = function (g, x, y, th, t) {
   g.strokeStyle = rgba(th.glow, 0.45 + 0.25 * Math.sin(t * 2 + x)); g.lineWidth = 2;
   g.beginPath(); g.moveTo(px + 2, py + 10 + v * 8); g.lineTo(px + 12, py + 16); g.lineTo(px + 20, py + 8 + v * 6); g.lineTo(px + 30, py + 18); g.moveTo(px + 12, py + 16); g.lineTo(px + 14, py + 30); g.stroke();
 };
-Art.drawAcid = function (g, x, y, surface, t) {
+Art.drawAcid = function (g, x, y, surface, t, th) {
   const px = x * TILE, py = y * TILE;
+  if (th && th.name === 'ember') {              // lava
+    const g1 = g.createLinearGradient(0, py, 0, py + TILE); g1.addColorStop(0, 'rgba(255,200,90,0.95)'); g1.addColorStop(0.35, 'rgba(255,110,30,0.92)'); g1.addColorStop(1, 'rgba(170,30,10,0.95)');
+    g.fillStyle = g1; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
+    if (!surface) { g.fillStyle = 'rgba(255,120,40,' + (0.12 + 0.1 * Math.sin(t * 2 + x * 3 + y)) + ')'; g.fillRect(px, py, TILE, TILE); return; }
+    bloom(g, px + 16, py + 6, 54, '#ff7a30', 0.32);
+    g.beginPath(); g.moveTo(px, py + 10);
+    for (let i = 0; i <= 4; i++) g.lineTo(px + i * 8, py + 7 + Math.sin(t * 2.4 + (x * 4 + i) * 0.8) * 2.5);
+    g.lineTo(px + TILE, py + 14); g.lineTo(px, py + 14); g.closePath(); g.fillStyle = 'rgba(255,236,150,0.95)'; g.fill();
+    if (Math.sin(t * 1.7 + x * 5) > 0.93) { g.fillStyle = 'rgba(255,230,150,0.9)'; ellipse(g, px + 16, py + 3, 3, 4); g.fill(); }
+    return;
+  }
   g.fillStyle = 'rgba(70,200,80,0.55)'; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
   if (!surface) return;
   bloom(g, px + 16, py + 10, 30, '#9dff6a', 0.18);
@@ -611,7 +631,7 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
-const DARKNESS = { foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+const DARKNESS = { frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }

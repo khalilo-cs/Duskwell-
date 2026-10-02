@@ -20,6 +20,9 @@ const Charms = (() => {
     magnet:     { cost: 1, color: '#ffe9a0', ar: 'مغناطيس الجيو', en: 'Geo Magnet', dAr: 'ينجذب الجيو إليك من بعيد.', dEn: 'Geo drifts toward you from afar.' },
     thrift:     { cost: 2, color: '#8fe0ff', ar: 'اقتصاد الروح', en: 'Soul Thrift', dAr: 'التعاويذ والشفاء يكلّفون روحاً أقل.', dEn: 'Spells and healing cost less soul.' },
     fury:       { cost: 2, color: '#ff6a5a', ar: 'غضب الأخير', en: 'Last Fury', dAr: 'حين يبقى لك قناع واحد تصير ضربتك أقوى بكثير.', dEn: 'With a single mask left, your strike hits far harder.' },
+    soles:      { cost: 1, color: '#bfe8ff', ar: 'نعل المسامير', en: 'Spiked Soles', dAr: 'تثبت قدماك على الجليد فلا تنزلق.', dEn: 'Your feet grip the ice: no more sliding.' },
+    wick:       { cost: 1, color: '#ffd890', ar: 'فتيل الفانوس', en: 'Lantern Wick', dAr: 'يتسع ضوء فانوسك فترى أبعد في العتمة.', dEn: 'Your lantern burns wider: you see further in the dark.' },
+    cinder:     { cost: 2, color: '#ff8a4a', ar: 'نصل الجمر', en: 'Cinder Edge', dAr: 'ضرباتك تترك حرقاً يؤذي العدو بعد لحظة.', dEn: 'Your strikes leave a burn that wounds the enemy a moment later.' },
     shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
   };
   const ORDER = Object.keys(DEFS);

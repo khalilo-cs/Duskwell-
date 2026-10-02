@@ -27,4 +27,11 @@ Hollow Knight's own art and music belong to Team Cherry and are not part of this
 pictures from their own device; they stay in that browser and are never shipped.
 
 ## Charms
-The 14 charms (`js/charms.js`), their names, effects and icons (`js/art_charms.js`, drawn in code) are original to this project. Equippable relics limited by a number of slots are a common genre mechanic, so only the idea is shared with other Metroidvanias; no names, art or text from Hollow Knight or any other game are used.
+The 17 charms (`js/charms.js`), their names, effects and icons (`js/art_charms.js`, drawn in code) are original to this project. Equippable relics limited by a number of slots are a common genre mechanic, so only the idea is shared with other Metroidvanias; no names, art or text from Hollow Knight or any other game are used.
+
+## Rimecrest, Cinderdeep and Lumen
+The sixteen rooms of the two new areas (`js/world_frost.js`, `js/world_ember.js`), the nine creatures (mole, lava worm, bomb imp, veil, roller, slime, chain bearer, night moth, icicle),
+the Rime Queen and the Cinder Colossus, their art (`js/art_sprites.js`, drawn in code), the two painted backgrounds (`art/bg/frost`, `art/bg/ember`, made by `tools/paint/painter.js`)
+and the two music pieces (`audio/music/frost.mp3`, `ember.mp3`, composed in `tools/music/compose.py`, played with the FluidR3 GM SoundFont as above) are original to this project.
+The Lumen lighting renderer (`js/lumen.js`: normal maps baked from tiles and silhouettes, point lights, ray-marched shadows, bloom, shafts, aberration, haze, caustics) is written for this game;
+it uses only the browser's WebGL2 API and no library or shader code from elsewhere.

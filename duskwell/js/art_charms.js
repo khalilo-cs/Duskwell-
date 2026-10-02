@@ -69,6 +69,21 @@ Art.drawCharm = function (g, id, x, y, r, o) {
       g.beginPath(); g.moveTo(0.05, -1); g.bezierCurveTo(0.95, -0.15, 0.95, 0.95, 0, 0.95); g.bezierCurveTo(-0.95, 0.95, -0.75, 0.1, -0.3, -0.25); g.bezierCurveTo(-0.28, 0.2, -0.1, 0.3, 0, 0.05); g.bezierCurveTo(0.2, -0.3, -0.1, -0.6, 0.05, -1); g.closePath(); fs(g, fill, ink, lw);
       g.fillStyle = 'rgba(255,240,200,0.85)'; ellipse(g, 0.05, 0.55, 0.28, 0.34); g.fill();
       break;
+    case 'soles':      // a boot sole with cleats
+      shape([-0.95, 0.15, 0.95, 0.15, 0.95, 0.55, -0.95, 0.55]);
+      for (const x of [-0.7, -0.25, 0.2, 0.65]) shape([x - 0.16, 0.55, x + 0.16, 0.55, x, 1.0], dim ? '#aab4c4' : '#ffffff');
+      shape([-0.55, -0.9, 0.35, -0.9, 0.35, 0.15, -0.55, 0.15]);
+      break;
+    case 'wick':       // a flame in a ring of light
+      ellipse(g, 0, 0.1, 0.92, 0.92); g.strokeStyle = fill; g.lineWidth = 0.1; g.stroke();
+      g.beginPath(); g.moveTo(0, -0.8); g.bezierCurveTo(0.6, -0.1, 0.55, 0.7, 0, 0.7); g.bezierCurveTo(-0.55, 0.7, -0.5, -0.1, 0, -0.8); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,255,255,0.85)'; ellipse(g, 0, 0.3, 0.2, 0.28); g.fill();
+      break;
+    case 'cinder':     // a blade edge wreathed in flame
+      shape([-0.13, -0.05, 0.13, -0.05, 0.1, 0.7, 0, 0.98, -0.1, 0.7]); shape([-0.5, 0.7, 0.5, 0.7, 0.5, 0.86, -0.5, 0.86]);
+      g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(0.5, -0.6, 0.5, -0.2, 0.12, -0.05); g.lineTo(-0.12, -0.05); g.bezierCurveTo(-0.5, -0.25, -0.35, -0.6, 0, -1); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,255,255,0.8)'; ellipse(g, 0, -0.32, 0.1, 0.22); g.fill();
+      break;
     case 'shell':      // a ward shield
       g.beginPath(); g.moveTo(0, -0.98); g.lineTo(0.88, -0.6); g.bezierCurveTo(0.88, 0.4, 0.42, 0.82, 0, 1); g.bezierCurveTo(-0.42, 0.82, -0.88, 0.4, -0.88, -0.6); g.closePath(); fs(g, fill, ink, lw);
       g.strokeStyle = 'rgba(30,24,16,0.6)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(0, -0.7); g.lineTo(0, 0.75); g.moveTo(-0.6, -0.15); g.lineTo(0.6, -0.15); g.stroke();

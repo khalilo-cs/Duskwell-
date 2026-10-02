@@ -14,6 +14,9 @@ const Skins = (() => {
     ['boss_weaver', 'زعيم: حائكة الأشواك', 'Boss: Thorn Weaver'], ['boss_drowned', 'زعيم: العملاق الغريق', 'Boss: Drowned Giant'],
     ['boss_wraith', 'زعيم: شبح البلّور', 'Boss: Crystal Wraith'], ['boss_brood', 'زعيم: أم الحضنة', 'Boss: Brood Mother'],
     ['boss_king', 'زعيم: الملك المجوّف', 'Boss: Hollow King'],
+    ['mole', 'الخلد', 'Mole'], ['lavaworm', 'دودة الحمم', 'Lava Worm'], ['imp', 'عفريت القنابل', 'Bomb Imp'], ['veil', 'الحجاب', 'Veil'],
+    ['roller', 'المدحرج', 'Roller'], ['slime', 'الهلام', 'Slime'], ['chainman', 'حامل السلسلة', 'Chain Bearer'], ['moth', 'فراشة الليل', 'Night Moth'], ['icicle', 'الجليدة', 'Icicle'],
+    ['boss_queen', 'زعيم: ملكة الصقيع', 'Boss: Rime Queen'], ['boss_colossus', 'زعيم: العملاق الجمري', 'Boss: Cinder Colossus'],
   ];
   const imgs = {};          // slot -> HTMLImageElement
   let data = {};            // slot -> data URL

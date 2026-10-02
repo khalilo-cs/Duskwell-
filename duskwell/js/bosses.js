@@ -5,18 +5,21 @@
 function spawnShock(x, y, dir, speed, color, life) {
   G.projs.push(new Proj({ kind: 'shock', x, y, vx: dir * speed, vy: 0, w: 46, h: 36, dmg: 1, color: color || '#c9d3de', life: life || 1.8, pierce: true, passWalls: true }));
 }
-function spawnRock(x, tele) {
+// `pal` re-colours a projectile for the other areas: { fill, fill2, glow, rgb } (see Art.drawProj)
+function spawnRock(x, tele, pal) {
   const y0 = 2 * TILE;
-  G.projs.push(new Proj({ kind: 'rock', x, y: y0, y0, r: 17, vx: 0, vy: 0, grav: 1500, dmg: 1, tele: tele || 0.7, life: 4, color: '#8d97a3', passWalls: true }));
+  G.projs.push(new Proj({ kind: 'rock', x, y: y0, y0, r: 17, vx: 0, vy: 0, grav: 1500, dmg: 1, tele: tele || 0.7, life: 4, color: (pal && pal.glow) || '#8d97a3', passWalls: true, pal }));
 }
-function spawnBeam(x, tele, dur, w) {
+function spawnBeam(x, tele, dur, w, pal) {
   Sound.play('tele');
-  G.projs.push(new Proj({ kind: 'beam', x, y: 0, bw: w || 44, tele, dur: dur || 0.3, dmg: 1, life: 5, color: '#dff3ff', pierce: true, passWalls: true }));
+  G.projs.push(new Proj({ kind: 'beam', x, y: 0, bw: w || 44, tele, dur: dur || 0.3, dmg: 1, life: 5, color: '#dff3ff', pierce: true, passWalls: true, pal }));
 }
-function spawnPillar(x, y, tele, dur, h) {
+function spawnPillar(x, y, tele, dur, h, pal) {
   Sound.play('tele');
-  G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: '#ff9bd6', pierce: true, passWalls: true }));
+  G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: (pal && pal.glow) || '#ff9bd6', pierce: true, passWalls: true, pal }));
 }
+const ICE = { fill: '#bfe8ff', fill2: '#f4fcff', glow: '#9fdcff', rgb: '170,225,255', spike: true };
+const SLAG = { fill: '#ff8a3a', fill2: '#ffe08a', glow: '#ff7a2a', rgb: '255,150,70' };
 
 class Boss extends Enemy {
   constructor(def, w, h, cfg) {
@@ -39,12 +42,23 @@ class Boss extends Enemy {
     return { x: m.face > 0 ? this.cx + m.ox : this.cx - m.ox - m.w, y: this.y + m.oy, w: m.w, h: m.h };
   }
   *brain() { while (true) yield* this.chooseAttack(); }
+  *flyTo(tx, ty, speed, maxT) {
+    let t = maxT || 2;
+    while (t > 0) {
+      const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy);
+      if (d < 14) break;
+      this.vx = dx / d * speed; this.vy = dy / d * speed; this.face = sign(dx) || this.face; t -= this.dt; yield;
+    }
+    this.vx = this.vy = 0;
+  }
+  *hover(s) { let t = s; while (t > 0) { this.vy = Math.sin(this.t * 3) * 30; this.vx = 0; this.facePlayer(); t -= this.dt; yield; } this.vy = 0; }
 
   hurt(dmg, dir, how) {
     if (this.dead || this.state !== 'fight' || this.invul || this.ghostly) { if (!this.invul && this.state === 'fight') Sound.play('hit'); return; }
-    this.hp -= dmg; this.flash = 0.1; Sound.play('bossHit'); G.hitstop(0.05);
-    G.burst(this.cx + rand(-14, 14), this.cy + rand(-20, 20), 8, { color: this.blood, speed: 230, life: 0.4, size: 3 });
-    G.slashFx(this.cx, this.cy, dir);
+    const burn = how === 'burn';
+    this.hp -= dmg; this.flash = 0.1; if (!burn) { Sound.play('bossHit'); G.hitstop(0.05); }
+    G.burst(this.cx + rand(-14, 14), this.cy + rand(-20, 20), 8, { color: burn ? pick(['#ff8a3a', '#ffd070']) : this.blood, speed: burn ? 150 : 230, life: 0.4, size: 3 });
+    if (!burn) G.slashFx(this.cx, this.cy, dir);
     if (this.hp <= 0) { this.hp = 0; this.kill(); return; }
     const th = this.phases[this.phase - 1];
     if (th !== undefined && this.hp < this.maxHp * th) { this.phase++; this.spd = Math.max(0.55, this.spd * 0.78); this.co = this.shiftRoutine(); }
@@ -211,16 +225,6 @@ class Wraith extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
-  *flyTo(tx, ty, speed, maxT) {
-    let t = maxT || 2;
-    while (t > 0) {
-      const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy);
-      if (d < 14) break;
-      this.vx = dx / d * speed; this.vy = dy / d * speed; this.face = sign(dx) || this.face; t -= this.dt; yield;
-    }
-    this.vx = this.vy = 0;
-  }
-  *hover(s) { let t = s; while (t > 0) { this.vy = Math.sin(this.t * 3) * 30; this.vx = 0; this.facePlayer(); t -= this.dt; yield; } this.vy = 0; }
   *volley() {
     const L = G.level;
     const tx = clamp(G.player.cx + pick([-1, 1]) * rand(160, 280), 4 * TILE, L.pw - 4 * TILE);
@@ -564,4 +568,203 @@ class Brood extends Boss {
   }
 }
 
-const BOSS_TYPES = { guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };
+// ---------------------------------------------------------------- The Rime Queen
+// A floating sovereign of frost. She never touches the ground: fans of ice shards, falling icicles, rings of
+// cold, a low sweep across the hall and (from the second wound on) columns of killing light.
+class Queen extends Boss {
+  constructor(d) { super(d, 72, 100, { key: 'queen', hp: 210, geo: 240, phases: [0.66, 0.33], blood: '#cfeeff' }); this.grav = false; this.last = ''; }
+  get hoverY() { return this.floorY - 6 * TILE; }
+  *chooseAttack() {
+    yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.4 : 0.28);
+    const opts = ['shards', 'icefall', 'ring'];
+    if (this.phase >= 2) opts.push('sweep', 'beams');
+    if (this.phase >= 3) opts.push('blink');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  fan(n, spread, speed) {
+    const a = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx);
+    for (let i = 0; i < n; i++) {
+      const o = (i - (n - 1) / 2) * spread;
+      G.projs.push(new Proj({ kind: 'shard', x: this.cx, y: this.cy, vx: Math.cos(a + o) * speed, vy: Math.sin(a + o) * speed, r: 7, dmg: 1, color: '#9fdcff', life: 3, rot: a + o, pal: ICE }));
+    }
+  }
+  *shards() {
+    const L = G.level;
+    yield* this.flyTo(clamp(G.player.cx + pick([-1, 1]) * rand(170, 290), 4 * TILE, L.pw - 4 * TILE), this.hoverY, 380);
+    const rounds = this.phase >= 3 ? 4 : this.phase >= 2 ? 3 : 2;
+    for (let r = 0; r < rounds; r++) {
+      this.facePlayer(); this.tele = 1; Sound.play('tele');
+      yield* this.hover(0.45 * this.spd);
+      this.tele = 0; Sound.play('shoot');
+      this.fan(this.phase >= 2 ? 5 : 3, 0.26, 360);
+      yield* this.hover(0.32);
+    }
+    yield* this.wait(0.25);
+  }
+  *icefall() {
+    const L = G.level;
+    yield* this.flyTo(L.pw / 2, this.hoverY - 50, 380);
+    this.tele = 1; Sound.play('roar');
+    const n = this.phase >= 3 ? 9 : this.phase >= 2 ? 7 : 5;
+    for (let i = 0; i < n; i++) {
+      spawnRock(clamp(G.player.cx + rand(-280, 280), 3 * TILE, L.pw - 3 * TILE), 0.85, ICE);
+      yield* this.hover(0.2);
+    }
+    yield* this.hover(0.9);
+    this.tele = 0;
+  }
+  *ring() {
+    const L = G.level;
+    yield* this.flyTo(clamp(L.pw / 2 + rand(-120, 120), 5 * TILE, L.pw - 5 * TILE), this.hoverY - 20, 360);
+    this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.6 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    const rings = this.phase >= 2 ? 2 : 1, n = this.phase >= 3 ? 14 : 10;
+    for (let r = 0; r < rings; r++) {
+      const off = r * Math.PI / n + (this.phase >= 3 ? this.t : 0);
+      for (let i = 0; i < n; i++) {
+        const a = off + i * Math.PI * 2 / n;
+        G.projs.push(new Proj({ kind: 'orb', x: this.cx, y: this.cy, vx: Math.cos(a) * 210, vy: Math.sin(a) * 210, r: 10, dmg: 1, color: '#bfe8ff', life: 3.2, pal: ICE }));
+      }
+      yield* this.hover(0.55);
+    }
+    yield* this.hover(0.4);
+  }
+  *sweep() {                                   // a low pass across the hall: jump it, then the cold bursts up behind her
+    const L = G.level, side = this.cx < L.pw / 2 ? 1 : -1;
+    yield* this.flyTo(side > 0 ? 4 * TILE : L.pw - 4 * TILE, this.floorY - 50, 420);
+    this.face = side; this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.55 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.sweeping = true;
+    let t = 2.2;
+    while (t > 0 && ((side > 0 && this.cx < L.pw - 4 * TILE) || (side < 0 && this.cx > 4 * TILE))) {
+      this.vx = side * (this.phase >= 3 ? 640 : 540); this.vy = 0; this.doMelee(-this.w / 2 - 8, 6, this.w + 16, this.h - 6, 1, 0.05);
+      if (Math.random() < 0.5) G.burst(this.cx - side * 20, this.cy + rand(-20, 30), 1, { color: '#dff3ff', speed: 60, life: 0.4, size: 3 });
+      t -= this.dt; yield;
+    }
+    this.sweeping = false; this.vx = 0; Sound.play('slam'); G.shake(6, 0.2);
+    this.fan(5, 0.4, 340);
+    yield* this.flyTo(this.cx, this.hoverY, 380);
+  }
+  *beams() {
+    const L = G.level, n = 2 + this.phase;
+    yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
+    this.tele = 1;
+    for (let i = 0; i < n; i++) {
+      spawnBeam(i % 2 === 0 ? G.player.cx : clamp(G.player.cx + rand(-240, 240), 3 * TILE, L.pw - 3 * TILE), 0.8, 0.3, 44, ICE);
+      yield* this.hover(0.5);
+    }
+    yield* this.hover(0.9);
+    this.tele = 0;
+  }
+  *blink() {
+    const L = G.level;
+    this.ghostly = true;
+    for (let a = 1; a > 0; a -= 0.1) { this.alpha = a; yield; }
+    this.alpha = 0; yield* this.wait(0.3);
+    this.x = clamp(G.player.cx + pick([-1, 1]) * rand(140, 300), 4 * TILE, L.pw - 4 * TILE) - this.w / 2; this.y = this.hoverY - rand(0, 70);
+    for (let a = 0; a < 1; a += 0.1) { this.alpha = a; yield; }
+    this.alpha = 1; this.ghostly = false;
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.35);
+    this.tele = 0; Sound.play('shoot'); this.fan(7, 0.2, 400);
+    yield* this.hover(0.3);
+  }
+}
+
+// ---------------------------------------------------------------- The Cinder Colossus
+// A walking furnace of basalt. Slow, huge and honest: every blow is announced. It lobs bombs of slag, rolls
+// into walls, calls geysers up under the hero's feet and, when nearly spent, shakes the whole floor.
+class Colossus extends Boss {
+  constructor(d) { super(d, 118, 150, { key: 'colossus', hp: 300, geo: 340, phases: [0.66, 0.33], blood: '#ffb070' }); this.last = ''; this.rolling = false; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.8 : this.phase === 2 ? 0.55 : 0.38);
+    const opts = ['smash', 'lob', 'roll'];
+    if (this.phase >= 2) opts.push('geysers', 'rain');
+    if (this.phase >= 3) opts.push('quake');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  slagDrops(n) {
+    const L = G.level;
+    for (let i = 0; i < n; i++) spawnRock(clamp(G.player.cx + rand(-280, 280), 3 * TILE, L.pw - 3 * TILE), 0.75 + i * 0.12, SLAG);
+  }
+  *smash() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.85 * this.spd);
+    this.tele = 0; this.doMelee(24, 18, 150, 112, 2, 0.25);
+    Sound.play('slam'); G.shake(9, 0.3);
+    spawnShock(this.cx + this.face * 80, this.y + this.h, this.face, 440, '#ff9a50');
+    if (this.phase >= 2) spawnShock(this.cx - this.face * 80, this.y + this.h, -this.face, 440, '#ff9a50');
+    G.burst(this.cx + this.face * 70, this.y + this.h, 16, { color: '#ff9a50', speed: 220, life: 0.6, size: 4, vy: -80 });
+    if (this.phase >= 2) this.slagDrops(this.phase >= 3 ? 4 : 2);
+    yield* this.wait(0.9 * this.spd);
+  }
+  *lob() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.55 * this.spd);
+    this.tele = 0;
+    const n = this.phase >= 3 ? 3 : this.phase >= 2 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      this.facePlayer(); Sound.play('shoot');
+      const x = this.cx + this.face * 40, y = this.y + 30, p = G.player, g = 1100, T = 0.95 + i * 0.12;
+      G.projs.push(new Proj({ kind: 'bomb', x, y, r: 11, vx: clamp((p.cx - x + rand(-40, 40)) / T, -420, 420), vy: (p.cy - y - 0.5 * g * T * T) / T, grav: g, fuse: 2.2, life: 4, dmg: 1, color: '#ff8a3a', blastR: 74 }));
+      yield* this.wait(0.35);
+    }
+    yield* this.wait(0.55 * this.spd);
+  }
+  *roll() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.6 * this.spd);
+    this.tele = 0; this.rolling = true;
+    let t = 1.8;
+    while (t > 0) {
+      this.vx = this.face * (this.phase >= 3 ? 560 : 480); this.doMelee(-this.w / 2, 24, this.w, this.h - 24, 1, 0.05);
+      t -= this.dt; if (this.hitL || this.hitR) break;
+      if (Math.random() < 0.4) G.burst(this.cx - this.face * 40, this.y + this.h - 6, 1, { color: '#ff9a50', speed: 80, life: 0.4, size: 3, vy: -40 });
+      yield;
+    }
+    this.vx = 0; this.rolling = false; Sound.play('slam'); G.shake(8, 0.3); this.stunned = true;
+    this.slagDrops(this.phase >= 2 ? 3 : 2);
+    yield* this.wait(1.15);
+    this.stunned = false;
+  }
+  *geysers() {
+    const L = G.level, n = this.phase >= 3 ? 5 : 3;
+    this.tele = 1; Sound.play('roar');
+    yield* this.wait(0.4);
+    for (let i = 0; i < n; i++) {
+      spawnPillar(clamp(G.player.cx + (i - (n - 1) / 2) * 110 + rand(-30, 30), 3 * TILE, L.pw - 3 * TILE), this.floorY, 0.9, 0.45, 300, SLAG);
+      yield* this.wait(0.2);
+    }
+    yield* this.wait(1.1);
+    this.tele = 0;
+  }
+  *rain() {
+    this.tele = 1; Sound.play('roar');
+    const n = this.phase >= 3 ? 10 : 7;
+    for (let i = 0; i < n; i++) { this.slagDrops(1); yield* this.wait(0.22); }
+    yield* this.wait(1.0);
+    this.tele = 0;
+  }
+  *quake() {                                   // a great leap; the landing sends fire along the floor both ways
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.55 * this.spd);
+    this.tele = 0;
+    this.vy = -860; this.vx = clamp((G.player.cx - this.cx) / 0.78, -440, 440); this.onGround = false;
+    yield; yield;
+    yield* this.until(() => this.onGround, 2);
+    this.vx = 0; Sound.play('slam'); G.shake(12, 0.45); G.flash = 0.25;
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 60, this.y + this.h, d, 420, '#ff9a50');
+    for (let i = 1; i <= 4; i++) {
+      for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'blast', x: this.cx + d * (60 + i * 78), y: this.y + this.h - 12, r: 20, r0: 62, dmg: 1, life: 0.45, pierce: true, passWalls: true, color: '#ff8a3a' }));
+      Sound.play('slam');
+      yield* this.wait(0.14);
+    }
+    yield* this.wait(0.7 * this.spd);
+  }
+}
+
+const BOSS_TYPES = { queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };

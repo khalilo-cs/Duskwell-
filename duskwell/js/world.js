@@ -10,7 +10,7 @@ class RoomBuilder {
     this.id = id; this.w = w; this.h = h;
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
-    this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = [];
+    this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = []; this.iceCells = new Set();
     this.signs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
@@ -28,6 +28,8 @@ class RoomBuilder {
   bounce(x, y, w) { return this.fill(x, y, w, 1, T_BOUNCE); }          // mushroom cap: launches the player
   crack(x, y, w, h) { return this.fill(x, y, w, h || 1, T_CRACK); }    // only a dive breaks it
   acid(x, y, w, h) { return this.fill(x, y, w, h || 1, T_ACID); }
+  ice(x, y, w, h) { h = h || 1; this.fill(x, y, w, h, T_SOLID); for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) this.iceCells.add(j * this.w + i); return this; }     // slippery rock
+  lava(x, y, w, h) { return this.fill(x, y, w, h || 1, T_ACID); }                                                                                      // looks like lava in Cinderdeep
   crumble(x, y, w) { return this.fill(x, y, w, 1, T_CRUMBLE); }          // gives way soon after it is stood on
   // machinery (see mechanics.js): coordinates in tiles; saws are placed by their centre
   mover(x, y, w, tx, ty, o) { this.mech.push(Object.assign({ type: 'mover', x, y, w, to: { x: tx, y: ty } }, o || {})); return this; }
@@ -42,6 +44,40 @@ class RoomBuilder {
   station(x, y) { this.stations.push({ x, y }); return this; }          // lantern station: fast travel between lit stations
   sign(x, y, text) { this.signs.push({ x, y, text }); return this; }
   decor(type, x, y, o) { this.deco.push(Object.assign({ type, x, y }, o || {})); return this; }
+  // Draws the whole room from text, one character per tile (rows are y = 0..h-1, x = 0..w-1):
+  //   # solid   = one-way plate   ^ spikes   ~ acid or lava   b breakable wall   c cracked floor
+  //   m bounce cap   i ice (solid and slippery)   space = air
+  // Other characters come from the legend and mark what stands in that tile:
+  //   ['enemy', type, opts]  ['item', id, kind, opts]  ['bench']  ['station']  ['sign', text]  ['npc', type]
+  //   ['light', opts]  and ['door', id, to, toDoor]: all cells of one door letter form its rectangle.
+  ascii(rows, legend) {
+    legend = legend || {};
+    if (rows.length !== this.h) throw new Error(this.id + ': ' + rows.length + ' rows, expected ' + this.h);
+    const doors = {};
+    rows.forEach((row, y) => {
+      if (row.length !== this.w) throw new Error(this.id + ' row ' + y + ': ' + row.length + ' columns, expected ' + this.w);
+      for (let x = 0; x < this.w; x++) {
+        const ch = row[x], i = y * this.w + x;
+        const tile = { '#': T_SOLID, '=': T_ONEWAY, '^': T_HAZARD, '~': T_ACID, b: T_BREAK, c: T_CRACK, m: T_BOUNCE, i: T_SOLID }[ch];
+        this.t[i] = tile === undefined ? T_AIR : tile;
+        if (ch === 'i') this.iceCells.add(i);
+        if (tile !== undefined || ch === ' ') continue;
+        const e = legend[ch];
+        if (!e) throw new Error(this.id + ' (' + x + ',' + y + '): "' + ch + '" is not in the legend');
+        if (e[0] === 'door') { (doors[ch] = doors[ch] || { e, x0: x, y0: y, x1: x, y1: y }); const d = doors[ch]; d.x0 = Math.min(d.x0, x); d.y0 = Math.min(d.y0, y); d.x1 = Math.max(d.x1, x); d.y1 = Math.max(d.y1, y); }
+        else if (e[0] === 'enemy') this.enemy(e[1], x, y, e[2]);
+        else if (e[0] === 'item') this.item(e[1], x, y, e[2], e[3]);
+        else if (e[0] === 'bench') this.bench(x, y);
+        else if (e[0] === 'station') this.station(x, y);
+        else if (e[0] === 'sign') this.sign(x, y, e[1]);
+        else if (e[0] === 'npc') this.npc(e[1], x, y);
+        else if (e[0] === 'light') this.decor('light', x, y, e[1]);
+        else throw new Error(this.id + ': unknown legend kind ' + e[0]);
+      }
+    });
+    for (const k of Object.keys(doors)) { const d = doors[k]; this.door(d.e[1], d.x0, d.y0, d.x1 - d.x0 + 1, d.y1 - d.y0 + 1, d.e[2], d.e[3]); }
+    return this;
+  }
   at(x, y) { return (x < 0 || y < 0 || x >= this.w || y >= this.h) ? T_SOLID : this.t[y * this.w + x]; }
   finish() {
     // doors are cut last so they always open the frame
@@ -68,6 +104,8 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   town.npc('elder', 17, 17).npc('merchant', 40, 17);
   town.sign(7, 17, 'sign_controls');
   town.plat(24, 14, 5).plat(34, 13, 4);
+  town.door('east', 63, 15, 1, 3, 'fr1', 'w').door('west', 0, 15, 1, 3, 'em1', 'e');          // Rimecrest to the east, Cinderdeep to the west
+  town.sign(59, 17, 'sign_to_frost').sign(2, 17, 'sign_to_ember');
 
   // ===================== SUNKEN CROSSROADS =====================
   const cx1 = room('cx1', 40, 44, { area: 'crossroads', theme: 'cave', map: { x: 5, y: 3 } });
@@ -503,6 +541,4 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   charm('aq3', 'dashmaster', 7, 19);  // inside the secret pocket
   charm('cs4', 'mage', 10, 13);       // on the ledge above the stash
   charm('fd3', 'fury', 68, 11);       // the raised reward ledge of the Rustworks
-  WORLD.order = Object.keys(WORLD.rooms);
-  for (const id of WORLD.order) WORLD.rooms[id].finish();
 })();

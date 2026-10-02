@@ -2,7 +2,7 @@
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
+const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
@@ -336,6 +336,14 @@ function updatePlay(dt) {
       if (e.alpha !== undefined && e.alpha < 0.6) continue;
       if (overlap(hb, e.body())) P.hurt(e.dmg, e.cx);
     }
+  }
+
+  // Cinder Edge: a struck enemy smoulders, then takes the burn
+  for (const e of G.enemies) {
+    if (!(e.burnT > 0) || e.dead) continue;
+    e.burnT -= dt;
+    if (Math.random() < 0.45) G.burst(e.cx + rand(-10, 10), e.cy + rand(-16, 10), 1, { color: pick(['#ff8a3a', '#ffd070']), speed: 40, life: 0.5, size: 2, vy: -55 });
+    if (e.burnT <= 0) e.hurt(3, 0, 'burn');
   }
 
   // arena trigger
@@ -673,7 +681,7 @@ function drawMenu(g, items, sel, y0, step) {
 }
 
 // colour of the air, specular shine of the rock and how much the heat shimmers, per area
-const SHINE = { aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
+const SHINE = { frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
   const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
@@ -705,7 +713,7 @@ function drawWorld(g) {
     const v = L.get(x, y);
     if (v === T_BREAK) Art.drawBreak(gs, x, y, th, t); else if (v === T_GATE) Art.drawGate(gs, x, y, th, t);
     else if (v === T_CRACK) Art.drawCrack(gs, x, y, th, t);
-    else if (v === T_ACID) Art.drawAcid(gs, x, y, L.get(x, y - 1) !== T_ACID, t);
+    else if (v === T_ACID) Art.drawAcid(gs, x, y, L.get(x, y - 1) !== T_ACID, t, th);
   }
   Art.mechFront(gs, t, th);
   for (const b of G.benches) Art.drawBench(gs, b, t, P.sitting === b);
@@ -731,7 +739,7 @@ function drawWorld(g) {
     const img = lum.render({
       lights: collectLights(cx, cy), cx, cy, time: t,
       dark: DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme], tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
-      aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : 0, shaft: sun,
+      aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
     });
     if (img) g.drawImage(img, 0, 0, VW, VH);
     else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
@@ -765,7 +773,7 @@ function drawWorld(g) {
 function collectLights(cx, cy, skipPlayer) {
   const L = G.level, th = THEMES[L.def.theme], out = [];
   const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
-  if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
+  if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, (P.focusT > 0 ? 300 : 250) * (Charms.has('wick') ? 1.4 : 1), 1, '#cfe8ff');
   if (P.wailT > 0) add(P.cx, (P.wailTop + P.y) / 2, 320, 1, '#dff3ff');
   for (const d of L.def.deco) {
     if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
@@ -785,6 +793,10 @@ function collectLights(cx, cy, skipPlayer) {
     else if (e.glowR) add(e.cx, e.cy, e.glowR, 0.7, e.blood);
   }
   for (const d of L.def.doors) add((d.x + d.w / 2) * TILE, (d.y + d.h / 2) * TILE, 170, 0.55, th.fog);
+  if (th.name === 'ember') {                    // lava glows: a light along every few surface tiles that are on screen
+    const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE) - 1), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (L.get(x, y) === T_ACID && L.get(x, y - 1) !== T_ACID && (x + y) % 4 === 0) add(x * TILE + 16, y * TILE, 120, 0.7, '#ff7a30');
+  }
   Mech.lights(add, th);
   return out;
 }

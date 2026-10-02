@@ -12,7 +12,12 @@ class Level {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return T_SOLID;
     return this.t[ty * this.w + tx];
   }
-  set(tx, ty, v) { if (tx >= 0 && ty >= 0 && tx < this.w && ty < this.h) this.t[ty * this.w + tx] = v; }
+  set(tx, ty, v) {
+    if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return;
+    const rock = a => a === T_SOLID || a === T_BREAK || a === T_GATE || a === T_CRACK, old = this.t[ty * this.w + tx];
+    this.t[ty * this.w + tx] = v;
+    if (rock(old) !== rock(v)) Lumen.invalidate();          // the baked relief of the rock is out of date
+  }
   solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK || v === T_CRUMBLE; }
   hazard(tx, ty) { const v = this.get(tx, ty); return v === T_HAZARD || v === T_ACID; }
   solidAtPx(x, y) { return this.solid(Math.floor(x / TILE), Math.floor(y / TILE)); }

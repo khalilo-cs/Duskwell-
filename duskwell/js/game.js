@@ -434,10 +434,15 @@ function titleItems() {
   a.push({ id: 'lang', label: tr('lang') });
   return a;
 }
+function gfxLabel() {
+  const m = Lumen.mode(), ar = LANG.cur === 'ar';
+  if (!Lumen.ready()) return ar ? 'قديمة (WebGL غير متاح)' : 'Classic (no WebGL)';
+  return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
+}
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
-    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 function updatePause() {
   const items = pauseItems();
@@ -453,6 +458,7 @@ function updatePause() {
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
+    else if (id === 'gfx' && Lumen.ready()) Lumen.setMode({ auto: 2, 2: 1, 1: 0, 0: 'auto' }[Lumen.mode()]);
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
 }
@@ -666,49 +672,71 @@ function drawMenu(g, items, sel, y0, step) {
   });
 }
 
+// colour of the air, specular shine of the rock and how much the heat shimmers, per area
+const SHINE = { aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
-  Art.drawBackground(g, L, G.cam.x, G.cam.y, t);
+  const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
+  let lumFailed = false;
+  const lay = lum ? lum.begin(G.k) : null;
+  const gs = lay ? lay.sg : g, ge = lay ? lay.eg : g;         // scene layer, creature layer
+  Art.drawBackground(gs, L, G.cam.x, G.cam.y, t);
   let sx = 0, sy = 0;
   if (G.shakeT > 0) { const a = G.shakeA * Math.min(1, G.shakeT * 3); sx = rand(-a, a); sy = rand(-a, a); }
   const cx = Math.round(G.cam.x + sx), cy = Math.round(G.cam.y + sy);
-  g.save(); g.translate(-cx, -cy);
+  gs.save(); gs.translate(-cx, -cy);
+  if (ge !== gs) { ge.save(); ge.translate(-cx, -cy); }
   for (const d of L.def.deco) {
-    if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(g, d, t, th);
-    else if (d.type === 'gear') Art.drawGear(g, d, t, th);
-    else if (d.type === 'chimney') Art.drawChimney(g, d, t, th);
+    if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(gs, d, t, th);
+    else if (d.type === 'gear') Art.drawGear(gs, d, t, th);
+    else if (d.type === 'chimney') Art.drawChimney(gs, d, t, th);
   }
   // tile layer
-  Art.mechBack(g, t);
+  Art.mechBack(gs, t);
   const s = Math.min(G.k, 1.5);
   if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.renderLevel(L, s); G.tileScale = s; G.tileRoom = L.id; }
   const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW, L.pw - vx), vh = Math.min(VH, L.ph - vy);
-  if (vw > 0 && vh > 0) g.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
-  for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(g, d, t, th);
-    else if (d.type === 'seals') Art.drawSeals(g, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
+  if (vw > 0 && vh > 0) gs.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
+  for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(gs, d, t, th);
+    else if (d.type === 'seals') Art.drawSeals(gs, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
   // breakable walls and gates
   const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE)), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const v = L.get(x, y);
-    if (v === T_BREAK) Art.drawBreak(g, x, y, th, t); else if (v === T_GATE) Art.drawGate(g, x, y, th, t);
-    else if (v === T_CRACK) Art.drawCrack(g, x, y, th, t);
-    else if (v === T_ACID) Art.drawAcid(g, x, y, L.get(x, y - 1) !== T_ACID, t);
+    if (v === T_BREAK) Art.drawBreak(gs, x, y, th, t); else if (v === T_GATE) Art.drawGate(gs, x, y, th, t);
+    else if (v === T_CRACK) Art.drawCrack(gs, x, y, th, t);
+    else if (v === T_ACID) Art.drawAcid(gs, x, y, L.get(x, y - 1) !== T_ACID, t);
   }
-  Art.mechFront(g, t, th);
-  for (const b of G.benches) Art.drawBench(g, b, t, P.sitting === b);
-  for (const n of G.npcs) Art.drawNPC(g, n, t);
-  for (const s2 of G.stations) Art.drawStation(g, s2, t, stationLit(s2.room));
-  for (const s2 of G.signs) Art.drawSign(g, s2, t);
-  for (const it of G.items) Art.drawItem(g, it, t);
-  for (const c of G.geos) Art.drawGeo(g, c, t);
-  Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
+  Art.mechFront(gs, t, th);
+  for (const b of G.benches) Art.drawBench(gs, b, t, P.sitting === b);
+  for (const n of G.npcs) Art.drawNPC(gs, n, t);
+  for (const s2 of G.stations) Art.drawStation(gs, s2, t, stationLit(s2.room));
+  for (const s2 of G.signs) Art.drawSign(gs, s2, t);
+  for (const it of G.items) Art.drawItem(gs, it, t);
+  for (const c of G.geos) Art.drawGeo(gs, c, t);
+  if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
   for (const e of G.enemies) {
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
-    if (skin) Skins.draw(g, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
-    else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](g, e, t); }
-    else if (Art.enemy[e.kind]) Art.enemy[e.kind](g, e, t);
+    if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
+    else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](ge, e, t); }
+    else if (Art.enemy[e.kind]) Art.enemy[e.kind](ge, e, t);
   }
-  Art.drawPlayer(g, P, t);
+  Art.drawPlayer(ge, P, t);
+  if (lum) Pixel.setFlat(false);
+  gs.restore(); if (ge !== gs) ge.restore();
+  if (lum) {
+    lum.bakeRoom(L);
+    const fogc = hexToRgb(th.fog).map(v => v / 255);
+    const sun = L.def.theme === 'town' ? { x: VW * 0.72 - G.cam.x * 0.02, y: 200, k: 0.28 } : L.def.theme === 'throne' ? { x: VW * 0.5 - G.cam.x * 0.04, y: 190, k: 0.3 } : null;
+    const img = lum.render({
+      lights: collectLights(cx, cy), cx, cy, time: t,
+      dark: DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme], tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
+      aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : 0, shaft: sun,
+    });
+    if (img) g.drawImage(img, 0, 0, VW, VH);
+    else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
+  }
+  g.save(); g.translate(-cx, -cy);
   if (P.wailT > 0) Art.drawWail(g, P, t);
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
@@ -722,7 +750,7 @@ function drawWorld(g) {
   }
   g.globalAlpha = 1;
   g.restore();
-  Art.drawLighting(g, G.k, L.def.theme, collectLights(cx, cy));
+  if (!lum || lumFailed) Art.drawLighting(g, G.k, L.def.theme, collectLights(cx, cy));
   Art.drawFog(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawForeground(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawAmbient(g, STEP, L.def.theme, G.cam.x, G.cam.y, t);
@@ -975,7 +1003,7 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 168, 44); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 152, 40); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
@@ -994,7 +1022,7 @@ function resize() {
 }
 function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
-  Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
+  Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
   const wake = () => Sound.init();
   // tapping the picture focuses it for the keyboard and works as "confirm" on menus
   G.canvas.addEventListener('pointerdown', () => {
@@ -1010,7 +1038,8 @@ function boot() {
     const dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
     Input.poll();
     let guard = 0;
-    if (G.manual) { acc = 0; draw(); return; }
+    if (G.manual) { acc = 0; return; }     // bots step the game themselves and ask for a picture with DW.draw()
+    Lumen.adapt(dt * 1000);
     while (acc >= STEP && guard++ < 6) { update(STEP); acc -= STEP; Input.endStep(); }
     if (guard >= 6) acc = 0;
     draw();
@@ -1029,5 +1058,5 @@ function refreshTouchLabels() {
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;
-window.DW = { G, P, Charms, enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
+window.DW = { G, P, Charms, Lumen, draw: () => draw(), enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
 window.addEventListener('DOMContentLoaded', boot);

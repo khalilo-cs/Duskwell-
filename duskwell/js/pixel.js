@@ -10,6 +10,7 @@ const Pixel = (() => {
   const sheets = {};
   let lights = [], ambient = [0.5, 0.52, 0.6];
   let work = null, wg = null;                 // scratch canvas a frame is lit into
+  let flat = false, shadowG = null;           // Lumen mode: no lighting here, shadows go to another context
 
   // ---------------------------------------------------------------- loading and normal maps
   function load(name, meta) {
@@ -77,6 +78,17 @@ const Pixel = (() => {
     const s = sheets[name]; if (!s || !s.ready) return false;
     o = o || {};
     const F = s.frames[frame % s.frames.length], m = s.meta, k = o.scale || SCALE, face = o.face || 1;
+    if (flat) {                                   // Lumen lights everything on screen: draw the plain pixels
+      const [cw, ch] = m.cell;
+      g.save(); g.imageSmoothingEnabled = false;
+      if (o.alpha != null) g.globalAlpha *= o.alpha;
+      g.translate(fx, fy); if (o.rot) g.rotate(o.rot);
+      g.scale(face * k * (o.sx || 1), k * (o.sy || 1));
+      g.drawImage(s.img, (frame % s.frames.length) * cw, 0, cw, ch, -m.mid, -m.feet, cw, ch);
+      g.restore();
+      if (o.flash > 0) silhouette(g, name, frame, fx, fy, { tint: '#ffffff', alpha: Math.min(1, o.flash), face, scale: k, sx: o.sx, sy: o.sy });
+      return true;
+    }
     if (!work || work.width < F.w || work.height < F.h) { work = document.createElement('canvas'); work.width = 64; work.height = 64; wg = work.getContext('2d'); }
     const img = wg.createImageData(F.w, F.h), out = img.data;
     // the strongest few lights at this sprite
@@ -148,6 +160,7 @@ const Pixel = (() => {
   // soft contact shadow on the ground under a body; fades and shrinks as it rises
   function shadow(g, cx, feetY, w) {
     const L = G.level; if (!L) return;
+    if (shadowG) g = shadowG;                     // under Lumen the shadow belongs to the scene layer, below the creatures
     const tx = Math.floor(cx / TILE);
     let ty = Math.floor((feetY + 2) / TILE), lift = 0;
     while (ty < L.h && !L.ground(tx, ty) && lift < 8) { ty++; lift++; }
@@ -168,5 +181,5 @@ const Pixel = (() => {
   }
 
   for (const k in SPRITE_META) load(k, SPRITE_META[k]);
-  return { draw, silhouette, shadow, setScene, frameOf, ready: n => !!(sheets[n] && sheets[n].ready), meta: n => sheets[n] && sheets[n].meta, SCALE };
+  return { setFlat(on, g) { flat = !!on; shadowG = on ? g : null; }, draw, silhouette, shadow, setScene, frameOf, ready: n => !!(sheets[n] && sheets[n].ready), meta: n => sheets[n] && sheets[n].meta, SCALE };
 })();

@@ -12,7 +12,8 @@ const Sound = (() => {
   const ROOT = { foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
   const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry' };
-  const MUSIC_DIR = 'audio/music/';
+  const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
+  const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   const MUSIC_VOL = 0.8;
   const MASTER_VOL = 0.55;
 
@@ -37,6 +38,7 @@ const Sound = (() => {
       else { ctx.resume(); if (Score.el && !muted) Score.el.play().catch(() => {}); }
     });
     Score.start();
+    Rec.start();
   }
 
   // ------------------------------------------------------------------ recorded score
@@ -122,6 +124,66 @@ const Sound = (() => {
         if (old) old.volume = Math.max(0, old.volume * (1 - k));
         if (k >= 1) { clearInterval(this.fadeTimer); if (old) old.pause(); }
       }, 50);
+    },
+  };
+
+  // ------------------------------------------------------------------ recorded effects and ambience
+  // CC0 recordings (see CREDITS.md) that replace or sit under the synthesised effects. They need
+  // fetch(), so from file:// the game keeps its synthesised sounds.
+  const Rec = {
+    meta: null, bufs: new Map(), last: {}, amb: null, ambWant: null, ambBus: null,
+    start() {
+      if (location.protocol === 'file:') return;
+      this.ambBus = ctx.createGain(); this.ambBus.gain.value = 0.5; this.ambBus.connect(master);
+      fetch(SFX_DIR + 'sfx.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(m => {
+        this.meta = m;
+        const names = new Set();
+        for (const e of Object.values(m.events)) e.files.forEach(f => names.add(f));
+        Promise.all([...names].map(n => this.decode(n))).then(() => this.ambience());
+      }).catch(() => { this.meta = null; });
+    },
+    decode(name) {
+      return fetch(SFX_DIR + name + '.mp3').then(r => r.arrayBuffer())
+        .then(d => new Promise((ok, fail) => { const q = ctx.decodeAudioData(d, ok, fail); if (q && q.catch) q.catch(fail); }))
+        .then(b => { this.bufs.set(name, b); return b; }, () => null);
+    },
+    // returns 'replace', 'layer' or false (nothing recorded for this event)
+    play(name) {
+      const e = this.meta && this.meta.events[name];
+      if (!e || !ctx || muted) return false;
+      const picks = e.files.filter(f => this.bufs.has(f));
+      if (!picks.length) return false;
+      const now = ctx.currentTime;
+      if (now - (this.last[name] || 0) < 0.04) return e.layer ? 'layer' : 'replace';        // no machine-gun stacking
+      this.last[name] = now;
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = this.bufs.get(pick(picks));
+      src.playbackRate.value = e.rate[0] + Math.random() * (e.rate[1] - e.rate[0]);
+      g.gain.value = e.gain;
+      src.connect(g); g.connect(sfxBus); src.start();
+      return e.layer ? 'layer' : 'replace';
+    },
+    ambience() {
+      if (!this.meta || !ctx) return;
+      const name = AMB_THEME[theme] || null;
+      if (name === this.ambWant) return;
+      this.ambWant = name;
+      const t = ctx.currentTime;
+      if (this.amb) {
+        const old = this.amb; this.amb = null;
+        old.gain.gain.cancelScheduledValues(t); old.gain.gain.setValueAtTime(old.gain.gain.value, t); old.gain.gain.linearRampToValueAtTime(0, t + 2.5);
+        try { old.src.stop(t + 2.6); } catch (e) { /* stopped */ }
+      }
+      const a = name && this.meta.ambience[name]; if (!a) return;
+      const load = this.bufs.has(a.file) ? Promise.resolve(this.bufs.get(a.file)) : this.decode(a.file);
+      load.then(buf => {
+        if (!buf || this.ambWant !== name) return;
+        const src = ctx.createBufferSource(), g = ctx.createGain();
+        src.buffer = buf; src.loop = true; src.connect(g); g.connect(this.ambBus);
+        const now = ctx.currentTime;
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(a.gain, now + 3);
+        src.start(); this.amb = { src, gain: g };
+      });
     },
   };
 
@@ -225,9 +287,9 @@ const Sound = (() => {
 
   return {
     init,
-    play(name) { try { if (FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
+    play(name) { try { const r = Rec.play(name); if (r !== 'replace' && FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
     // area theme: 'title', 'town', 'cave', 'moss', ... (see TRACK)
-    setTheme(t) { if (t !== theme) { theme = t; Score.update(); } },
+    setTheme(t) { if (t !== theme) { theme = t; Score.update(); Rec.ambience(); } },
     // boss music on/off; the final boss has a theme of its own
     boss(on, final) {
       const track = final ? 'king' : 'boss';
@@ -245,6 +307,7 @@ const Sound = (() => {
       return !muted;
     },
     isOn: () => !muted,
+    sfxState: () => ({ loaded: !!Rec.meta, buffers: Rec.bufs.size, ambience: Rec.ambWant, ambiencePlaying: !!Rec.amb }),
     musicState: () => ({ mode: Score.mode, want: Score.want, playing: Score.cur ? Score.cur.name : (Score.el ? Score.el.src : null), cached: [...Score.cache.keys()] }),
   };
 })();

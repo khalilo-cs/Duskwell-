@@ -1,0 +1,162 @@
+{
+ "events": {
+  "slash": {
+   "files": [
+    "medieval_fantasy_sounds_woosh_1",
+    "medieval_fantasy_sounds_woosh_2",
+    "western_fps_2d_sounds_woosh_1",
+    "western_fps_2d_sounds_woosh_2",
+    "western_fps_2d_sounds_woosh_3"
+   ],
+   "rate": [
+    0.92,
+    1.1
+   ],
+   "gain": 0.8,
+   "layer": false
+  },
+  "hit": {
+   "files": [
+    "prehistoric_platformer_sound_hit_1",
+    "prehistoric_platformer_sound_hit_2",
+    "western_fps_2d_sounds_impact_1"
+   ],
+   "rate": [
+    0.9,
+    1.1
+   ],
+   "gain": 0.9,
+   "layer": false
+  },
+  "bossHit": {
+   "files": [
+    "prehistoric_platformer_sound_hit_1",
+    "prehistoric_platformer_sound_hit_2",
+    "western_fps_2d_sounds_impact_1"
+   ],
+   "rate": [
+    0.7,
+    0.85
+   ],
+   "gain": 1.0,
+   "layer": false
+  },
+  "enemyDie": {
+   "files": [
+    "medieval_fantasy_sounds_monster_1",
+    "medieval_fantasy_sounds_monster_2",
+    "prehistoric_platformer_sound_dinosaur_5"
+   ],
+   "rate": [
+    0.8,
+    1.0
+   ],
+   "gain": 0.9,
+   "layer": true
+  },
+  "roar": {
+   "files": [
+    "prehistoric_platformer_sound_dinosaur_1",
+    "prehistoric_platformer_sound_dinosaur_3",
+    "prehistoric_platformer_sound_dinosaur_4"
+   ],
+   "rate": [
+    0.55,
+    0.7
+   ],
+   "gain": 1.0,
+   "layer": true
+  },
+  "bossDie": {
+   "files": [
+    "western_fps_2d_sounds_explosion_1",
+    "western_fps_2d_sounds_explosion_2",
+    "western_fps_2d_sounds_explosion_3"
+   ],
+   "rate": [
+    0.5,
+    0.65
+   ],
+   "gain": 1.0,
+   "layer": true
+  },
+  "slam": {
+   "files": [
+    "western_fps_2d_sounds_explosion_2",
+    "western_fps_2d_sounds_explosion_3"
+   ],
+   "rate": [
+    0.75,
+    0.9
+   ],
+   "gain": 0.9,
+   "layer": true
+  },
+  "break": {
+   "files": [
+    "prehistoric_platformer_sound_wood_1",
+    "prehistoric_platformer_sound_wood_2",
+    "prehistoric_platformer_sound_wood_3",
+    "prehistoric_platformer_sound_wood_4",
+    "prehistoric_platformer_sound_wood_5"
+   ],
+   "rate": [
+    0.7,
+    0.85
+   ],
+   "gain": 0.9,
+   "layer": true
+  },
+  "geo": {
+   "files": [
+    "ninja_adventure_sounds_gold_1"
+   ],
+   "rate": [
+    0.95,
+    1.1
+   ],
+   "gain": 0.7,
+   "layer": false
+  },
+  "ability": {
+   "files": [
+    "ninja_adventure_sounds_power_up"
+   ],
+   "rate": [
+    1.0,
+    1.0
+   ],
+   "gain": 0.8,
+   "layer": true
+  },
+  "heal": {
+   "files": [
+    "ninja_adventure_sounds_power_up_2"
+   ],
+   "rate": [
+    1.0,
+    1.0
+   ],
+   "gain": 0.7,
+   "layer": true
+  },
+  "bench": {
+   "files": [
+    "ninja_adventure_sounds_secret_1"
+   ],
+   "rate": [
+    1.0,
+    1.0
+   ],
+   "gain": 0.8,
+   "layer": true
+  }
+ },
+ "ambience": {
+  "forest": {
+   "file": "amb_forest",
+   "loop": 28.5002,
+   "gain": 0.5
+  }
+ }
+}

@@ -296,8 +296,8 @@ class Player {
       if (overlap(hb, e.hb())) {
         this.hits.add(e);
         const dir = this.atkDir === 'side' ? this.face : (e.cx > cx ? 1 : -1);
-        e.hurt(this.nailDamage(), dir, this.atkDir);
-        this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
+        const landed = e.hurt(this.nailDamage(), dir, this.atkDir);      // false: a shield turned it aside
+        if (landed !== false) this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
         connected = true;
       }
     }
@@ -990,4 +990,99 @@ class Jelly extends Enemy {     // drifting jellyfish that bursts into sparks wh
   }
 }
 
-const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly };
+// Shield Warden: a slow guard with a tall shield. A strike from the side it faces is blocked; its
+// back, the air above it and spells are open. It turns toward the player only every 0.8 s, so
+// slipping past gives a moment to strike its back.  Idle -> Patrol -> Chase -> Anticipation -> Attack (shield bash) -> Recoil
+class Warden extends Enemy {
+  constructor(d) { super(d, 38, 56); this.hp = 28; this.geo = 9; this.kb = 0.3; this.blood = '#c9b88a'; this.turnCD = 0; this.blocked = 0; }
+  hurt(dmg, dir, how) {
+    if (this.dead) return;
+    if (how === 'side' && dir === -this.face) {            // the strike travels against the way it faces: shield
+      this.blocked = 0.18; this.flash = 0;
+      Sound.play('clank'); G.hitstop(0.04);
+      G.burst(this.cx + this.face * 24, this.cy - 6, 8, { color: '#fff3c4', speed: 220, life: 0.25, size: 2 });
+      if (this.currentState !== ST.ATTACK) this.vx += -dir * 40;
+      return false;
+    }
+    return super.hurt(dmg, dir, how);
+  }
+  update(dt) {
+    this.tick(dt); this.turnCD -= dt; this.blocked -= dt;
+    const p = G.player, sees = this.seesPlayer(300) && Math.abs(p.cy - this.cy) < 110;
+    if (sees) this.lastSeen = this.t;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees) this.setState(ST.CHASE);
+        else if (this.stateT > 1) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL:
+        this.vx = this.face * 34;
+        if (this.edgeAhead(this.face)) { this.face = -this.face; this.setState(ST.IDLE); }
+        if (sees) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:
+        if (this.turnCD <= 0) { this.face = p.cx > this.cx ? 1 : -1; this.turnCD = 0.8; }
+        this.vx = this.edgeAhead(this.face) ? 0 : this.face * 58;
+        if (Math.abs(p.cx - this.cx) < 78 && Math.abs(p.cy - this.cy) < 70 && (p.cx - this.cx) * this.face > 0) { this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.t - this.lastSeen > 1.5) this.setState(ST.PATROL);
+        break;
+      case ST.ANTICIPATION:           // the shield is drawn back
+        this.vx = 0;
+        if (this.stateT >= 0.55) this.setState(ST.ATTACK);
+        break;
+      case ST.ATTACK:                 // shield bash
+        this.vx = this.edgeAhead(this.face) ? 0 : this.face * 300;
+        if (this.stateT >= 0.3) { this.vx = 0; this.setState(ST.RECOIL); }
+        break;
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > 0.35) this.setState(ST.CHASE);
+        break;
+    }
+    this.physics(dt);
+  }
+}
+
+// Ram: paws the ground, charges in a straight line, and is left dazed when it runs into a wall.
+// Patrol -> Anticipation (pawing) -> Attack (charge) -> Recoil (dazed after a crash)
+class Ram extends Enemy {
+  constructor(d) { super(d, 52, 34); this.hp = 26; this.geo = 7; this.kb = 0.25; this.blood = '#d4b79a'; this.crashed = false; }
+  onHurt(dir, how) { if (this.currentState === ST.ATTACK) return; super.onHurt(dir, how); }     // nothing stops a charge
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, sees = this.seesPlayer(430) && Math.abs(p.cy - this.cy) < 90;
+    switch (this.currentState) {
+      case ST.IDLE:
+        this.vx = 0;
+        if (sees && this.stateT > 0.4) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        else if (this.stateT > 1.2) this.setState(ST.PATROL);
+        break;
+      case ST.PATROL:
+        this.vx = this.face * 36;
+        if (this.edgeAhead(this.face)) { this.face = -this.face; this.setState(ST.IDLE); }
+        if (sees) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
+        break;
+      case ST.ANTICIPATION:           // paws the ground: dust, a readable warning
+        this.vx = 0;
+        if (Math.random() < 0.5) G.burst(this.cx + this.face * 26, this.y + this.h, 1, { color: '#8d9aa8', speed: 60, life: 0.4, size: 3, vy: -40 });
+        if (this.stateT >= 0.75) this.setState(ST.ATTACK);
+        break;
+      case ST.ATTACK: {
+        const wall = this.face > 0 ? this.hitR : this.hitL;
+        this.vx = this.face * 430;
+        if (Math.random() < 0.6) G.burst(this.cx - this.face * 26, this.y + this.h, 1, { color: '#8d9aa8', speed: 50, life: 0.35, size: 3, vy: -30 });
+        if (wall) { this.crashed = true; this.vx = -this.face * 90; this.vy = -180; G.shake(6, 0.2); Sound.play('slam'); G.burst(this.cx + this.face * 26, this.cy, 12, { color: '#cfd8e0', speed: 200, life: 0.4, size: 3 }); this.setState(ST.RECOIL); }
+        else if (this.edgeAhead(this.face) || this.stateT > 1.6) { this.vx = 0; this.setState(ST.RECOIL); }
+        break;
+      }
+      case ST.RECOIL:
+        this.vx *= 0.85;
+        if (this.stateT > (this.crashed ? 1.1 : 0.35)) { this.crashed = false; this.setState(ST.IDLE); }
+        break;
+    }
+    this.physics(dt);
+  }
+}
+
+const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly, warden: Warden, ram: Ram };

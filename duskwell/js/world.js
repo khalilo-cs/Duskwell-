@@ -483,6 +483,12 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   WORLD.rooms.ht1.enemy('husk', 39, 26);
   WORLD.rooms.ht1.enemy('husk', 48, 26);
 
+  // shield wardens and rams (see entities.js): on long flat floors, away from the doors
+  const en = (r, type, x, y) => WORLD.rooms[r].enemy(type, x, y);
+  en('sp1', 'warden', 47, 22); en('cs4', 'warden', 41, 22); en('aq3', 'warden', 52, 19);
+  en('wd2', 'warden', 12, 22); en('cx2', 'warden', 23, 19); en('mg4', 'warden', 58, 23);
+  en('mg1', 'ram', 56, 19); en('cx4', 'ram', 24, 30); en('aq1', 'ram', 22, 21);
+  en('wd2', 'ram', 50, 22); en('cx1', 'ram', 6, 39);
   // lantern stations (fast travel): one per area, a few steps from a bench; the hub's is lit from the start
   const st = (r, x, y) => WORLD.rooms[r].station(x, y);
   st('town', 35, 17); st('cx2', 70, 19); st('mg2', 33, 3); st('cs2', 64, 22); st('sp1', 6, 22);

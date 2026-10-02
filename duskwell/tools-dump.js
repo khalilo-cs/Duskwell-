@@ -19,7 +19,7 @@ for (const id of W.order) {
   };
   r.enemies.forEach(e => {
     chk(e, 'enemy');
-    const ground = ['crawler', 'hopper', 'spitter', 'sentinel', 'shard', 'shroom'].includes(e.type);
+    const ground = ['crawler', 'hopper', 'spitter', 'sentinel', 'shard', 'shroom', 'warden', 'ram'].includes(e.type);
     if (ground) { const b = r.at(e.x, e.y + 1); if (b !== 1 && b !== 2 && b !== 4) { console.log('ENEMY NOT ON GROUND', id, e.type, e.x, e.y); errors++; } }
   });
   r.items.forEach(e => chk(e, 'item'));

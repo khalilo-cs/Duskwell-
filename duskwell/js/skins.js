@@ -8,7 +8,7 @@ const Skins = (() => {
   const SLOTS = [
     ['player', 'البطل', 'Hero'],
     ['husk', 'الهيكل', 'Husk'], ['crawler', 'الزاحف', 'Crawler'], ['flyer', 'الطائر', 'Flyer'], ['hopper', 'القافز', 'Hopper'],
-    ['spitter', 'البصّاق', 'Spitter'], ['shard', 'برج البلّور', 'Crystal turret'], ['sentinel', 'الحارس', 'Sentinel'],
+    ['warden', 'حارس الدرع', 'Shield Warden'], ['ram', 'النطّاح', 'Ram'], ['spitter', 'البصّاق', 'Spitter'], ['shard', 'برج البلّور', 'Crystal turret'], ['sentinel', 'الحارس', 'Sentinel'],
     ['diver', 'البعوضة', 'Diver'], ['spider', 'العنكبوت', 'Spider'], ['shroom', 'الفطر الماشي', 'Shroom'], ['jelly', 'قنديل البحر', 'Jelly'],
     ['boss_guardian', 'زعيم: الحارس الحجري', 'Boss: Stone Guardian'], ['boss_spore', 'زعيم: أم الفطر', 'Boss: Sporecap'],
     ['boss_weaver', 'زعيم: حائكة الأشواك', 'Boss: Thorn Weaver'], ['boss_drowned', 'زعيم: العملاق الغريق', 'Boss: Drowned Giant'],

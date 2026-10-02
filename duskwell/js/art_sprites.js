@@ -828,3 +828,48 @@ Art.drawStation = function (g, st, t, lit) {
     g.fillStyle = '#fff6d0'; ellipse(g, x + 22, y - 93, 5 * fl, 8 * fl); g.fill();
   }
 };
+
+// Shield Warden: bronze-plated guard behind a tall shield; the shield is pulled back before a bash
+Art.enemy.warden = function (g, e, t) {
+  const st = e.currentState, wind = st === 'anticipation', bash = st === 'attack', fl = e.flash > 0, w = wind ? clamp(e.stateT / 0.55, 0, 1) : 0;
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1);
+  const walk = st === 'patrol' || st === 'chase' ? Math.sin(t * (st === 'chase' ? 9 : 5)) * 2.2 : 0;
+  g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-7, -16); g.lineTo(-8 + walk, 0); g.moveTo(7, -16); g.lineTo(8 - walk, 0); g.stroke();
+  // tabard and plated torso
+  poly(g, [-13, -14, 13, -14, 15, -2, -15, -2]); fs(g, fl ? '#fff' : '#5a3d2a', INK, 2.6);
+  ellipse(g, 0, -30, 14, 17); fs(g, fl ? '#fff' : '#6b5a3c', INK, 3);
+  g.strokeStyle = 'rgba(20,16,10,0.7)'; g.lineWidth = 1.8; for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(-12, -30 + i * 8); g.quadraticCurveTo(0, -27 + i * 8, 12, -30 + i * 8); g.stroke(); }
+  // small mask-helm
+  mask(g, 0, -52, 9, 9, 1, 1, fl ? '#fff' : BONE);
+  poly(g, [-6, -60, -3, -70, 0, -60]); fs(g, fl ? '#fff' : BONE, INK, 2);
+  // the shield: a tall plate in front, drawn back while winding up, thrust out in the bash
+  const sx = 14 + (bash ? 9 : 0) - w * 7;
+  g.save(); g.translate(sx, -30);
+  poly(g, [-3, -34, 13, -30, 15, 4, 13, 30, -3, 34, -7, 0]); fs(g, fl ? '#fff' : '#8a8f9a', INK, 3.2);
+  poly(g, [0, -26, 9, -23, 10, 4, 9, 24, 0, 27, -2, 0]); fs(g, fl ? '#fff' : '#a7adb8', INK, 1.6);
+  g.fillStyle = fl ? '#fff' : '#ff9c5a'; ellipse(g, 5, 0, 2.6, 4.5); g.fill();                    // the studded eye of the shield
+  g.restore();
+  if (e.blocked > 0) bloom(g, sx + 6, -30, 40, '#fff3c4', 0.8);
+  if (wind) bloom(g, sx + 6, -30, 50, '#ff9c5a', 0.1 + w * 0.3);
+  g.restore();
+};
+
+// Ram: a low, horned beast; it lowers its head and paws the ground before the charge
+Art.enemy.ram = function (g, e, t) {
+  const st = e.currentState, wind = st === 'anticipation', charge = st === 'attack', dazed = st === 'recoil' && e.crashed, fl = e.flash > 0;
+  const sw = charge ? Math.sin(t * 28) * 4 : (st === 'patrol' ? Math.sin(t * 7) * 2 : 0);
+  g.save(); g.translate(e.cx, e.y + e.h); g.scale(e.face, 1); g.rotate(charge ? 0.1 : 0);
+  g.strokeStyle = INK; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-18, -14); g.lineTo(-20 - sw, 0); g.moveTo(-9, -14); g.lineTo(-8 + sw, 0); g.moveTo(10, -14); g.lineTo(9 - sw, wind ? -3 - Math.abs(Math.sin(t * 16)) * 5 : 0); g.moveTo(19, -14); g.lineTo(21 + sw, 0); g.stroke();
+  ellipse(g, -2, -22, 26, 14); fs(g, fl ? '#fff' : '#4b4038', INK, 3);                          // body
+  g.save(); ellipse(g, -2, -22, 26, 14); g.clip(); g.fillStyle = fl ? '#fff' : '#5e5146'; for (let i = 0; i < 6; i++) { ellipse(g, -18 + i * 7, -30 + (i % 2) * 5, 6, 5); g.fill(); } g.restore();
+  g.save(); g.translate(22, -24); g.rotate(wind ? 0.3 : (dazed ? 0.5 + Math.sin(t * 9) * 0.08 : 0));        // the head
+  ellipse(g, 2, 0, 12, 10); fs(g, fl ? '#fff' : BONE, INK, 2.8);
+  g.fillStyle = INK; ellipse(g, 6, -2, 2, 3.2); g.fill();
+  if (wind || charge) { g.fillStyle = '#ff6a4a'; ellipse(g, 6, -2, 1.5, 2.4); g.fill(); }
+  g.beginPath(); g.moveTo(-4, -8); g.bezierCurveTo(-14, -26, -30, -14, -20, -2); g.bezierCurveTo(-24, -14, -12, -18, -2, -6); g.closePath(); fs(g, fl ? '#fff' : '#d8c8a0', INK, 2.4);   // curled horn
+  g.restore();
+  if (wind) bloom(g, 28, -20, 60, '#ff7a5a', 0.2);
+  g.restore();
+};

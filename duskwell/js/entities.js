@@ -589,6 +589,45 @@ class Crawler extends Enemy {
   }
 }
 
+// A hollow husk from the artist's sprite: shuffles along its patrol, hunts when it sees you, and
+// gathers itself for a short leap when you are close.
+class Husk extends Enemy {
+  constructor(d) { super(d, 34, 40); this.hp = 12; this.geo = 3; this.speed = 48; this.blood = '#9db4e0'; this.lostT = 0; }
+  update(dt) {
+    this.tick(dt);
+    const p = G.player, dist = Math.abs(p.cx - this.cx);
+    switch (this.currentState) {
+      case ST.IDLE: this.setState(ST.PATROL); break;
+      case ST.PATROL:
+        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * this.speed; }
+        if (this.seesPlayer(300)) this.setState(ST.CHASE);
+        break;
+      case ST.CHASE:
+        if (this.onGround) {
+          this.face = p.cx > this.cx ? 1 : -1;
+          this.vx = this.edgeAhead(this.face) ? 0 : this.face * 100;
+          if (this.stateT > 0.8 && dist < 170 && Math.abs(p.cy - this.cy) < 90 && this.seesPlayer(220)) this.setState(ST.ANTICIPATION);
+        }
+        this.lostT = this.seesPlayer(420) ? 0 : this.lostT + dt;
+        if (this.lostT > 2) { this.lostT = 0; this.setState(ST.PATROL); }
+        break;
+      case ST.ANTICIPATION:
+        this.vx = 0;
+        if (this.stateT > 0.25) { this.vy = -400; this.vx = this.face * 230; this.onGround = false; this.setState(ST.ATTACK); }
+        break;
+      case ST.ATTACK:
+        if (this.onGround && this.stateT > 0.12) { this.vx = 0; this.setState(ST.CHASE); }
+        break;
+      case ST.RECOIL:
+        if (this.onGround) this.vx *= 0.85;
+        if (this.stateT > 0.2) this.setState(ST.CHASE);
+        break;
+    }
+    this.physics(dt);
+    if (this.hitL) this.face = 1; if (this.hitR) this.face = -1;
+  }
+}
+
 class Flyer extends Enemy {
   constructor(d) { super(d, 30, 26); this.hp = 10; this.geo = 3; this.kb = 1.2; this.blood = '#e8f6ff'; this.ph = rand(0, 6); this.glowR = 110; }
   steer(tx, ty, sp, acc, dt) {
@@ -893,4 +932,4 @@ class Jelly extends Enemy {     // drifting jellyfish that bursts into sparks wh
   }
 }
 
-const ENEMY_TYPES = { crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly };
+const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly };

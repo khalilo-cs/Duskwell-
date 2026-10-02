@@ -199,7 +199,8 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   g.restore();
 }
 Art.drawPlayer = function (g, p, t) {
-  for (const gh of p.ghost) {
+  const pixelGhosts = !Skins.get('player') && Art.drawPixelGhosts(g, p, t);
+  for (const gh of pixelGhosts ? [] : p.ghost) {
     const life = gh.sd ? 0.26 : 0.22, a = (gh.sd ? 0.55 : 0.45) * (1 - (t - gh.t) / life);
     if (a > 0) wanderer(g, gh.x + p.w / 2, gh.y + p.h, gh.face, { t, vx: 0, vy: 0, dash: !gh.sd, sdGo: gh.sd }, a, gh.sd ? '#a8642a' : '#2a3a5a');
   }
@@ -235,6 +236,7 @@ Art.drawPlayer = function (g, p, t) {
   bloom(g, p.cx, p.cy - 8, 46, '#9cc4ff', 0.08);
   const skin = Skins.get('player');                   // a picture chosen in "Your images"
   if (skin) { g.save(); g.globalAlpha = alpha; Skins.draw(g, skin, { x: p.x, y: p.y, w: p.w, h: p.h }, p.face, 0, 1.5); g.restore(); }
+  else if (Art.drawPixelHero(g, p, t, alpha)) return;      // the artist's pixel hero, lit in 3D
   else wanderer(g, p.cx, p.y + p.h + (p.sitting ? 4 : 0), p.face, o, alpha, null);
   if (p.atkT > 0) {
     const pr = 1 - clamp(p.atkT / 0.16, 0, 1), a = 1 - pr * 0.7, f = p.face, m = p.atkAlt ? 1 : -1;

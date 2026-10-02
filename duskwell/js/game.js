@@ -381,7 +381,7 @@ function titleItems() {
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
-    { id: 'lang', label: tr('lang') }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 function updatePause() {
   const items = pauseItems();
@@ -395,6 +395,7 @@ function updatePause() {
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
+    else if (id === 'look') HeroStyle.next();
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
 }
@@ -607,6 +608,7 @@ function drawWorld(g) {
   for (const s2 of G.signs) Art.drawSign(g, s2, t);
   for (const it of G.items) Art.drawItem(g, it, t);
   for (const c of G.geos) Art.drawGeo(g, c, t);
+  Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
   for (const e of G.enemies) {
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
     if (skin) Skins.draw(g, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
@@ -634,10 +636,10 @@ function drawWorld(g) {
 }
 
 // light sources in screen space for the darkness map
-function collectLights(cx, cy) {
+function collectLights(cx, cy, skipPlayer) {
   const L = G.level, th = THEMES[L.def.theme], out = [];
   const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
-  if (!P.dead) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
+  if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
   for (const d of L.def.deco) {
     if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
     else if (d.type === 'light') add(d.x * TILE + 16, d.y * TILE + 16, d.r || 220, d.a || 0.8, d.c || th.glow);
@@ -715,7 +717,11 @@ function drawTitle(g) {
   }
   // the wanderer on the hill
   glow(g, 300, 400, 150, '#9cc4ff', 0.16);
-  wanderer(g, 300, 458, 1, { t, vx: 0, vy: 0, scale: 2.1 }, 1, null);
+  if (HeroStyle.pixel()) {
+    Pixel.setScene([{ x: 760, y: 150, r: 1100, a: 1, c: '#ffe9b0' }, { x: 120, y: 420, r: 500, a: 0.5, c: '#7aa0ff' }], 0, 0, 'title');
+    Pixel.shadow(g, 300, 458, 60);
+    Pixel.draw(g, HeroStyle.sheet(), Pixel.frameOf(HeroStyle.sheet(), 'idle', t), 300, 458, { face: 1, scale: 8 });
+  } else wanderer(g, 300, 458, 1, { t, vx: 0, vy: 0, scale: 2.1 }, 1, null);
   Art.drawAmbient(g, STEP, 'town', 0, 0, t);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
   g.font = font(LANG.cur === 'ar' ? 92 : 78, '700');

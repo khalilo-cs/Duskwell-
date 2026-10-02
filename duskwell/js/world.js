@@ -462,6 +462,23 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   fd3.decor('gear', 36, 6, { r: 4, dir: -1 }).decor('gear', 64, 5, { r: 3 }).decor('chimney', 25, 17, { h: 9 });
   fd3.enemy('crawler', 26, 17).enemy('flyer', 67, 6);
 
+  // ===================== the husks: hollow wanderers from the artist's sprite, spread over the world =====================
+  WORLD.rooms.cx1.enemy('husk', 18, 39);
+  WORLD.rooms.cx2.enemy('husk', 24, 19);
+  WORLD.rooms.cx2.enemy('husk', 54, 13);
+  WORLD.rooms.cx5.enemy('husk', 22, 16);
+  WORLD.rooms.mg1.enemy('husk', 46, 19);
+  WORLD.rooms.mg2.enemy('husk', 18, 36);
+  WORLD.rooms.sp1.enemy('husk', 41, 22);
+  WORLD.rooms.sp3.enemy('husk', 11, 21);
+  WORLD.rooms.aq1.enemy('husk', 29, 21);
+  WORLD.rooms.aq3.enemy('husk', 28, 11);
+  WORLD.rooms.cs2.enemy('husk', 34, 22);
+  WORLD.rooms.cs4.enemy('husk', 14, 22);
+  WORLD.rooms.wd2.enemy('husk', 26, 22);
+  WORLD.rooms.ht1.enemy('husk', 39, 26);
+  WORLD.rooms.ht1.enemy('husk', 48, 26);
+
   WORLD.order = Object.keys(WORLD.rooms);
   for (const id of WORLD.order) WORLD.rooms[id].finish();
 })();

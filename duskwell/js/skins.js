@@ -7,7 +7,7 @@ const Skins = (() => {
   const KEY = 'duskwell_skins_v1', MAX = 256;
   const SLOTS = [
     ['player', 'البطل', 'Hero'],
-    ['crawler', 'الزاحف', 'Crawler'], ['flyer', 'الطائر', 'Flyer'], ['hopper', 'القافز', 'Hopper'],
+    ['husk', 'الهيكل', 'Husk'], ['crawler', 'الزاحف', 'Crawler'], ['flyer', 'الطائر', 'Flyer'], ['hopper', 'القافز', 'Hopper'],
     ['spitter', 'البصّاق', 'Spitter'], ['shard', 'برج البلّور', 'Crystal turret'], ['sentinel', 'الحارس', 'Sentinel'],
     ['diver', 'البعوضة', 'Diver'], ['spider', 'العنكبوت', 'Spider'], ['shroom', 'الفطر الماشي', 'Shroom'], ['jelly', 'قنديل البحر', 'Jelly'],
     ['boss_guardian', 'زعيم: الحارس الحجري', 'Boss: Stone Guardian'], ['boss_spore', 'زعيم: أم الفطر', 'Boss: Sporecap'],

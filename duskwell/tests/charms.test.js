@@ -171,16 +171,16 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
 
   // shop
   await setup();
-  await ev(() => { const { G, P } = DW; P.geo = 1000; G.state = 'shop'; G.menuSel = 4; G.shopTop = 0; });
+  await ev(() => { const { G, P } = DW; P.geo = 1000; G.state = 'shop'; G.menuSel = shopList().findIndex(i => i.id === 'buy_reach'); G.shopTop = 0; });
   r = await ev(() => ({ n: shopList().length, names: shopList().map(i => i.id) }));
-  ok('shop hides the second notch at first', r.n === 7 && !r.names.includes('buy_notch2'), r);
+  ok('shop hides the second notch at first', r.n === 8 && !r.names.includes('buy_notch2'), r);
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ owned: DW.Charms.ownedList().join(), geo: DW.P.geo }));
   ok('buying a charm in the shop', r.owned === 'reach' && r.geo === 880, r);
-  await ev(() => { DW.G.menuSel = 3; });
+  await ev(() => { DW.G.menuSel = shopList().findIndex(i => i.id === 'buy_notch1'); });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ n: DW.Charms.notches(), list: shopList().length, geo: DW.P.geo }));
-  ok('buying a notch adds one and reveals the next', r.n === 4 && r.list === 8 && r.geo === 580, r);
+  ok('buying a notch adds one and reveals the next', r.n === 4 && r.list === 9 && r.geo === 580, r);
 
   // screens: charm UI behaviour and screenshots
   await setup();

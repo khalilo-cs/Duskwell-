@@ -69,7 +69,7 @@ const SD_CHARGE = 0.8, SD_SPEED = 1050, SD_DMG = 13;
 class Player {
   constructor() {
     this.w = 22; this.h = 38;
-    this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false };
+    this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false, wail: false };
     this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = 99; this.geo = 0;
     this.nail = 5; this.soulGain = 11;
     this.place(0, 0, 1);
@@ -85,7 +85,7 @@ class Player {
     this.invuln = 0; this.hurtT = 0; this.focusT = 0; this.castHold = 0; this.castDone = false; this.castT = 0;
     this.sitting = null; this.dead = false; this.safe = { x: fx, y: fy }; this.safeT = 0;
     this.t = 0; this.landT = 0; this.ghost = []; this.recoil = 0; this.diving = false; this.bounced = false;
-    this.sd = null; this.riding = null; this.turnT = 0; this.airT = 0;
+    this.sd = null; this.riding = null; this.turnT = 0; this.airT = 0; this.wailT = 0; this.wailTick = 0; this.wailTop = 0;
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
@@ -117,6 +117,7 @@ class Player {
       return;
     }
     if (this.diving) { this.updateDive(dt); return; }
+    if (this.wailT > 0) { this.updateWail(dt); return; }
     if (this.sd && this.updateSuperdash(dt)) return;
     const ix = Input.axisX(), iy = Input.axisY();
     const stunned = this.hurtT > 0;
@@ -127,7 +128,10 @@ class Player {
 
     // ---- cast / focus ----
     if (Input.pressed('cast')) { this.castHold = 0; this.castDone = false; }
-    // Down + cast plunges at once, so it never waits for the key to be released
+    // Up + cast loosens the Dusk Cry at once; Down + cast plunges at once. Neither waits for the key to be released
+    if (Input.pressed('cast') && this.ab.wail && Input.down('up') && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
+      this.castDone = true; this.startWail(); return;
+    }
     if (Input.pressed('cast') && this.ab.dive && Input.down('down') && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
       this.castDone = true; this.startDive(); return;
     }
@@ -327,6 +331,28 @@ class Player {
     G.shake(3, 0.12);
   }
 
+  // Dusk Cry: the Wanderer hangs in the air and a column of light stands above, striking everything in it
+  startWail() {
+    this.soul -= this.spellCost(); this.wailT = 0.55; this.wailTick = 0; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 0;
+    Sound.play('cast'); G.shake(5, 0.3); G.ring(this.cx, this.cy, '#dff3ff', 0.4);
+    G.burst(this.cx, this.cy, 14, { color: '#dff3ff', speed: 200, life: 0.5, size: 3, grav: -120 });
+  }
+  updateWail(dt) {
+    const L = G.level;
+    this.wailT -= dt; this.vx = 0; this.vy = 0;
+    // the column stops at the first ceiling above
+    const tx = Math.floor(this.cx / TILE); let ty = Math.floor(this.y / TILE);
+    while (ty > 0 && !L.solid(tx, ty - 1) && this.y - ty * TILE < 250) ty--;
+    this.wailTop = Math.max(this.y - 250, ty * TILE);
+    this.wailTick -= dt;
+    if (this.wailTick <= 0) {
+      this.wailTick = 0.13;
+      const col = { x: this.cx - 38, y: this.wailTop, w: 76, h: this.y + this.h - this.wailTop };
+      for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(col, e.hb())) { e.hurt(this.spellDmg(6), e.cx > this.cx ? 1 : -1, 'wail'); this.soul = Math.min(this.maxSoul, this.soul + 1); }
+      G.burst(this.cx + rand(-30, 30), rand(this.wailTop, this.y), 5, { color: '#dff3ff', speed: 60, life: 0.4, size: 3, grav: -260 });
+    }
+    if (this.wailT <= 0) { this.wailT = 0; this.invuln = Math.max(this.invuln, 0.2); }
+  }
   startDive() {
     this.soul -= this.spellCost(); this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
     Sound.play('cast'); G.burst(this.cx, this.cy, 12, { color: '#dff3ff', speed: 160, life: 0.4, size: 3 });
@@ -360,7 +386,7 @@ class Player {
       return true;
     }
     if (Charms.over()) dmg *= 2;               // overcharmed: every wound costs double
-    this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
+    this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.wailT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300; this.vy = -320; this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
@@ -574,7 +600,8 @@ class Enemy {
     if (this.hp <= 0) this.kill();
   }
   // knockback pushes the enemy away from the strike and puts it in the Recoil state
-  onHurt(dir) { if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
+  // the Dusk Cry holds enemies in its column instead of throwing them out of it
+  onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15);
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
@@ -775,9 +802,9 @@ class Sentinel extends Enemy {   // Idle -> Patrol (waypoints) -> Chase -> Antic
     for (let i = 0; i < this.range; i += 8) { if (!ok(this.cx + i + this.w / 2 + 4)) break; b = this.cx + i; }
     this.wp = [a, b];
   }
-  onHurt(dir) {
+  onHurt(dir, how) {
     if (this.currentState === ST.ANTICIPATION || this.currentState === ST.ATTACK) { this.vx += dir * 60; return; }   // armour holds mid-swing
-    super.onHurt(dir);
+    super.onHurt(dir, how);
   }
   update(dt) {
     this.tick(dt);

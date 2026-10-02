@@ -29,6 +29,7 @@ function heroPose(p, t) {
   else if (charge > 0) { o.frame = A.idle[0]; o.sy = 1 - 0.14 * charge; o.sx = 1 + 0.1 * charge; o.dy = 0; }
   else if (p.dashT > 0) { o.anim = 'run'; o.frame = A.run[2 % A.run.length]; o.sx = 1.3; o.sy = 0.85; o.rot = 0.14; }
   else if (p.diving) { o.anim = 'fall'; o.frame = A.fall[0]; o.sx = 0.8; o.sy = 1.22; }
+  else if (p.wailT > 0) { o.anim = 'jump'; o.frame = A.jump[0]; o.sx = 0.9; o.sy = 1.14; o.dy = -4; }          // stretched, face to the sky
   else if (p.sitting) { o.frame = A.idle[0]; o.sy = 0.86; o.dy = 4; }
   else if (p.hurtT > 0) { o.anim = 'fall'; o.frame = A.fall[0]; o.flash = 0.55; o.rot = -0.2; }
   else if (p.sliding) { o.anim = 'fall'; o.frame = A.fall[0]; o.rot = 0.1; o.sy = 1.04; }

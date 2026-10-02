@@ -49,6 +49,8 @@ const STR = {
     charmsHint: 'Z: ارتداء أو نزع    Esc: رجوع', charmsBench: 'تُغيَّر التمائم وأنت جالس على مقعد فقط.', charmsFull: 'أنت مُثقَل بالتمائم أصلاً: انزع شيئاً أولاً.',
     overcharm: 'تميمة فوق الفتحات! كل إصابة ستكلّفك الضعف.', charm_found_d: 'اجلس على مقعد وافتح التمائم من قائمة الإيقاف لترتديها.',
     itemNotch: 'فتحة تميمة', itemNotchD: 'تتسع لتمائم أكثر',
+    itemWail: 'مخطوطة النداء', itemWailD: 'تعلّم نداء الغسق: عمود نور فوقك (↑ + F)',
+    abil_wail: 'نداء الغسق', abil_wail_d: 'اضغط ↑ مع F لتطلق عمود نور فوقك يضرب كل ما فيه عدة مرات. يكلّف روحاً مثل بقية التعاويذ.',
   },
   en: {
     title: 'DUSKWELL', subtitle: 'A kingdom whose light fell into the deep',
@@ -95,6 +97,8 @@ const STR = {
     charmsHint: 'Z: wear or remove    Esc: back', charmsBench: 'Charms can only be changed while resting on a bench.', charmsFull: 'You are already overcharmed: remove something first.',
     overcharm: 'Over the notch limit! Every wound will cost you double.', charm_found_d: 'Rest on a bench and open Charms from the pause menu to wear it.',
     itemNotch: 'Charm Notch', itemNotchD: 'Room for more charms',
+    itemWail: 'Cry Scroll', itemWailD: 'Learn the Dusk Cry: a column of light above you (Up + F)',
+    abil_wail: 'Dusk Cry', abil_wail_d: 'Hold Up and press F to loose a column of light above you that strikes everything in it several times. It costs soul like the other spells.',
   },
 };
 function tr(k) { return (STR[LANG.cur] && STR[LANG.cur][k]) || STR.en[k] || k; }

@@ -11,7 +11,7 @@ const G = {
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
-  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0,
+  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, look: 0, lookT: 0, lookDir: 0,
 };
 const P = G.player;
 
@@ -150,7 +150,7 @@ function cameraBounds() {
 }
 function cameraTarget() {
   const b = cameraBounds();
-  return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24, b.y0, b.y1) };
+  return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24 + G.look, b.y0, b.y1) };
 }
 
 G.fadeTo = function (fn, out, hold, inn) {
@@ -206,6 +206,7 @@ G.onBossDeath = function (b) {
 
 function startGame(useSave) {
   Object.assign(P, new Player());
+  G.look = 0; G.lookT = 0; G.lookDir = 0;
   G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset();
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
@@ -249,6 +250,7 @@ const SHOP_ITEMS = [
   { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, icon: 'soul', apply() { P.soulGain = 17; } },
   { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 300, icon: 'notch', apply() { /* the notch count reads this flag */ } },
   { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 550, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_wail', name: 'itemWail', desc: 'itemWailD', price: 500, icon: 'soul', apply() { P.ab.wail = true; G.banner = { title: tr('abil_wail'), desc: tr('abil_wail_d'), t: 0 }; G.state = 'banner'; } },
   { id: 'buy_reach', charm: 'reach', price: 120, apply() { Charms.give('reach'); } },
   { id: 'buy_boots', charm: 'boots', price: 100, apply() { Charms.give('boots'); } },
   { id: 'buy_magnet', charm: 'magnet', price: 90, apply() { Charms.give('magnet'); } },
@@ -273,6 +275,13 @@ function updatePlay(dt) {
   Mech.update(dt);
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
+  // a cracked soul vessel: while the shade still holds your Geo, only two thirds of the soul can be kept
+  P.maxSoul = G.shade ? 66 : 99; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
+  // looking up or down: hold the key while standing still and the camera drifts that way
+  const still = P.onGround && !P.sitting && Input.axisX() === 0 && P.atkT <= 0 && P.hurtT <= 0 && !P.diving && !P.sd && !P.wailT;
+  const iy = still ? Input.axisY() : 0;
+  if (iy !== 0 && iy === G.lookDir) G.lookT += dt; else { G.lookDir = iy; G.lookT = 0; }
+  G.look = lerp(G.look, G.lookT > 0.55 ? G.lookDir * 130 : 0, 1 - Math.exp(-dt * 5));
   if (Input.pressed('up') && !P.sitting && P.onGround && P.hurtT <= 0 && P.atkT <= 0) interact();
   if (Input.pressed('mute')) Sound.toggle();
 
@@ -523,7 +532,7 @@ function drawMaskIcon(g, x, y, full, pulse) {
 }
 function drawHUD(g) {
   // soul orb
-  const ox = 52, oy = 54, r = 30, soul = P.soul / P.maxSoul;
+  const ox = 52, oy = 54, r = 30, soul = P.soul / 99;
   g.save();
   glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
   g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill();
@@ -533,6 +542,11 @@ function drawHUD(g) {
   g.beginPath(); g.moveTo(ox - r, oy + r);
   for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
   g.lineTo(ox + r, oy + r); g.closePath(); g.fill();
+  if (P.maxSoul < 99) {            // the cracked top third
+    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / 99);
+    g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
+    g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
+  }
   g.restore();
   g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
   g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke();
@@ -657,6 +671,7 @@ function drawWorld(g) {
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](g, e, t);
   }
   Art.drawPlayer(g, P, t);
+  if (P.wailT > 0) Art.drawWail(g, P, t);
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
     g.strokeStyle = 'rgba(232,220,184,' + (0.45 + 0.2 * Math.sin(t * 5)) + ')'; g.lineWidth = 2; ellipse(g, P.cx, P.cy, 24, 33); g.stroke();
@@ -685,6 +700,7 @@ function collectLights(cx, cy, skipPlayer) {
   const L = G.level, th = THEMES[L.def.theme], out = [];
   const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
   if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
+  if (P.wailT > 0) add(P.cx, (P.wailTop + P.y) / 2, 320, 1, '#dff3ff');
   for (const d of L.def.deco) {
     if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
     else if (d.type === 'light') add(d.x * TILE + 16, d.y * TILE + 16, d.r || 220, d.a || 0.8, d.c || th.glow);

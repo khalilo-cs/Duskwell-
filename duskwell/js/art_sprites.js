@@ -91,6 +91,7 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   if (o.charge > 0) { sy = 1 - 0.13 * o.charge; sx = 1 + 0.1 * o.charge; lean = -0.1 * o.charge; }
   if (o.sdGo) { sx = 1.55; sy = 0.72; lean = 0.3; }
   if (o.dive) { sx = 0.78; sy = 1.22; }
+  if (o.wail) { sx = 0.9; sy = 1.14; }
   if (o.sit) sy = 0.84;
   if (o.hurt) lean = -0.25;
   const k = HERO_SCALE * (o.scale || 1);
@@ -220,7 +221,7 @@ Art.drawPlayer = function (g, p, t) {
   if (p.dead) return;
   let alpha = 1;
   if (p.invuln > 0 && Math.floor(t * 24) % 2 === 0) alpha = 0.4;
-  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving && !sdGo, run: p.onGround && Math.abs(p.vx) > 30 && !sdGo, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving,
+  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving && !sdGo, run: p.onGround && Math.abs(p.vx) > 30 && !sdGo, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving, wail: p.wailT > 0,
     turn: p.turnT > 0 && p.onGround, wall: p.sliding, atk: p.atkT > 0 ? p.atkDir : null, charge, sdGo };
   if (p.diving) {
     const tr = g.createLinearGradient(0, p.y - 120, 0, p.y + p.h);
@@ -794,4 +795,20 @@ Art.drawProj = function (g, p, t) {
     return;
   }
   baseDrawProj(g, p, t);
+};
+
+// Dusk Cry: a column of pale light from the Wanderer's feet to the ceiling, flickering as it fades
+Art.drawWail = function (g, p, t) {
+  const k = clamp(p.wailT / 0.55, 0, 1), env = Math.sin(Math.PI * (1 - k) * 0.9 + 0.2) * 0.9 + 0.1, w = 40 * env * (0.85 + 0.15 * Math.sin(t * 60));
+  const top = p.wailTop, bot = p.y + p.h, x = p.cx;
+  const gr = g.createLinearGradient(x - w, 0, x + w, 0);
+  gr.addColorStop(0, 'rgba(210,236,255,0)'); gr.addColorStop(0.5, 'rgba(240,250,255,' + (0.9 * env) + ')'); gr.addColorStop(1, 'rgba(210,236,255,0)');
+  const o = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter';
+  g.fillStyle = gr; g.fillRect(x - w, top, w * 2, bot - top);
+  const tg = g.createLinearGradient(0, top, 0, top + 70); tg.addColorStop(0, 'rgba(10,14,22,0.5)'); tg.addColorStop(1, 'rgba(10,14,22,0)');
+  g.globalCompositeOperation = o; g.fillStyle = tg; g.fillRect(x - w, top, w * 2, 70);   // the top fades into the dark
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 7; i++) { const sx = x + (hash2(i, 3, 5) - 0.5) * w * 1.4, sy = bot - ((t * 340 + i * 97) % Math.max(40, bot - top)); g.fillStyle = 'rgba(255,255,255,' + (0.7 * env) + ')'; g.fillRect(sx - 1.5, sy - 12, 3, 24); }
+  g.globalCompositeOperation = o;
+  bloom(g, x, bot - 20, 90, '#dff3ff', 0.5 * env);
 };

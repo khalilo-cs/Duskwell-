@@ -171,6 +171,12 @@ const STR = {
     sign_spore: 'لافتة: قبعات الفطر الحمراء تقذفك عالياً. اهبط عليها.',
     sign_crack: 'لافتة: الأرض هنا متشققة. شيءٌ أثقل من الخطى يمكنه كسرها.',
     sign_acid: 'لافتة: الماء الأخضر حمضٌ يحرق. لا تلمسه.',
+    charms: 'التمائم', cost: 'الفتحات', notches: 'الفتحات', worn: 'مرتداة', noCharms: 'لم تجد أي تميمة بعد. ابحث في الزوايا البعيدة، واسأل التاجر.',
+    charmsHint: 'Z: ارتداء أو نزع    Esc: رجوع', charmsBench: 'تُغيَّر التمائم وأنت جالس على مقعد فقط.', charmsFull: 'أنت مُثقَل بالتمائم أصلاً: انزع شيئاً أولاً.',
+    overcharm: 'تميمة فوق الفتحات! كل إصابة ستكلّفك الضعف.', charm_found_d: 'اجلس على مقعد وافتح التمائم من قائمة الإيقاف لترتديها.',
+    itemNotch: 'فتحة تميمة', itemNotchD: 'تتسع لتمائم أكثر',
+    itemWail: 'مخطوطة النداء', itemWailD: 'تعلّم نداء الغسق: عمود نور فوقك (↑ + F)',
+    abil_wail: 'نداء الغسق', abil_wail_d: 'اضغط ↑ مع F لتطلق عمود نور فوقك يضرب كل ما فيه عدة مرات. يكلّف روحاً مثل بقية التعاويذ.',
   },
   en: {
     title: 'DUSKWELL', subtitle: 'A kingdom whose light fell into the deep',
@@ -213,6 +219,12 @@ const STR = {
     sign_spore: 'Sign: The red mushroom caps throw you high. Land on them.',
     sign_crack: 'Sign: The ground here is cracked. Something heavier than footsteps could break it.',
     sign_acid: 'Sign: The green water is acid. Do not touch it.',
+    charms: 'Charms', cost: 'Notches', notches: 'Notches', worn: 'Worn', noCharms: 'You have found no charms yet. Search the far corners, and ask the merchant.',
+    charmsHint: 'Z: wear or remove    Esc: back', charmsBench: 'Charms can only be changed while resting on a bench.', charmsFull: 'You are already overcharmed: remove something first.',
+    overcharm: 'Over the notch limit! Every wound will cost you double.', charm_found_d: 'Rest on a bench and open Charms from the pause menu to wear it.',
+    itemNotch: 'Charm Notch', itemNotchD: 'Room for more charms',
+    itemWail: 'Cry Scroll', itemWailD: 'Learn the Dusk Cry: a column of light above you (Up + F)',
+    abil_wail: 'Dusk Cry', abil_wail_d: 'Hold Up and press F to loose a column of light above you that strikes everything in it several times. It costs soul like the other spells.',
   },
 };
 function tr(k) { return (STR[LANG.cur] && STR[LANG.cur][k]) || STR.en[k] || k; }
@@ -352,7 +364,8 @@ const Sound = (() => {
   const ROOT = { foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
   const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry' };
-  const MUSIC_DIR = 'audio/music/';
+  const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
+  const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   const MUSIC_VOL = 0.8;
   const MASTER_VOL = 0.55;
 
@@ -377,6 +390,7 @@ const Sound = (() => {
       else { ctx.resume(); if (Score.el && !muted) Score.el.play().catch(() => {}); }
     });
     Score.start();
+    Rec.start();
   }
 
   // ------------------------------------------------------------------ recorded score
@@ -462,6 +476,66 @@ const Sound = (() => {
         if (old) old.volume = Math.max(0, old.volume * (1 - k));
         if (k >= 1) { clearInterval(this.fadeTimer); if (old) old.pause(); }
       }, 50);
+    },
+  };
+
+  // ------------------------------------------------------------------ recorded effects and ambience
+  // CC0 recordings (see CREDITS.md) that replace or sit under the synthesised effects. They need
+  // fetch(), so from file:// the game keeps its synthesised sounds.
+  const Rec = {
+    meta: null, bufs: new Map(), last: {}, amb: null, ambWant: null, ambBus: null,
+    start() {
+      if (location.protocol === 'file:') return;
+      this.ambBus = ctx.createGain(); this.ambBus.gain.value = 0.5; this.ambBus.connect(master);
+      fetch(SFX_DIR + 'sfx.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(m => {
+        this.meta = m;
+        const names = new Set();
+        for (const e of Object.values(m.events)) e.files.forEach(f => names.add(f));
+        Promise.all([...names].map(n => this.decode(n))).then(() => this.ambience());
+      }).catch(() => { this.meta = null; });
+    },
+    decode(name) {
+      return fetch(SFX_DIR + name + '.mp3').then(r => r.arrayBuffer())
+        .then(d => new Promise((ok, fail) => { const q = ctx.decodeAudioData(d, ok, fail); if (q && q.catch) q.catch(fail); }))
+        .then(b => { this.bufs.set(name, b); return b; }, () => null);
+    },
+    // returns 'replace', 'layer' or false (nothing recorded for this event)
+    play(name) {
+      const e = this.meta && this.meta.events[name];
+      if (!e || !ctx || muted) return false;
+      const picks = e.files.filter(f => this.bufs.has(f));
+      if (!picks.length) return false;
+      const now = ctx.currentTime;
+      if (now - (this.last[name] || 0) < 0.04) return e.layer ? 'layer' : 'replace';        // no machine-gun stacking
+      this.last[name] = now;
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = this.bufs.get(pick(picks));
+      src.playbackRate.value = e.rate[0] + Math.random() * (e.rate[1] - e.rate[0]);
+      g.gain.value = e.gain;
+      src.connect(g); g.connect(sfxBus); src.start();
+      return e.layer ? 'layer' : 'replace';
+    },
+    ambience() {
+      if (!this.meta || !ctx) return;
+      const name = AMB_THEME[theme] || null;
+      if (name === this.ambWant) return;
+      this.ambWant = name;
+      const t = ctx.currentTime;
+      if (this.amb) {
+        const old = this.amb; this.amb = null;
+        old.gain.gain.cancelScheduledValues(t); old.gain.gain.setValueAtTime(old.gain.gain.value, t); old.gain.gain.linearRampToValueAtTime(0, t + 2.5);
+        try { old.src.stop(t + 2.6); } catch (e) { /* stopped */ }
+      }
+      const a = name && this.meta.ambience[name]; if (!a) return;
+      const load = this.bufs.has(a.file) ? Promise.resolve(this.bufs.get(a.file)) : this.decode(a.file);
+      load.then(buf => {
+        if (!buf || this.ambWant !== name) return;
+        const src = ctx.createBufferSource(), g = ctx.createGain();
+        src.buffer = buf; src.loop = true; src.connect(g); g.connect(this.ambBus);
+        const now = ctx.currentTime;
+        g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(a.gain, now + 3);
+        src.start(); this.amb = { src, gain: g };
+      });
     },
   };
 
@@ -565,9 +639,9 @@ const Sound = (() => {
 
   return {
     init,
-    play(name) { try { if (FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
+    play(name) { try { const r = Rec.play(name); if (r !== 'replace' && FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
     // area theme: 'title', 'town', 'cave', 'moss', ... (see TRACK)
-    setTheme(t) { if (t !== theme) { theme = t; Score.update(); } },
+    setTheme(t) { if (t !== theme) { theme = t; Score.update(); Rec.ambience(); } },
     // boss music on/off; the final boss has a theme of its own
     boss(on, final) {
       const track = final ? 'king' : 'boss';
@@ -585,6 +659,7 @@ const Sound = (() => {
       return !muted;
     },
     isOn: () => !muted,
+    sfxState: () => ({ loaded: !!Rec.meta, buffers: Rec.bufs.size, ambience: Rec.ambWant, ambiencePlaying: !!Rec.amb }),
     musicState: () => ({ mode: Score.mode, want: Score.want, playing: Score.cur ? Score.cur.name : (Score.el ? Score.el.src : null), cached: [...Score.cache.keys()] }),
   };
 })();
@@ -737,6 +812,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     boss: 'weaver', flag: 'boss_weaver', trigger: 9, spawn: { x: 30, y: 17 },
     gates: [{ x: 0, y: 15, w: 1, h: 3, close: 'start' }, { x: 39, y: 15, w: 1, h: 3, close: 'always' }],
     reward: { id: 'ability_wall', kind: 'ability', ability: 'wall', x: 20, y: 16 },
+    reward2: { id: 'charm_siphon', kind: 'charm', charm: 'siphon', x: 23, y: 17 },
   };
 
   // ===================== CRYSTAL SPIRES =====================
@@ -932,6 +1008,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     boss: 'drowned', flag: 'boss_drowned', trigger: 34, triggerDir: -1, spawn: { x: 12, y: 19 },
     gates: [{ x: 43, y: 17, w: 1, h: 3, close: 'start' }],
     reward: { id: 'seed_drowned', kind: 'seed', x: 22, y: 18 },
+    reward2: { id: 'charm_thrift', kind: 'charm', charm: 'thrift', x: 25, y: 19 },
   };
 
   // ===================== CRYSTAL SPIRES: the cracked hall =====================
@@ -982,6 +1059,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     boss: 'brood', flag: 'boss_brood', trigger: 34, triggerDir: -1, spawn: { x: 10, y: 19 },
     gates: [{ x: 43, y: 17, w: 1, h: 3, close: 'start' }],
     reward: { id: 'fang_brood', kind: 'fang', x: 22, y: 18 },
+    reward2: { id: 'charm_deep', kind: 'charm', charm: 'deep', x: 25, y: 19 },
   };
 
   // ===================== HOLLOW THRONE: the seal gate =====================
@@ -1072,6 +1150,16 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   WORLD.rooms.ht1.enemy('husk', 39, 26);
   WORLD.rooms.ht1.enemy('husk', 48, 26);
 
+  // charms (see charms.js): each lies next to a spot the route already reaches; three more drop from guardians
+  const charm = (r, id, x, y) => WORLD.rooms[r].item('charm_' + id, x, y, 'charm', { charm: id });
+  charm('cx2', 'thorn', 4, 14);       // the high ledge, beside the mask seed
+  charm('cx5', 'spirit', 5, 16);      // inside the secret pocket
+  charm('mg1', 'swift', 48, 4);       // on the island with the mask seed
+  charm('ht1', 'focus', 7, 16);       // beside the far seed
+  charm('sp1', 'shell', 44, 13);      // on the ledge above the stash
+  charm('aq3', 'dashmaster', 7, 19);  // inside the secret pocket
+  charm('cs4', 'mage', 10, 13);       // on the ledge above the stash
+  charm('fd3', 'fury', 68, 11);       // the raised reward ledge of the Rustworks
   WORLD.order = Object.keys(WORLD.rooms);
   for (const id of WORLD.order) WORLD.rooms[id].finish();
 })();
@@ -1825,6 +1913,7 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   if (o.charge > 0) { sy = 1 - 0.13 * o.charge; sx = 1 + 0.1 * o.charge; lean = -0.1 * o.charge; }
   if (o.sdGo) { sx = 1.55; sy = 0.72; lean = 0.3; }
   if (o.dive) { sx = 0.78; sy = 1.22; }
+  if (o.wail) { sx = 0.9; sy = 1.14; }
   if (o.sit) sy = 0.84;
   if (o.hurt) lean = -0.25;
   const k = HERO_SCALE * (o.scale || 1);
@@ -1954,7 +2043,7 @@ Art.drawPlayer = function (g, p, t) {
   if (p.dead) return;
   let alpha = 1;
   if (p.invuln > 0 && Math.floor(t * 24) % 2 === 0) alpha = 0.4;
-  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving && !sdGo, run: p.onGround && Math.abs(p.vx) > 30 && !sdGo, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving,
+  const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving && !sdGo, run: p.onGround && Math.abs(p.vx) > 30 && !sdGo, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving, wail: p.wailT > 0,
     turn: p.turnT > 0 && p.onGround, wall: p.sliding, atk: p.atkT > 0 ? p.atkDir : null, charge, sdGo };
   if (p.diving) {
     const tr = g.createLinearGradient(0, p.y - 120, 0, p.y + p.h);
@@ -1963,7 +2052,7 @@ Art.drawPlayer = function (g, p, t) {
     bloom(g, p.cx, p.y + p.h, 60, '#dff3ff', 0.5);
   }
   if (p.focusT > 0) {
-    const k = p.focusT / 0.9;
+    const k = p.focusT / p.focusTime();
     bloom(g, p.cx, p.cy - 6, 40 + k * 50, '#dff3ff', 0.2 + k * 0.4);
     g.strokeStyle = rgba('#e8f6ff', 0.75); g.lineWidth = 2.5; ellipse(g, p.cx, p.cy - 4, 28 - k * 12, 36 - k * 14); g.stroke();
   }
@@ -1987,7 +2076,7 @@ Art.drawPlayer = function (g, p, t) {
     // the sword in the hand, at the leading edge of the swing
     // the hand sits in front of the chest so the blade never crosses the mask
     const hx = p.cx + f * 14, hy = p.cy + (p.atkDir === 'up' ? -6 : p.atkDir === 'down' ? 6 : 0);
-    heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE, null);
+    heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE * (Charms.has('reach') ? 1.3 : 1), null);
     g.fillStyle = INK; ellipse(g, hx, hy, 3.2, 2.8); g.fill();
   }
 };
@@ -2304,6 +2393,10 @@ Art.drawItem = function (g, it, t) {
     for (let i = 0; i < 3; i++) { const a = t * 1.5 + i * 2.09; g.strokeStyle = 'rgba(230,243,255,0.55)'; g.lineWidth = 2; ellipse(g, it.x, y, 24 + i * 4, 10 + i * 6, a); g.stroke(); }
     ellipse(g, it.x, y, 14, 14); fs(g, '#ffffff', INK, 3);
     g.fillStyle = 'rgba(120,180,255,0.5)'; ellipse(g, it.x, y, 7, 7); g.fill();
+  } else if (it.kind === 'charm') {
+    const c = Charms.DEFS[it.def.charm].color;
+    bloom(g, it.x, y, 90, c, 0.4 + 0.12 * Math.sin(t * 3));
+    Art.drawCharm(g, it.def.charm, it.x, y, 17, { glow: true });
   } else if (it.kind === 'seed') {
     bloom(g, it.x, y, 56, '#e8f4ff', 0.35);
     mask(g, it.x, y, 12, 13, 1.1, 0);
@@ -2524,6 +2617,22 @@ Art.drawProj = function (g, p, t) {
     return;
   }
   baseDrawProj(g, p, t);
+};
+
+// Dusk Cry: a column of pale light from the Wanderer's feet to the ceiling, flickering as it fades
+Art.drawWail = function (g, p, t) {
+  const k = clamp(p.wailT / 0.55, 0, 1), env = Math.sin(Math.PI * (1 - k) * 0.9 + 0.2) * 0.9 + 0.1, w = 40 * env * (0.85 + 0.15 * Math.sin(t * 60));
+  const top = p.wailTop, bot = p.y + p.h, x = p.cx;
+  const gr = g.createLinearGradient(x - w, 0, x + w, 0);
+  gr.addColorStop(0, 'rgba(210,236,255,0)'); gr.addColorStop(0.5, 'rgba(240,250,255,' + (0.9 * env) + ')'); gr.addColorStop(1, 'rgba(210,236,255,0)');
+  const o = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter';
+  g.fillStyle = gr; g.fillRect(x - w, top, w * 2, bot - top);
+  const tg = g.createLinearGradient(0, top, 0, top + 70); tg.addColorStop(0, 'rgba(10,14,22,0.5)'); tg.addColorStop(1, 'rgba(10,14,22,0)');
+  g.globalCompositeOperation = o; g.fillStyle = tg; g.fillRect(x - w, top, w * 2, 70);   // the top fades into the dark
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 7; i++) { const sx = x + (hash2(i, 3, 5) - 0.5) * w * 1.4, sy = bot - ((t * 340 + i * 97) % Math.max(40, bot - top)); g.fillStyle = 'rgba(255,255,255,' + (0.7 * env) + ')'; g.fillRect(sx - 1.5, sy - 12, 3, 24); }
+  g.globalCompositeOperation = o;
+  bloom(g, x, bot - 20, 90, '#dff3ff', 0.5 * env);
 };
 
 </script>
@@ -2918,6 +3027,7 @@ function heroPose(p, t) {
   else if (charge > 0) { o.frame = A.idle[0]; o.sy = 1 - 0.14 * charge; o.sx = 1 + 0.1 * charge; o.dy = 0; }
   else if (p.dashT > 0) { o.anim = 'run'; o.frame = A.run[2 % A.run.length]; o.sx = 1.3; o.sy = 0.85; o.rot = 0.14; }
   else if (p.diving) { o.anim = 'fall'; o.frame = A.fall[0]; o.sx = 0.8; o.sy = 1.22; }
+  else if (p.wailT > 0) { o.anim = 'jump'; o.frame = A.jump[0]; o.sx = 0.9; o.sy = 1.14; o.dy = -4; }          // stretched, face to the sky
   else if (p.sitting) { o.frame = A.idle[0]; o.sy = 0.86; o.dy = 4; }
   else if (p.hurtT > 0) { o.anim = 'fall'; o.frame = A.fall[0]; o.flash = 0.55; o.rot = -0.2; }
   else if (p.sliding) { o.anim = 'fall'; o.frame = A.fall[0]; o.rot = 0.1; o.sy = 1.04; }
@@ -2933,7 +3043,7 @@ function heroPose(p, t) {
 function drawSlash(g, p, fx, fy, k) {
   if (!SLASH_IMG.complete || !SLASH_IMG.naturalWidth) return;
   const m = Pixel.meta(HeroStyle.sheet()), sl = m.slash, pr = 1 - clamp(p.atkT / 0.16, 0, 1);
-  const grow = 1.1 + 0.5 * pr, a = pr < 0.5 ? 0 : 1 - (pr - 0.5) * 1.4;
+  const grow = (1.1 + 0.5 * pr) * (Charms.has('reach') ? 1.3 : 1), a = pr < 0.5 ? 0 : 1 - (pr - 0.5) * 1.4;
   g.save(); g.imageSmoothingEnabled = false; g.globalAlpha = a;
   if (p.atkDir === 'side') g.translate(fx, fy), g.scale(p.face * k, k);
   else g.translate(fx, fy - 12 * k), g.rotate(p.atkDir === 'up' ? -Math.PI / 2 : Math.PI / 2), g.scale(k, k);
@@ -3052,7 +3162,7 @@ const SD_CHARGE = 0.8, SD_SPEED = 1050, SD_DMG = 13;
 class Player {
   constructor() {
     this.w = 22; this.h = 38;
-    this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false };
+    this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false, wail: false };
     this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = 99; this.geo = 0;
     this.nail = 5; this.soulGain = 11;
     this.place(0, 0, 1);
@@ -3068,9 +3178,16 @@ class Player {
     this.invuln = 0; this.hurtT = 0; this.focusT = 0; this.castHold = 0; this.castDone = false; this.castT = 0;
     this.sitting = null; this.dead = false; this.safe = { x: fx, y: fy }; this.safeT = 0;
     this.t = 0; this.landT = 0; this.ghost = []; this.recoil = 0; this.diving = false; this.bounced = false;
-    this.sd = null; this.riding = null; this.turnT = 0; this.airT = 0;
+    this.sd = null; this.riding = null; this.turnT = 0; this.airT = 0; this.wailT = 0; this.wailTick = 0; this.wailTop = 0;
   }
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
+
+  // ---- numbers the charms change (see charms.js) ----
+  spellCost() { return Charms.has('thrift') ? 24 : 33; }
+  focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1); }
+  nailDamage() { return Math.round(this.nail * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1)); }
+  spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1)); }
+  reachK() { return Charms.has('reach') ? 1.35 : 1; }
 
   touchWall(dir) {
     const L = G.level, x = dir > 0 ? this.x + this.w + 1 : this.x - 1;
@@ -3093,6 +3210,7 @@ class Player {
       return;
     }
     if (this.diving) { this.updateDive(dt); return; }
+    if (this.wailT > 0) { this.updateWail(dt); return; }
     if (this.sd && this.updateSuperdash(dt)) return;
     const ix = Input.axisX(), iy = Input.axisY();
     const stunned = this.hurtT > 0;
@@ -3103,23 +3221,26 @@ class Player {
 
     // ---- cast / focus ----
     if (Input.pressed('cast')) { this.castHold = 0; this.castDone = false; }
-    // Down + cast plunges at once, so it never waits for the key to be released
-    if (Input.pressed('cast') && this.ab.dive && Input.down('down') && this.soul >= 33 && !stunned && this.dashT <= 0) {
+    // Up + cast loosens the Dusk Cry at once; Down + cast plunges at once. Neither waits for the key to be released
+    if (Input.pressed('cast') && this.ab.wail && Input.down('up') && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
+      this.castDone = true; this.startWail(); return;
+    }
+    if (Input.pressed('cast') && this.ab.dive && Input.down('down') && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
       this.castDone = true; this.startDive(); return;
     }
     if (Input.down('cast')) this.castHold += dt;
-    const canFocus = this.onGround && this.soul >= 33 && this.hp < this.maxHp && ix === 0 && this.dashT <= 0 && !stunned && this.atkT <= 0;
+    const canFocus = this.onGround && this.soul >= this.spellCost() && this.hp < this.maxHp && ix === 0 && this.dashT <= 0 && !stunned && this.atkT <= 0;
     if (Input.down('cast') && canFocus && this.castHold > 0.22 && !this.castDone) {
       if (this.focusT === 0) Sound.play('focus');
       this.focusT += dt;
-      if (this.focusT >= 0.9) {
-        this.hp = Math.min(this.maxHp, this.hp + 1); this.soul -= 33; this.focusT = 0; this.castDone = true;
+      if (this.focusT >= this.focusTime()) {
+        this.hp = Math.min(this.maxHp, this.hp + (Charms.has('deep') ? 2 : 1)); this.soul -= this.spellCost(); this.focusT = 0; this.castDone = true;
         Sound.play('heal'); G.burst(this.cx, this.cy, 22, { color: '#dff6ff', speed: 220, life: 0.7, size: 3, grav: -80 });
       }
       if (Math.random() < 0.5) G.burst(this.cx + rand(-18, 18), this.y + this.h, 1, { color: '#bfe8ff', speed: 30, life: 0.8, size: 2, grav: -160, vy: -60 });
     } else if (this.focusT > 0) { this.focusT = 0; this.castDone = true; }
     if (Input.released('cast')) {
-      if (!this.castDone && this.castHold < 0.3 && this.soul >= 33 && !stunned && this.dashT <= 0) {
+      if (!this.castDone && this.castHold < 0.3 && this.soul >= this.spellCost() && !stunned && this.dashT <= 0) {
         this.castBolt();
       }
       this.castHold = 0;
@@ -3136,7 +3257,7 @@ class Player {
 
     // ---- dash ----
     if (Input.pressed('dash') && this.ab.dash && this.dashCD <= 0 && (this.onGround || this.airDash) && !stunned && !focusing) {
-      this.dashT = 0.21; this.dashCD = 0.5;
+      this.dashT = 0.21; this.dashCD = Charms.has('dashmaster') ? 0.3 : 0.5;
       if (ix !== 0) this.face = ix;
       if (!this.onGround) this.airDash = false;
       this.atkT = 0; this.vy = 0;
@@ -3158,7 +3279,7 @@ class Player {
       } else if (focusing) {
         this.vx = 0;
       } else {
-        const target = ix * 250;
+        const target = ix * (Charms.has('boots') ? 305 : 250);
         this.vx = approach(this.vx, target, (ix === 0 ? 4200 : 3600) * dt * (this.onGround ? 1 : 0.85));
         if (ix !== 0 && this.atkT <= 0) this.face = ix;
         else if (ix !== 0 && this.atkT > 0 && this.atkDir !== 'side') this.face = ix;
@@ -3204,7 +3325,7 @@ class Player {
     if (this.atkBuf > 0 && this.atkCD <= 0 && !stunned && !focusing && this.dashT <= 0) {
       this.atkBuf = 0;
       this.atkDir = iy < 0 ? 'up' : (iy > 0 && !this.onGround ? 'down' : 'side');
-      this.atkT = 0.16; this.atkCD = 0.34; this.atkAlt ^= 1; this.hits = new Set();
+      this.atkT = 0.16; this.atkCD = Charms.has('swift') ? 0.21 : 0.34; this.atkAlt ^= 1; this.hits = new Set();
       Sound.play('slash');
     }
     if (this.atkT > 0) this.attackHits();
@@ -3257,9 +3378,10 @@ class Player {
     const L = G.level;
     let hb;
     const cx = this.cx;
-    if (this.atkDir === 'up') hb = { x: cx - 30, y: this.y - 58, w: 60, h: 64 };
-    else if (this.atkDir === 'down') hb = { x: cx - 28, y: this.y + this.h - 10, w: 56, h: 56 };
-    else hb = { x: this.face > 0 ? this.x + this.w - 4 : this.x + 4 - 70, y: this.y - 8, w: 70, h: 52 };
+    const rk = this.reachK();
+    if (this.atkDir === 'up') hb = { x: cx - 30, y: this.y + 6 - 64 * rk, w: 60, h: 64 * rk };
+    else if (this.atkDir === 'down') hb = { x: cx - 28, y: this.y + this.h - 10, w: 56, h: 56 * rk };
+    else hb = { x: this.face > 0 ? this.x + this.w - 4 : this.x + 4 - 70 * rk, y: this.y - 8, w: 70 * rk, h: 52 };
     this.atkBox = hb;
     let connected = false;
     for (const e of G.enemies) {
@@ -3267,8 +3389,8 @@ class Player {
       if (overlap(hb, e.hb())) {
         this.hits.add(e);
         const dir = this.atkDir === 'side' ? this.face : (e.cx > cx ? 1 : -1);
-        e.hurt(this.nail, dir, this.atkDir);
-        this.soul = Math.min(this.maxSoul, this.soul + this.soulGain);
+        e.hurt(this.nailDamage(), dir, this.atkDir);
+        this.soul = Math.min(this.maxSoul, this.soul + this.soulGain + (Charms.has('siphon') ? 6 : 0));
         connected = true;
       }
     }
@@ -3295,15 +3417,37 @@ class Player {
   }
 
   castBolt() {
-    this.soul -= 33; this.castT = 0.25;
+    this.soul -= this.spellCost(); this.castT = 0.25;
     Sound.play('cast');
-    G.projs.push(new Proj({ x: this.cx + this.face * 24, y: this.cy - 2, vx: this.face * 640, vy: 0, r: 15, dmg: 14, friendly: true, pierce: true, life: 0.85, kind: 'bolt', color: '#bfe6ff', passWalls: false }));
+    G.projs.push(new Proj({ x: this.cx + this.face * 24, y: this.cy - 2, vx: this.face * 640, vy: 0, r: 15, dmg: this.spellDmg(14), friendly: true, pierce: true, life: 0.85, kind: 'bolt', color: '#bfe6ff', passWalls: false }));
     this.vx = -this.face * 140; this.recoil = 0.1;
     G.shake(3, 0.12);
   }
 
+  // Dusk Cry: the Wanderer hangs in the air and a column of light stands above, striking everything in it
+  startWail() {
+    this.soul -= this.spellCost(); this.wailT = 0.55; this.wailTick = 0; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 0;
+    Sound.play('cast'); G.shake(5, 0.3); G.ring(this.cx, this.cy, '#dff3ff', 0.4);
+    G.burst(this.cx, this.cy, 14, { color: '#dff3ff', speed: 200, life: 0.5, size: 3, grav: -120 });
+  }
+  updateWail(dt) {
+    const L = G.level;
+    this.wailT -= dt; this.vx = 0; this.vy = 0;
+    // the column stops at the first ceiling above
+    const tx = Math.floor(this.cx / TILE); let ty = Math.floor(this.y / TILE);
+    while (ty > 0 && !L.solid(tx, ty - 1) && this.y - ty * TILE < 250) ty--;
+    this.wailTop = Math.max(this.y - 250, ty * TILE);
+    this.wailTick -= dt;
+    if (this.wailTick <= 0) {
+      this.wailTick = 0.13;
+      const col = { x: this.cx - 38, y: this.wailTop, w: 76, h: this.y + this.h - this.wailTop };
+      for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(col, e.hb())) { e.hurt(this.spellDmg(6), e.cx > this.cx ? 1 : -1, 'wail'); this.soul = Math.min(this.maxSoul, this.soul + 1); }
+      G.burst(this.cx + rand(-30, 30), rand(this.wailTop, this.y), 5, { color: '#dff3ff', speed: 60, life: 0.4, size: 3, grav: -260 });
+    }
+    if (this.wailT <= 0) { this.wailT = 0; this.invuln = Math.max(this.invuln, 0.2); }
+  }
   startDive() {
-    this.soul -= 33; this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
+    this.soul -= this.spellCost(); this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
     Sound.play('cast'); G.burst(this.cx, this.cy, 12, { color: '#dff3ff', speed: 160, life: 0.4, size: 3 });
   }
   updateDive(dt) {
@@ -3322,23 +3466,41 @@ class Player {
     Sound.play('slam'); G.shake(10, 0.35); G.ring(this.cx, this.y + this.h - 6, '#dff3ff', 0.35);
     G.burst(this.cx, this.y + this.h, 24, { color: '#dff3ff', speed: 300, life: 0.5, size: 3, vy: -120 });
     const blast = { x: this.cx - 120, y: this.y + this.h - 80, w: 240, h: 90 };
-    for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(blast, e.hb())) e.hurt(18, e.cx > this.cx ? 1 : -1, 'spell');
-    for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'shock', x: this.cx + d * 30, y: this.y + this.h, vx: d * 480, dmg: 8, friendly: true, pierce: true, life: 0.45, color: '#dff3ff', passWalls: true }));
+    for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(blast, e.hb())) e.hurt(this.spellDmg(18), e.cx > this.cx ? 1 : -1, 'spell');
+    for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'shock', x: this.cx + d * 30, y: this.y + this.h, vx: d * 480, dmg: this.spellDmg(8), friendly: true, pierce: true, life: 0.45, color: '#dff3ff', passWalls: true }));
   }
 
   hurt(dmg, srcX) {
     if (this.invuln > 0 || this.dead || this.diving || G.state !== 'play') return false;
-    this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
+    if (Charms.absorb()) {                    // Shell Ward turns the blow aside, once
+      this.invuln = 0.9; this.vx = (this.cx < srcX ? -1 : 1) * 160; this.recoil = 0.1;
+      Sound.play('clank'); G.hitstop(0.08); G.shake(4, 0.15); G.ring(this.cx, this.cy, '#d8c8a0', 0.4);
+      G.burst(this.cx, this.cy, 14, { color: '#e8dcb8', speed: 220, life: 0.4, size: 3 });
+      return true;
+    }
+    if (Charms.over()) dmg *= 2;               // overcharmed: every wound costs double
+    this.hp -= dmg; this.invuln = 1.4; this.hurtT = 0.28; this.focusT = 0; this.wailT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300; this.vy = -320; this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
     G.burst(this.cx, this.cy, 16, { color: '#e9f3ff', speed: 240, life: 0.5, size: 3 });
     G.burst(this.cx, this.cy, 10, { color: '#1a2230', speed: 200, life: 0.5, size: 4 });
-    if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); }
+    if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }
+    if (Charms.has('spirit')) this.soul = Math.min(this.maxSoul, this.soul + 18);
+    if (Charms.has('thorn')) this.thornBurst();
     return true;
   }
+  // Thorn Mantle: the wound makes thorns burst out and strike everything close by
+  thornBurst() {
+    G.ring(this.cx, this.cy, '#b6ef6a', 0.5);
+    G.burst(this.cx, this.cy, 18, { color: '#b6ef6a', speed: 300, life: 0.4, size: 3 });
+    for (const e of G.enemies) {
+      if (e.dead || e.ghostly) continue;
+      if (Math.hypot(e.cx - this.cx, e.cy - this.cy) < 120) e.hurt(this.spellDmg(9), e.cx > this.cx ? 1 : -1, 'spell');
+    }
+  }
   spikeHurt() {
-    this.hp -= 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
+    this.hp -= Charms.over() ? 2 : 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
     Sound.play('hurt'); G.hitstop(0.12); G.shake(8, 0.3);
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return; }
     G.respawnFade(this.safe.x, this.safe.y);
@@ -3405,6 +3567,7 @@ class Player {
   sit(bench) {
     this.sitting = bench; this.vx = 0; this.vy = 0; this.x = bench.px - this.w / 2; this.y = bench.py - this.h;
     this.hp = this.maxHp; this.soul = this.maxSoul;
+    Charms.rest();
   }
 }
 
@@ -3473,6 +3636,10 @@ class Geo {
     this.age += dt;
     this.vy = Math.min(this.vy + GRAV * 0.8 * dt, 700);
     if (this.onGround) this.vx *= 0.9;
+    if (Charms.has('magnet') && this.age > 0.4 && !G.player.dead) {      // Geo Magnet draws it in
+      const mx = G.player.cx - (this.x + this.w / 2), my = G.player.cy - (this.y + this.h / 2), md = Math.hypot(mx, my);
+      if (md < 190 && md > 1) { this.vx = mx / md * 520; this.vy = my / md * 520; }
+    }
     moveBody(this, dt, G.level);
     if (this.hitL || this.hitR) this.vx = -this.vx * 0.5;
     if (this.onGround && this.vy === 0 && Math.abs(this.vx) > 10 && Math.random() < 0.0) this.vy = -100;
@@ -3526,7 +3693,8 @@ class Enemy {
     if (this.hp <= 0) this.kill();
   }
   // knockback pushes the enemy away from the strike and puts it in the Recoil state
-  onHurt(dir) { if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
+  // the Dusk Cry holds enemies in its column instead of throwing them out of it
+  onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15);
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
@@ -3727,9 +3895,9 @@ class Sentinel extends Enemy {   // Idle -> Patrol (waypoints) -> Chase -> Antic
     for (let i = 0; i < this.range; i += 8) { if (!ok(this.cx + i + this.w / 2 + 4)) break; b = this.cx + i; }
     this.wp = [a, b];
   }
-  onHurt(dir) {
+  onHurt(dir, how) {
     if (this.currentState === ST.ANTICIPATION || this.currentState === ST.ATTACK) { this.vx += dir * 60; return; }   // armour holds mid-swing
-    super.onHurt(dir);
+    super.onHurt(dir, how);
   }
   update(dt) {
     this.tick(dt);
@@ -4878,6 +5046,161 @@ const Skins = (() => {
 </script>
 <script>
 'use strict';
+// Charms: small relics the Wanderer wears on the cloak. Each one costs notches. The notches grow
+// with the seals of the guardians and with the merchant. Wearing more than the notches allow
+// "overcharms" the Wanderer: every wound then costs double. Charms can be changed only while
+// resting on a bench. The effects themselves are read by the Player and the Geo pickups through
+// Charms.has(id); this file holds the list, the notch rules and the save data.
+const Charms = (() => {
+  const BASE_NOTCHES = 3;
+  const DEFS = {
+    reach:      { cost: 1, color: '#cfe6ff', ar: 'نصل طويل', en: 'Long Edge', dAr: 'ضربتك تمتد أبعد بثلث.', dEn: 'Your strike reaches a third further.' },
+    swift:      { cost: 2, color: '#bfe8ff', ar: 'ضربة الريح', en: 'Gale Strike', dAr: 'تضرب أسرع بكثير.', dEn: 'You strike much faster.' },
+    siphon:     { cost: 2, color: '#a9d4ff', ar: 'ماصّة الروح', en: 'Soul Siphon', dAr: 'كل ضربة تملأ روحاً أكثر.', dEn: 'Every strike gathers more soul.' },
+    focus:      { cost: 3, color: '#ffe9a0', ar: 'تركيز سريع', en: 'Swift Focus', dAr: 'تشفي جراحك أسرع.', dEn: 'You heal much faster.' },
+    deep:       { cost: 4, color: '#ffd070', ar: 'تركيز عميق', en: 'Deep Focus', dAr: 'الشفاء أبطأ لكنه يشفي قناعين دفعة واحدة.', dEn: 'Healing is slower but mends two masks at once.' },
+    thorn:      { cost: 1, color: '#b6ef6a', ar: 'عباءة الشوك', en: 'Thorn Mantle', dAr: 'عندما تُصاب تنفجر الأشواك وتؤذي من حولك.', dEn: 'When you are hurt, thorns burst out and wound those around you.' },
+    boots:      { cost: 1, color: '#9dff9a', ar: 'حذاء الريح', en: 'Wind Boots', dAr: 'تجري أسرع.', dEn: 'You run faster.' },
+    dashmaster: { cost: 2, color: '#ff9c5a', ar: 'سيّد الاندفاع', en: 'Dash Master', dAr: 'تندفع من جديد بعد وقت أقصر.', dEn: 'You can dash again much sooner.' },
+    mage:       { cost: 3, color: '#c8a8ff', ar: 'حجر الساحر', en: 'Mage Stone', dAr: 'تعاويذك تؤذي أكثر بنسبة أربعين بالمئة.', dEn: 'Your spells hurt forty percent more.' },
+    spirit:     { cost: 1, color: '#ff9bd6', ar: 'صدى الألم', en: 'Pain Echo', dAr: 'جروحك تملأ روحك.', dEn: 'Your wounds gather soul.' },
+    magnet:     { cost: 1, color: '#ffe9a0', ar: 'مغناطيس الجيو', en: 'Geo Magnet', dAr: 'ينجذب الجيو إليك من بعيد.', dEn: 'Geo drifts toward you from afar.' },
+    thrift:     { cost: 2, color: '#8fe0ff', ar: 'اقتصاد الروح', en: 'Soul Thrift', dAr: 'التعاويذ والشفاء يكلّفون روحاً أقل.', dEn: 'Spells and healing cost less soul.' },
+    fury:       { cost: 2, color: '#ff6a5a', ar: 'غضب الأخير', en: 'Last Fury', dAr: 'حين يبقى لك قناع واحد تصير ضربتك أقوى بكثير.', dEn: 'With a single mask left, your strike hits far harder.' },
+    shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
+  };
+  const ORDER = Object.keys(DEFS);
+
+  let owned = {}, worn = [], shell = false;
+
+  const name = id => DEFS[id][LANG.cur === 'ar' ? 'ar' : 'en'];
+  const desc = id => DEFS[id][LANG.cur === 'ar' ? 'dAr' : 'dEn'];
+  const has = id => worn.indexOf(id) >= 0;
+  const used = () => worn.reduce((s, id) => s + DEFS[id].cost, 0);
+  // three to begin with, one more for every two guardians' seals, and up to two from the merchant
+  const notches = () => BASE_NOTCHES + Math.floor(sealCount() / 2) + (G.flags.buy_notch1 ? 1 : 0) + (G.flags.buy_notch2 ? 1 : 0);
+  const over = () => used() > notches();
+  const ownedList = () => ORDER.filter(id => owned[id]);
+
+  function give(id) {
+    if (!DEFS[id] || owned[id]) return false;
+    owned[id] = true; return true;
+  }
+  // Wear or remove a charm. Returns 'on', 'over' (worn, but now overcharmed), 'off', 'full' (already
+  // overcharmed, so nothing more fits) or 'none' (not owned).
+  function toggle(id) {
+    if (!owned[id]) return 'none';
+    const i = worn.indexOf(id);
+    if (i >= 0) { worn.splice(i, 1); return 'off'; }
+    if (used() > notches()) return 'full';
+    worn.push(id);
+    return used() > notches() ? 'over' : 'on';
+  }
+
+  // Shell Ward: armed by resting, spent by the next wound.
+  function rest() { shell = has('shell'); }
+  function absorb() {
+    if (!shell || !has('shell')) return false;
+    shell = false; return true;
+  }
+
+  function reset() { owned = {}; worn = []; shell = false; }
+  function save() { return { o: ORDER.filter(id => owned[id]), w: worn.slice() }; }
+  function load(d) {
+    reset();
+    if (!d) return;
+    for (const id of d.o || []) if (DEFS[id]) owned[id] = true;
+    for (const id of d.w || []) if (owned[id] && worn.indexOf(id) < 0) worn.push(id);
+  }
+
+  return { DEFS, ORDER, name, desc, has, used, notches, over, ownedList, give, toggle, rest, absorb, reset, save, load, shellUp: () => shell && has('shell') };
+})();
+
+</script>
+<script>
+'use strict';
+// Drawing of the charms: a round medallion with a glyph. Used by the charm screen, the shop, the
+// pickups in the world and the banner shown when one is found. The glyphs are drawn in a unit box
+// (-1..1), scaled to the medallion, in the same dark ink and pale light as the rest of the game.
+Art.drawCharm = function (g, id, x, y, r, o) {
+  o = o || {};
+  const def = Charms.DEFS[id]; if (!def) return;
+  const c = def.color, dim = o.dim;
+  g.save(); g.translate(x, y);
+  if (o.glow) glow(g, 0, 0, r * 2.4, c, 0.25);
+  // the medallion: ink rim, dark bowl, a thin ring of the charm's colour
+  ellipse(g, 0, 0, r, r); fs(g, dim ? '#161b27' : '#0d1322', INK, Math.max(2, r * 0.16));
+  g.strokeStyle = dim ? 'rgba(150,165,190,0.45)' : rgba(c, o.worn ? 1 : 0.8); g.lineWidth = Math.max(1.2, r * (o.worn ? 0.12 : 0.08));
+  ellipse(g, 0, 0, r * 0.84, r * 0.84); g.stroke();
+  g.save(); g.scale(r * 0.52, r * 0.52); g.lineWidth = 0.16; g.lineJoin = 'round'; g.lineCap = 'round';
+  const fill = dim ? '#6d7a8c' : c, ink = INK, lw = 0.16;
+  const shape = (pts, f) => { poly(g, pts); fs(g, f || fill, ink, lw); };
+  switch (id) {
+    case 'reach':      // a long blade
+      shape([0, -1, 0.22, 0.4, -0.22, 0.4]); shape([-0.55, 0.4, 0.55, 0.4, 0.55, 0.58, -0.55, 0.58]); shape([-0.1, 0.58, 0.1, 0.58, 0.1, 1, -0.1, 1]);
+      break;
+    case 'swift':      // speed lines ending in an arrow
+      for (const yy of [-0.5, 0, 0.5]) { poly(g, [-1, yy - 0.08, 0.1, yy - 0.04, 0.1, yy + 0.04, -1, yy + 0.08]); fs(g, fill, ink, 0.08); }
+      shape([1, 0, 0.35, -0.5, 0.35, 0.5]);
+      break;
+    case 'siphon':     // a drop of soul
+      g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(0.2, -0.5, 0.78, -0.05, 0.78, 0.35); g.arc(0, 0.35, 0.78, 0, Math.PI); g.bezierCurveTo(-0.78, -0.05, -0.2, -0.5, 0, -1); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,255,255,0.7)'; ellipse(g, -0.28, 0.2, 0.12, 0.24, 0.4); g.fill();
+      break;
+    case 'focus':      // gathering rings
+      ellipse(g, 0, 0, 0.9, 0.9); g.strokeStyle = fill; g.lineWidth = 0.2; g.stroke();
+      ellipse(g, 0, 0, 0.5, 0.5); g.stroke(); ellipse(g, 0, 0, 0.18, 0.18); fs(g, fill, ink, 0.06);
+      break;
+    case 'deep':       // a diamond sunk in a ring
+      ellipse(g, 0, 0, 0.92, 0.92); g.strokeStyle = fill; g.lineWidth = 0.2; g.stroke();
+      shape([0, -0.62, 0.62, 0, 0, 0.62, -0.62, 0]);
+      g.fillStyle = 'rgba(255,255,255,0.55)'; poly(g, [0, -0.4, 0.22, 0, 0, 0.1, -0.22, 0]); g.fill();
+      break;
+    case 'thorn': {    // a burst of thorns
+      const pts = []; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? 0.34 : 1; pts.push(Math.cos(a) * rr, Math.sin(a) * rr); }
+      shape(pts);
+      break;
+    }
+    case 'boots':      // a boot with wind behind it
+      shape([-0.3, -0.95, 0.35, -0.95, 0.35, 0.1, 0.95, 0.4, 0.95, 0.85, -0.3, 0.85]);
+      g.strokeStyle = fill; g.lineWidth = 0.1; for (const yy of [-0.3, 0.1, 0.5]) { g.beginPath(); g.moveTo(-0.95, yy); g.lineTo(-0.5, yy); g.stroke(); }
+      break;
+    case 'dashmaster': // two chevrons
+      for (const dx of [-0.5, 0.35]) shape([dx - 0.4, -0.75, dx + 0.3, 0, dx - 0.4, 0.75, dx - 0.05, 0.75, dx + 0.65, 0, dx - 0.05, -0.75]);
+      break;
+    case 'mage':       // a four-point star
+      shape([0, -1, 0.26, -0.26, 1, 0, 0.26, 0.26, 0, 1, -0.26, 0.26, -1, 0, -0.26, -0.26]);
+      break;
+    case 'spirit':     // a heart that echoes
+      g.beginPath(); g.moveTo(0, 0.9); g.bezierCurveTo(-1.15, 0.1, -0.7, -0.85, 0, -0.35); g.bezierCurveTo(0.7, -0.85, 1.15, 0.1, 0, 0.9); g.closePath(); fs(g, fill, ink, lw);
+      g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(-0.55, -0.12); g.lineTo(-0.3, -0.3); g.stroke();
+      break;
+    case 'magnet':     // a horseshoe magnet
+      g.lineCap = 'butt';
+      g.strokeStyle = ink; g.lineWidth = 0.62; g.beginPath(); g.moveTo(-0.55, 0.9); g.lineTo(-0.55, 0.05); g.arc(0, 0.05, 0.55, Math.PI, 0); g.lineTo(0.55, 0.9); g.stroke();
+      g.strokeStyle = fill; g.lineWidth = 0.4; g.stroke();
+      g.strokeStyle = dim ? '#aab4c4' : '#ffffff'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(-0.55, 0.9); g.lineTo(-0.55, 0.62); g.moveTo(0.55, 0.9); g.lineTo(0.55, 0.62); g.stroke();
+      break;
+    case 'thrift':     // a leaf: the soul is spared
+      g.beginPath(); g.moveTo(-0.85, 0.85); g.bezierCurveTo(-1, -0.4, 0.2, -1, 0.95, -0.9); g.bezierCurveTo(1, 0.1, 0.3, 0.95, -0.85, 0.85); g.closePath(); fs(g, fill, ink, lw);
+      g.strokeStyle = ink; g.lineWidth = 0.1; g.beginPath(); g.moveTo(-0.85, 0.85); g.lineTo(0.35, -0.35); g.stroke();
+      break;
+    case 'fury':       // a flame
+      g.beginPath(); g.moveTo(0.05, -1); g.bezierCurveTo(0.95, -0.15, 0.95, 0.95, 0, 0.95); g.bezierCurveTo(-0.95, 0.95, -0.75, 0.1, -0.3, -0.25); g.bezierCurveTo(-0.28, 0.2, -0.1, 0.3, 0, 0.05); g.bezierCurveTo(0.2, -0.3, -0.1, -0.6, 0.05, -1); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,240,200,0.85)'; ellipse(g, 0.05, 0.55, 0.28, 0.34); g.fill();
+      break;
+    case 'shell':      // a ward shield
+      g.beginPath(); g.moveTo(0, -0.98); g.lineTo(0.88, -0.6); g.bezierCurveTo(0.88, 0.4, 0.42, 0.82, 0, 1); g.bezierCurveTo(-0.42, 0.82, -0.88, 0.4, -0.88, -0.6); g.closePath(); fs(g, fill, ink, lw);
+      g.strokeStyle = 'rgba(30,24,16,0.6)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(0, -0.7); g.lineTo(0, 0.75); g.moveTo(-0.6, -0.15); g.lineTo(0.6, -0.15); g.stroke();
+      break;
+  }
+  g.restore();
+  g.restore();
+};
+
+</script>
+<script>
+'use strict';
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
@@ -4890,7 +5213,7 @@ const G = {
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
-  geoPulse: 0, ending: null, deathText: 0, lastArea: '',
+  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, look: 0, lookT: 0, lookDir: 0,
 };
 const P = G.player;
 
@@ -4941,7 +5264,7 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, room: G.bench.room, maxHp: P.maxHp, ab: P.ab, geo: P.geo, nail: P.nail, soulGain: P.soulGain, flags: G.flags,
-      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths,
+      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(),
     }));
   } catch (e) { /* storage may be blocked */ }
 }
@@ -4974,7 +5297,7 @@ function enterRoom(id, spawn) {
     const a = def.arena;
     G.arena = { def: a, state: G.flags[a.flag] ? 'won' : 'idle' };
     if (G.arena.state === 'idle') { for (const gt of a.gates) if (gt.close === 'always') closeGate(gt, true); }
-    else if (a.reward && !G.flags[a.reward.id]) G.items.push(new Item({ id: a.reward.id, x: a.reward.x, y: a.reward.y, kind: a.reward.kind, ability: a.reward.ability }));
+    else for (const r of [a.reward, a.reward2]) if (r && !G.flags[r.id]) G.items.push(new Item(r));
     let fy = a.spawn.y; while (fy < L.h - 1 && !L.solid(a.spawn.x, fy)) fy++;
     G.floorY = fy * TILE;
   }
@@ -5029,7 +5352,7 @@ function cameraBounds() {
 }
 function cameraTarget() {
   const b = cameraBounds();
-  return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24, b.y0, b.y1) };
+  return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24 + G.look, b.y0, b.y1) };
 }
 
 G.fadeTo = function (fn, out, hold, inn) {
@@ -5058,6 +5381,10 @@ G.collectItem = function (it) {
   G.flags[d.id] = true;
   if (d.kind === 'seed') { P.maxHp++; P.hp = P.maxHp; G.banner = { title: tr('seed'), desc: tr('seed_d'), t: 0 }; }
   else if (d.kind === 'fang') { P.nail += 3; G.banner = { title: tr('fang'), desc: tr('fang_d'), t: 0, big: true }; }
+  else if (d.kind === 'charm') {
+    Charms.give(d.charm);
+    G.banner = { title: Charms.name(d.charm), desc: Charms.desc(d.charm) + '  ' + tr('charm_found_d'), t: 0, charm: d.charm };
+  }
   else if (d.kind === 'ability') {
     P.ab[d.ability] = true;
     G.banner = { title: tr('abil_' + d.ability), desc: tr('abil_' + d.ability + '_d'), t: 0, big: true };
@@ -5075,18 +5402,19 @@ G.onBossDeath = function (b) {
   G.dropGeo(b.cx, b.cy, b.geo); G.flash = 0.8; Sound.boss(false);
   G.burst(b.cx, b.cy, 50, { color: '#ffffff', speed: 360, life: 1.2, size: 4, grav: -30 });
   openGates();
-  if (a.def.reward) G.items.push(new Item({ id: a.def.reward.id, x: a.def.reward.x, y: a.def.reward.y, kind: a.def.reward.kind, ability: a.def.reward.ability }));
+  for (const r of [a.def.reward, a.def.reward2]) if (r) G.items.push(new Item(r));
   if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; Sound.setTheme('title'); }, 2.2, 0.4, 1.5); saveGame(); }
 };
 
 function startGame(useSave) {
   Object.assign(P, new Player());
-  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null;
+  G.look = 0; G.lookT = 0; G.lookDir = 0;
+  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset();
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
     P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = Object.assign(P.ab, s.ab); P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
-    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0;
+    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms);
     room = s.room; spawn = { bench: true };
   } else {
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
@@ -5119,10 +5447,19 @@ function interact() {
   return false;
 }
 const SHOP_ITEMS = [
-  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, apply() { P.maxHp++; P.hp = P.maxHp; } },
-  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, apply() { P.nail = 9; } },
-  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, apply() { P.soulGain = 17; } },
+  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
+  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail = 9; } },
+  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, icon: 'soul', apply() { P.soulGain = 17; } },
+  { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 300, icon: 'notch', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 550, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_wail', name: 'itemWail', desc: 'itemWailD', price: 500, icon: 'soul', apply() { P.ab.wail = true; G.banner = { title: tr('abil_wail'), desc: tr('abil_wail_d'), t: 0 }; G.state = 'banner'; } },
+  { id: 'buy_reach', charm: 'reach', price: 120, apply() { Charms.give('reach'); } },
+  { id: 'buy_boots', charm: 'boots', price: 100, apply() { Charms.give('boots'); } },
+  { id: 'buy_magnet', charm: 'magnet', price: 90, apply() { Charms.give('magnet'); } },
 ];
+const shopList = () => SHOP_ITEMS.filter(it => !it.needs || G.flags[it.needs]);
+const shopName = it => (it.charm ? Charms.name(it.charm) : tr(it.name));
+const shopDesc = it => (it.charm ? Charms.desc(it.charm) : tr(it.desc));
 
 // ---------------------------------------------------------------- update
 function updateParticles(dt) {
@@ -5140,6 +5477,13 @@ function updatePlay(dt) {
   Mech.update(dt);
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
+  // a cracked soul vessel: while the shade still holds your Geo, only two thirds of the soul can be kept
+  P.maxSoul = G.shade ? 66 : 99; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
+  // looking up or down: hold the key while standing still and the camera drifts that way
+  const still = P.onGround && !P.sitting && Input.axisX() === 0 && P.atkT <= 0 && P.hurtT <= 0 && !P.diving && !P.sd && !P.wailT;
+  const iy = still ? Input.axisY() : 0;
+  if (iy !== 0 && iy === G.lookDir) G.lookT += dt; else { G.lookDir = iy; G.lookT = 0; }
+  G.look = lerp(G.look, G.lookT > 0.55 ? G.lookDir * 130 : 0, 1 - Math.exp(-dt * 5));
   if (Input.pressed('up') && !P.sitting && P.onGround && P.hurtT <= 0 && P.atkT <= 0) interact();
   if (Input.pressed('mute')) Sound.toggle();
 
@@ -5258,7 +5602,7 @@ function titleItems() {
   return a;
 }
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -5271,6 +5615,7 @@ function updatePause() {
     const id = items[G.menuSel].id;
     if (id === 'resume') G.state = 'play';
     else if (id === 'map') G.state = 'map';
+    else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
@@ -5289,15 +5634,42 @@ function updateDialog(dt) {
   }
 }
 function updateShop() {
-  const n = SHOP_ITEMS.length + 1;
+  const list = shopList(), n = list.length + 1, VIS = 6;
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); return; }
   if (menuNav(n)) {
     if (G.menuSel === n - 1) { G.state = 'play'; return; }
-    const it = SHOP_ITEMS[G.menuSel];
+    const it = list[G.menuSel];
     if (G.flags[it.id]) { Sound.play('hit'); return; }
     if (P.geo < it.price) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
-    P.geo -= it.price; G.flags[it.id] = true; it.apply(); Sound.play('ability'); G.burst(VW / 2, VH / 2, 0, {});
-    G.toastMsg(tr(it.name), 1.8);
+    P.geo -= it.price; G.flags[it.id] = true; it.apply(); Sound.play('ability');
+    G.toastMsg(shopName(it), 1.8);
+  }
+  G.menuSel = Math.min(G.menuSel, n - 1);
+  if (G.menuSel < G.shopTop) G.shopTop = G.menuSel;
+  if (G.menuSel >= G.shopTop + VIS) G.shopTop = G.menuSel - VIS + 1;
+}
+
+// ---------------------------------------------------------------- the charm screen
+const CHARM_COLS = 7;
+function updateCharms(dt) {
+  const list = Charms.ownedList(), n = list.length;
+  if (G.charmNote) { G.charmNote.t += dt; if (G.charmNote.t > 3) G.charmNote = null; }
+  if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'pause'; Input.consume('pause'); Input.consume('map'); Sound.play('select'); return; }
+  if (!n) return;
+  G.charmSel = clamp(G.charmSel, 0, n - 1);
+  const move = d => { G.charmSel = clamp(G.charmSel + d, 0, n - 1); Sound.play('select'); };
+  if (Input.pressed('left')) move(-1);
+  if (Input.pressed('right')) move(1);
+  if (Input.pressed('up')) move(-CHARM_COLS);
+  if (Input.pressed('down')) move(CHARM_COLS);
+  if (Input.pressed('confirm')) {
+    if (!P.sitting) { Sound.play('hurt'); G.charmNote = { text: tr('charmsBench'), t: 0, bad: true }; return; }
+    const r = Charms.toggle(list[G.charmSel]);
+    if (r === 'full') { Sound.play('hurt'); G.charmNote = { text: tr('charmsFull'), t: 0, bad: true }; }
+    else {
+      Sound.play(r === 'off' ? 'select' : 'confirm');
+      G.charmNote = r === 'over' ? { text: tr('overcharm'), t: 0, bad: true } : null;
+    }
   }
 }
 function updateBanner(dt) {
@@ -5320,6 +5692,7 @@ function update(dt) {
     case 'map': if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('confirm') || Input.pressed('attack')) { G.state = 'play'; Input.consume('map'); Input.consume('pause'); } break;
     case 'dialog': updateDialog(dt); updateParticles(dt); break;
     case 'shop': updateShop(); break;
+    case 'charms': updateCharms(dt); break;
     case 'banner': updateBanner(dt); updateParticles(dt); for (const it of G.items) it.t += dt; break;
     case 'ending': G.ending.t += dt; if (G.ending.t > 4 && Input.pressed('confirm')) { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.hasSave = readSave() !== null; G.menuSel = 0; Sound.setTheme('title'); }, 0.6, 0.2, 0.6); } break;
     case 'dying': {
@@ -5361,16 +5734,21 @@ function drawMaskIcon(g, x, y, full, pulse) {
 }
 function drawHUD(g) {
   // soul orb
-  const ox = 52, oy = 54, r = 30, soul = P.soul / P.maxSoul;
+  const ox = 52, oy = 54, r = 30, soul = P.soul / 99;
   g.save();
-  glow(g, ox, oy, 60, '#cfe8ff', P.soul >= 33 ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
+  glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
   g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill();
   g.save(); g.beginPath(); g.arc(ox, oy, r - 2, 0, 7); g.clip();
   const ly = oy + r - 2 * (r - 2) * soul;
-  g.fillStyle = P.soul >= 33 ? '#e4f4ff' : '#9bb8d6';
+  g.fillStyle = P.soul >= P.spellCost() ? '#e4f4ff' : '#9bb8d6';
   g.beginPath(); g.moveTo(ox - r, oy + r);
   for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
   g.lineTo(ox + r, oy + r); g.closePath(); g.fill();
+  if (P.maxSoul < 99) {            // the cracked top third
+    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / 99);
+    g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
+    g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
+  }
   g.restore();
   g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
   g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke();
@@ -5495,6 +5873,11 @@ function drawWorld(g) {
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](g, e, t);
   }
   Art.drawPlayer(g, P, t);
+  if (P.wailT > 0) Art.drawWail(g, P, t);
+  if (Charms.shellUp() && !P.dead) {
+    bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
+    g.strokeStyle = 'rgba(232,220,184,' + (0.45 + 0.2 * Math.sin(t * 5)) + ')'; g.lineWidth = 2; ellipse(g, P.cx, P.cy, 24, 33); g.stroke();
+  }
   for (const p of G.projs) Art.drawProj(g, p, t);
   for (const f of G.fx) Art.drawFx(g, f);
   for (const p of G.parts) {
@@ -5519,6 +5902,7 @@ function collectLights(cx, cy, skipPlayer) {
   const L = G.level, th = THEMES[L.def.theme], out = [];
   const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
   if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, P.focusT > 0 ? 300 : 250, 1, '#cfe8ff');
+  if (P.wailT > 0) add(P.cx, (P.wailTop + P.y) / 2, 320, 1, '#dff3ff');
   for (const d of L.def.deco) {
     if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
     else if (d.type === 'light') add(d.x * TILE + 16, d.y * TILE + 16, d.r || 220, d.a || 0.8, d.c || th.glow);
@@ -5624,27 +6008,84 @@ function drawDialog(g) {
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.beginPath(); const by = 492 + Math.sin(G.t * 5) * 2; g.moveTo(VW / 2 - 8, by - 6); g.lineTo(VW / 2 + 8, by - 6); g.lineTo(VW / 2, by + 3); g.fill();
   g.restore();
 }
+// small pictures for the shop rows that are not charms
+function shopIcon(g, kind, x, y) {
+  g.save(); g.translate(x, y);
+  if (kind === 'mask') drawMaskIcon(g, 0, 0, true, 0);
+  else if (kind === 'nail') { poly(g, [0, -16, 5, 8, -5, 8]); fs(g, '#e6eef7', INK, 2.5); poly(g, [-10, 8, 10, 8, 10, 12, -10, 12]); fs(g, '#8a96a8', INK, 2); }
+  else if (kind === 'soul') { g.beginPath(); g.moveTo(0, -15); g.bezierCurveTo(4, -7, 12, -2, 12, 4); g.arc(0, 4, 12, 0, Math.PI); g.bezierCurveTo(-12, -2, -4, -7, 0, -15); g.closePath(); fs(g, '#cfe8ff', INK, 2.5); }
+  else if (kind === 'notch') { ellipse(g, 0, 0, 13, 13); fs(g, '#0d1322', INK, 3); g.strokeStyle = '#7fe3d9'; g.lineWidth = 2.5; ellipse(g, 0, 0, 9, 9); g.stroke(); g.fillStyle = '#7fe3d9'; ellipse(g, 0, 0, 3.5, 3.5); g.fill(); }
+  g.restore();
+}
 function drawShop(g) {
+  const list = shopList(), VIS = 6, ROW = 58, Y0 = 138;
   g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH);
-  drawPanel(g, 150, 70, VW - 300, 400);
-  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('shopTitle'), VW / 2, 112, '#eef5ff');
+  drawPanel(g, 130, 30, VW - 260, 480);
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('shopTitle'), VW / 2, 72, '#eef5ff');
   g.font = font(22, '700'); g.textAlign = 'right'; g.direction = 'ltr';
-  g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 190, 112);
-  SHOP_ITEMS.forEach((it, i) => {
-    const y = 170 + i * 82, on = G.menuSel === i, sold = G.flags[it.id];
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(180, y - 30, VW - 360, 68); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(180.5, y - 29.5, VW - 361, 67); }
-    setDir(g); g.textAlign = 'center'; g.font = font(26, '700'); g.fillStyle = sold ? '#6d7a8c' : '#eef5ff'; g.fillText(tr(it.name), VW / 2, y - 6);
-    g.font = font(17, '500'); g.fillStyle = '#9db5d6'; g.fillText(tr(it.desc), VW / 2, y + 22);
-    g.textAlign = 'right'; g.direction = 'ltr'; g.font = font(22, '700'); g.fillStyle = sold ? '#6d7a8c' : (P.geo >= it.price ? '#ffe9a0' : '#c77'); g.fillText(sold ? tr('soldout') : it.price + ' ' + tr('price'), VW - 200, y + 6);
+  g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 170, 72);
+  for (let i = G.shopTop; i < Math.min(list.length + 1, G.shopTop + VIS); i++) {
+    const y = Y0 + (i - G.shopTop) * ROW, on = G.menuSel === i;
+    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(160, y - 28, VW - 320, 56); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(160.5, y - 27.5, VW - 321, 55); }
+    if (i === list.length) {
+      setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(190,205,225,0.8)'; g.fillText(tr('leave'), VW / 2, y);
+      continue;
+    }
+    const it = list[i], sold = G.flags[it.id];
+    if (it.charm) Art.drawCharm(g, it.charm, 202, y, 21, { dim: sold });
+    else shopIcon(g, it.icon, 202, y);
+    setDir(g); g.textAlign = 'center'; g.font = font(23, '700'); g.fillStyle = sold ? '#6d7a8c' : '#eef5ff'; g.fillText(shopName(it), VW / 2, y - 9);
+    g.font = font(15, '500'); g.fillStyle = '#9db5d6'; g.fillText(shopDesc(it), VW / 2, y + 15);
+    g.textAlign = 'right'; g.direction = 'ltr'; g.font = font(21, '700'); g.fillStyle = sold ? '#6d7a8c' : (P.geo >= it.price ? '#ffe9a0' : '#c77'); g.fillText(sold ? tr('soldout') : it.price + ' ' + tr('price'), VW - 180, y);
+  }
+  g.fillStyle = 'rgba(230,240,255,0.55)';
+  if (G.shopTop > 0) { g.beginPath(); g.moveTo(VW / 2 - 8, 112); g.lineTo(VW / 2 + 8, 112); g.lineTo(VW / 2, 102); g.fill(); }
+  if (G.shopTop + VIS < list.length + 1) { g.beginPath(); g.moveTo(VW / 2 - 8, 488); g.lineTo(VW / 2 + 8, 488); g.lineTo(VW / 2, 498); g.fill(); }
+}
+
+function drawCharms(g) {
+  g.fillStyle = 'rgba(3,5,10,0.95)'; g.fillRect(0, 0, VW, VH);
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('charms'), VW / 2, 40, '#eef5ff');
+  // the notches: filled for what is worn, red beyond the limit
+  const total = Charms.notches(), used = Charms.used(), shown = Math.max(total, used), sx = VW / 2 - (shown - 1) * 15;
+  for (let i = 0; i < shown; i++) {
+    const x = sx + i * 30, y = 86, bad = i >= total;
+    ellipse(g, x, y, 10, 10); fs(g, i < used ? (bad ? '#d24a4a' : '#7fe3d9') : '#0d1322', bad ? '#ff8a8a' : '#9fb4cf', 2.5);
+  }
+  g.font = font(16, '600'); g.fillStyle = Charms.over() ? '#ff8a8a' : '#9db5d6'; g.direction = 'ltr'; g.fillText(tr('notches') + ': ' + used + ' / ' + total, VW / 2, 112);
+  setDir(g);
+  const list = Charms.ownedList();
+  if (!list.length) {
+    g.font = font(22, '600'); g.fillStyle = '#9db5d6'; g.fillText(tr('noCharms'), VW / 2, 250);
+  }
+  const CW = 104, x0 = (VW - CHARM_COLS * CW) / 2 + CW / 2;
+  list.forEach((id, i) => {
+    const cx = x0 + (i % CHARM_COLS) * CW, cy = 168 + Math.floor(i / CHARM_COLS) * 100, on = i === G.charmSel, worn = Charms.has(id);
+    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(cx - 46, cy - 42, 92, 88); g.strokeStyle = 'rgba(230,240,255,0.8)'; g.lineWidth = 1.5; g.strokeRect(cx - 45.5, cy - 41.5, 91, 87); }
+    if (worn) bloom(g, cx, cy - 4, 52, Charms.DEFS[id].color, 0.28);
+    Art.drawCharm(g, id, cx, cy - 4, 28, { worn });
+    for (let k = 0; k < Charms.DEFS[id].cost; k++) { ellipse(g, cx + (k - (Charms.DEFS[id].cost - 1) / 2) * 12, cy + 34, 4, 4); fs(g, worn ? '#7fe3d9' : '#2a3550', '#9fb4cf', 1.5); }
   });
-  drawMenu(g, [{ label: tr('leave') }], G.menuSel - SHOP_ITEMS.length, 172 + SHOP_ITEMS.length * 82 - 10, 50);
+  if (list.length) {
+    const id = list[clamp(G.charmSel, 0, list.length - 1)], d = Charms.DEFS[id];
+    drawPanel(g, 80, 352, VW - 160, 160);
+    setDir(g); g.textAlign = 'center'; g.font = font(28, '700'); textShadow(g, Charms.name(id), VW / 2, 384, d.color);
+    g.font = font(18, '500'); g.fillStyle = '#9db5d6'; g.fillText(tr('cost') + ': ' + d.cost + (Charms.has(id) ? '   ·   ' + tr('worn') : ''), VW / 2, 414);
+    g.font = font(20, '600'); g.fillStyle = '#e1ecf8';
+    wrapText(g, Charms.desc(id), VW - 260).forEach((l, k) => g.fillText(l, VW / 2, 446 + k * 26));
+    const note = G.charmNote;
+    g.font = font(17, '600');
+    if (note) { g.fillStyle = note.bad ? '#ff9a8a' : '#9db5d6'; g.fillText(note.text, VW / 2, 494); }
+    else { g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(P.sitting ? tr('charmsHint') : tr('charmsBench'), VW / 2, 494); }
+  }
 }
 function drawBanner(g) {
   const b = G.banner, k = clamp(b.t / 0.5, 0, 1);
   g.fillStyle = 'rgba(0,0,0,' + 0.55 * k + ')'; g.fillRect(0, 0, VW, VH);
   g.save(); g.globalAlpha = k; setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
   glow(g, VW / 2, 230, 240, '#dff0ff', 0.25);
-  g.font = font(54, '700'); textShadow(g, b.title, VW / 2, 200, '#f4f9ff', 16);
+  if (b.charm) Art.drawCharm(g, b.charm, VW / 2, 124, 46, { glow: true, worn: true });
+  g.font = font(54, '700'); textShadow(g, b.title, VW / 2, 206, '#f4f9ff', 16);
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.fillRect(VW / 2 - 160, 240, 320, 2);
   g.font = font(24, '600'); const lines = wrapText(g, b.desc, 620);
   lines.forEach((l, i) => { g.fillStyle = '#d6e4f5'; g.fillText(l, VW / 2, 290 + i * 34); });
@@ -5681,9 +6122,10 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 190, 54); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 168, 44); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
+        if (G.state === 'charms') drawCharms(g);
         if (G.state === 'banner') drawBanner(g);
       }
   }
@@ -5733,7 +6175,7 @@ function refreshTouchLabels() {
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;
-window.DW = { G, P, enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
+window.DW = { G, P, Charms, enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
 window.addEventListener('DOMContentLoaded', boot);
 
 </script>

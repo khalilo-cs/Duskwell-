@@ -812,3 +812,19 @@ Art.drawWail = function (g, p, t) {
   g.globalCompositeOperation = o;
   bloom(g, x, bot - 20, 90, '#dff3ff', 0.5 * env);
 };
+
+// Lantern station: an iron post with a hanging lantern. Dark until the Wanderer lights it.
+Art.drawStation = function (g, st, t, lit) {
+  const x = st.px, y = st.py, fl = 0.85 + 0.15 * Math.sin(t * 7 + x);
+  if (lit) bloom(g, x + 22, y - 88, 190, '#ffd98a', 0.5 * fl);
+  g.strokeStyle = INK; g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 96); g.quadraticCurveTo(x, y - 112, x + 22, y - 112); g.stroke();          // post and arm
+  g.strokeStyle = '#3d3a4a'; g.lineWidth = 3.5; g.stroke();
+  g.fillStyle = '#2a2833'; g.fillRect(x - 11, y - 8, 22, 8); g.strokeStyle = INK; g.lineWidth = 2.5; g.strokeRect(x - 11, y - 8, 22, 8);   // foot
+  g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 22, y - 112); g.lineTo(x + 22, y - 100); g.stroke();             // chain
+  poly(g, [x + 10, y - 106, x + 34, y - 106, x + 38, y - 80, x + 6, y - 80]); fs(g, lit ? rgba('#ffd98a', 0.9) : '#16151c', INK, 3);   // lantern
+  g.strokeStyle = INK; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x + 22, y - 106); g.lineTo(x + 22, y - 80); g.moveTo(x + 7, y - 93); g.lineTo(x + 37, y - 93); g.stroke();
+  if (lit) {
+    g.fillStyle = '#fff6d0'; ellipse(g, x + 22, y - 93, 5 * fl, 8 * fl); g.fill();
+  }
+};

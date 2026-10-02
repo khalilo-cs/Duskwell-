@@ -11,7 +11,7 @@ const G = {
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
-  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, look: 0, lookT: 0, lookDir: 0,
+  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, stations: [], look: 0, lookT: 0, lookDir: 0,
 };
 const P = G.player;
 
@@ -79,6 +79,7 @@ function enterRoom(id, spawn) {
   G.enemies = []; G.projs = []; G.geos = []; G.items = []; G.fx = []; G.parts = [];
   G.benches = def.benches.map(b => ({ x: b.x, y: b.y, px: b.x * TILE + 16, py: (b.y + 1) * TILE, room: id }));
   G.npcs = def.npcs.map(n => ({ type: n.type, px: n.x * TILE + 16, py: (n.y + 1) * TILE }));
+  G.stations = def.stations.map(t => ({ px: t.x * TILE + 16, py: (t.y + 1) * TILE, room: id }));
   G.signs = def.signs.map(s => ({ text: s.text, px: s.x * TILE + 16, py: (s.y + 1) * TILE }));
   G.gates = []; G.arena = null; G.boss = null; G.bossBarShow = false; G.doorLock = true;
   // persistent changes
@@ -114,6 +115,8 @@ function enterRoom(id, spawn) {
     else { fx = cx; fy = d.y * TILE; vy = -900; }
     const keep = { hp: P.hp, soul: P.soul };
     P.place(fx, fy, face); P.vy = vy; P.hp = keep.hp; P.soul = keep.soul;
+  } else if (spawn.station && G.stations.length) {
+    P.place(G.stations[0].px, G.stations[0].py, 1);
   } else if (spawn.pos) {
     P.place(spawn.pos.x, spawn.pos.y, 1);
   }
@@ -231,6 +234,16 @@ function nearest(list, px, range) {
 function interact() {
   const b = nearest(G.benches, P.cx, 54);
   if (b) { P.sit(b); G.bench = { room: G.level.id }; Sound.play('bench'); saveGame(); G.hasSave = true; G.toastMsg(tr('saved'), 1.6); G.burst(b.px, b.py - 40, 16, { color: '#cfe6ff', speed: 90, life: 0.9, size: 3, grav: -90 }); return true; }
+  const stn = nearest(G.stations, P.cx, 54);
+  if (stn) {
+    if (!stationLit(stn.room)) {
+      G.flags['station_' + stn.room] = true; Sound.play('bench'); G.toastMsg(tr('stationLit'), 2.2);
+      G.burst(stn.px, stn.py - 70, 18, { color: '#ffd98a', speed: 110, life: 0.9, size: 3, grav: -100 }); G.ring(stn.px, stn.py - 70, '#ffd98a', 0.4);
+      return true;
+    }
+    if (!stationList().length) { G.toastMsg(tr('stationNone'), 2.6); return true; }
+    G.state = 'travel'; G.menuSel = 0; Sound.play('select'); return true;
+  }
   const n = nearest(G.npcs, P.cx, 70);
   if (n) {
     if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3')], i: 0, t: 0 };
@@ -244,9 +257,31 @@ function interact() {
   }
   return false;
 }
+// ---------------------------------------------------------------- lantern stations (fast travel)
+const STATION_FARE = 25;
+const stationLit = room => room === 'town' || !!G.flags['station_' + room];
+function stationList() {
+  return WORLD.order.filter(id => WORLD.rooms[id].stations.length && stationLit(id) && id !== G.level.id)
+    .map(id => ({ id, name: tr('area_' + WORLD.rooms[id].area), color: AREA_COLORS[WORLD.rooms[id].area] }));
+}
+function updateTravel() {
+  const list = stationList(), n = list.length + 1;
+  if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); Input.consume('map'); return; }
+  if (menuNav(n)) {
+    if (G.menuSel === n - 1) { G.state = 'play'; return; }
+    if (P.geo < STATION_FARE) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
+    const dest = list[G.menuSel].id;
+    P.geo -= STATION_FARE; Sound.play('confirm');
+    G.fadeTo(() => enterRoom(dest, { station: true }), 0.5, 0.2, 0.5);
+  }
+  G.menuSel = Math.min(G.menuSel, n - 1);
+}
+
 const SHOP_ITEMS = [
   { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
-  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail = 9; } },
+  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail += 4; } },
+  { id: 'buy_nail2', name: 'itemNail2', desc: 'itemNailD', price: 700, icon: 'nail', needs: 'buy_nail', apply() { P.nail += 4; } },
+  { id: 'buy_nail3', name: 'itemNail3', desc: 'itemNailD', price: 1400, icon: 'nail', needs: 'buy_nail2', apply() { P.nail += 4; } },
   { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, icon: 'soul', apply() { P.soulGain = 17; } },
   { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 300, icon: 'notch', apply() { /* the notch count reads this flag */ } },
   { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 550, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
@@ -491,6 +526,7 @@ function update(dt) {
     case 'dialog': updateDialog(dt); updateParticles(dt); break;
     case 'shop': updateShop(); break;
     case 'charms': updateCharms(dt); break;
+    case 'travel': updateTravel(); break;
     case 'banner': updateBanner(dt); updateParticles(dt); for (const it of G.items) it.t += dt; break;
     case 'ending': G.ending.t += dt; if (G.ending.t > 4 && Input.pressed('confirm')) { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.hasSave = readSave() !== null; G.menuSel = 0; Sound.setTheme('title'); }, 0.6, 0.2, 0.6); } break;
     case 'dying': {
@@ -600,7 +636,8 @@ function drawHUD(g) {
   }
   // interaction hint
   if (G.state === 'play' && !P.sitting) {
-    const t = nearest(G.benches, P.cx, 54) ? 'rest' : nearest(G.npcs, P.cx, 70) ? 'talk' : nearest(G.signs, P.cx, 54) ? 'read' : null;
+    const ns = nearest(G.stations, P.cx, 54);
+    const t = nearest(G.benches, P.cx, 54) ? 'rest' : ns ? (stationLit(ns.room) ? 'travel' : 'light') : nearest(G.npcs, P.cx, 70) ? 'talk' : nearest(G.signs, P.cx, 54) ? 'read' : null;
     if (t) {
       const sx = P.cx - G.cam.x, sy = P.y - G.cam.y - 30;
       g.save(); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(18, '700');
@@ -660,6 +697,7 @@ function drawWorld(g) {
   Art.mechFront(g, t, th);
   for (const b of G.benches) Art.drawBench(g, b, t, P.sitting === b);
   for (const n of G.npcs) Art.drawNPC(g, n, t);
+  for (const s2 of G.stations) Art.drawStation(g, s2, t, stationLit(s2.room));
   for (const s2 of G.signs) Art.drawSign(g, s2, t);
   for (const it of G.items) Art.drawItem(g, it, t);
   for (const c of G.geos) Art.drawGeo(g, c, t);
@@ -707,6 +745,7 @@ function collectLights(cx, cy, skipPlayer) {
   }
   for (const b of G.benches) add(b.px, b.py - 40, 200, 0.85, '#ffe2a8');
   for (const n of G.npcs) add(n.px, n.py - 40, 170, 0.8, '#ffd98a');
+  for (const s of G.stations) if (stationLit(s.room)) add(s.px, s.py - 70, 230, 0.9, '#ffd98a');
   for (const it of G.items) add(it.x, it.y, 190, 0.9, '#e6f3ff');
   for (const c of G.geos) add(c.x, c.y, 50, 0.5, null);
   for (const p of G.projs) {
@@ -738,6 +777,7 @@ function drawMap(g) {
     g.fillStyle = rgba(col, 0.22); g.fillRect(x, y, w, h);
     g.strokeStyle = rgba(col, 0.9); g.lineWidth = 2; g.strokeRect(x + 1, y + 1, w - 2, h - 2);
     for (const b of d.benches) { g.fillStyle = '#ffffff'; g.fillRect(x + b.x / d.w * w - 2, y + b.y / d.h * h - 2, 5, 5); }
+    for (const sn of d.stations) { const mx = x + sn.x / d.w * w, my = y + sn.y / d.h * h; poly(g, [mx, my - 5, mx + 4, my, mx, my + 5, mx - 4, my]); fs(g, stationLit(id) ? '#ffd98a' : '#4a4030', null); }
     for (const dr of d.doors) { g.fillStyle = col; g.fillRect(x + dr.x / d.w * w - 2, y + dr.y / d.h * h - 2, 4 + dr.w / d.w * w, 4 + dr.h / d.h * h); }
     if (id === G.level.id) {
       const px = x + clamp(P.cx / G.level.pw, 0, 1) * w, py = y + clamp(P.cy / G.level.ph, 0, 1) * h;
@@ -877,6 +917,21 @@ function drawCharms(g) {
     else { g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(P.sitting ? tr('charmsHint') : tr('charmsBench'), VW / 2, 494); }
   }
 }
+function drawTravel(g) {
+  const list = stationList();
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH);
+  drawPanel(g, 200, 70, VW - 400, 400);
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('stationTitle'), VW / 2, 112, '#ffe9b0');
+  g.font = font(20, '700'); g.textAlign = 'right'; g.direction = 'ltr'; g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 240, 112);
+  g.font = font(17, '500'); g.textAlign = 'center'; setDir(g); g.fillStyle = '#9db5d6'; g.fillText(tr('stationFare') + ': ' + STATION_FARE + ' ' + tr('price'), VW / 2, 146);
+  list.forEach((it, i) => {
+    const y = 196 + i * 48, on = G.menuSel === i;
+    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(230, y - 22, VW - 460, 44); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(230.5, y - 21.5, VW - 461, 43); }
+    poly(g, [262, y - 8, 270, y, 262, y + 8, 254, y]); fs(g, it.color, INK, 2);
+    setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(210,222,240,0.85)'; g.fillText(it.name, VW / 2, y);
+  });
+  drawMenu(g, [{ label: tr('leave') }], G.menuSel - list.length, 196 + list.length * 48 + 18, 48);
+}
 function drawBanner(g) {
   const b = G.banner, k = clamp(b.t / 0.5, 0, 1);
   g.fillStyle = 'rgba(0,0,0,' + 0.55 * k + ')'; g.fillRect(0, 0, VW, VH);
@@ -924,6 +979,7 @@ function draw() {
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
+        if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
       }
   }

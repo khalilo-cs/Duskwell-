@@ -10,7 +10,7 @@ class RoomBuilder {
     this.id = id; this.w = w; this.h = h;
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
-    this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = [];
+    this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = [];
     this.signs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
@@ -39,6 +39,7 @@ class RoomBuilder {
   item(id, x, y, kind, o) { this.items.push(Object.assign({ id, x, y, kind }, o || {})); return this; }
   npc(type, x, y) { this.npcs.push({ type, x, y }); return this; }
   bench(x, y) { this.benches.push({ x, y }); return this; }
+  station(x, y) { this.stations.push({ x, y }); return this; }          // lantern station: fast travel between lit stations
   sign(x, y, text) { this.signs.push({ x, y, text }); return this; }
   decor(type, x, y, o) { this.deco.push(Object.assign({ type, x, y }, o || {})); return this; }
   at(x, y) { return (x < 0 || y < 0 || x >= this.w || y >= this.h) ? T_SOLID : this.t[y * this.w + x]; }
@@ -482,6 +483,10 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   WORLD.rooms.ht1.enemy('husk', 39, 26);
   WORLD.rooms.ht1.enemy('husk', 48, 26);
 
+  // lantern stations (fast travel): one per area, a few steps from a bench; the hub's is lit from the start
+  const st = (r, x, y) => WORLD.rooms[r].station(x, y);
+  st('town', 35, 17); st('cx2', 70, 19); st('mg2', 33, 3); st('cs2', 64, 22); st('sp1', 6, 22);
+  st('aq3', 52, 19); st('wd2', 55, 22); st('ht1', 7, 26); st('fd1', 67, 20);
   // charms (see charms.js): each lies next to a spot the route already reaches; three more drop from guardians
   const charm = (r, id, x, y) => WORLD.rooms[r].item('charm_' + id, x, y, 'charm', { charm: id });
   charm('cx2', 'thorn', 4, 14);       // the high ledge, beside the mask seed

@@ -11,7 +11,7 @@ const G = {
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
-  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, stations: [], look: 0, lookT: 0, lookDir: 0,
+  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, shopId: 'general', gearTab: 0, gearSel: 0, gearT: 0, stations: [], look: 0, lookT: 0, lookDir: 0,
 };
 const P = G.player;
 
@@ -62,7 +62,7 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, room: G.bench.room, maxHp: P.maxHp, ab: P.ab, geo: P.geo, nail: P.nail, soulGain: P.soulGain, flags: G.flags,
-      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(), seen: G.seen,
+      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(), gear: Gear.save(), seen: G.seen,
     }));
   } catch (e) { /* storage may be blocked */ }
 }
@@ -78,7 +78,7 @@ function enterRoom(id, spawn) {
   G.level = L;
   G.enemies = []; G.projs = []; G.geos = []; G.items = []; G.fx = []; G.parts = [];
   G.benches = def.benches.map(b => ({ x: b.x, y: b.y, px: b.x * TILE + 16, py: (b.y + 1) * TILE, room: id }));
-  G.npcs = def.npcs.map(n => ({ type: n.type, px: n.x * TILE + 16, py: (n.y + 1) * TILE }));
+  G.npcs = def.npcs.map(n => ({ type: n.type, shop: n.shop, px: n.x * TILE + 16, py: (n.y + 1) * TILE }));
   G.stations = def.stations.map(t => ({ px: t.x * TILE + 16, py: (t.y + 1) * TILE, room: id }));
   G.signs = def.signs.map(s => ({ text: s.text, px: s.x * TILE + 16, py: (s.y + 1) * TILE }));
   G.gates = []; G.arena = null; G.boss = null; G.bossBarShow = false; G.doorLock = true;
@@ -210,12 +210,12 @@ G.onBossDeath = function (b) {
 function startGame(useSave) {
   Object.assign(P, new Player());
   G.look = 0; G.lookT = 0; G.lookDir = 0;
-  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); G.seen = {};
+  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); Gear.reset(); G.seen = {};
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
     P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = Object.assign(P.ab, s.ab); P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
-    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms); G.seen = s.seen || {};
+    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms); Gear.load(s.gear); G.seen = s.seen || {};
     room = s.room; spawn = { bench: true };
   } else {
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
@@ -247,7 +247,7 @@ function interact() {
   const n = nearest(G.npcs, P.cx, 70);
   if (n) {
     if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3')], i: 0, t: 0 };
-    else G.dialog = { lines: [tr('merchant')], i: 0, t: 0, shop: true };
+    else { G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : 'general'); G.dialog = { lines: [shopGreet(shopDef())], i: 0, t: 0, shop: true }; }
     G.state = 'dialog'; Sound.play('select'); return true;
   }
   const s = nearest(G.signs, P.cx, 54);
@@ -277,22 +277,6 @@ function updateTravel() {
   G.menuSel = Math.min(G.menuSel, n - 1);
 }
 
-const SHOP_ITEMS = [
-  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
-  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail += 4; } },
-  { id: 'buy_nail2', name: 'itemNail2', desc: 'itemNailD', price: 700, icon: 'nail', needs: 'buy_nail', apply() { P.nail += 4; } },
-  { id: 'buy_nail3', name: 'itemNail3', desc: 'itemNailD', price: 1400, icon: 'nail', needs: 'buy_nail2', apply() { P.nail += 4; } },
-  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, icon: 'soul', apply() { P.soulGain = 17; } },
-  { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 300, icon: 'notch', apply() { /* the notch count reads this flag */ } },
-  { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 550, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
-  { id: 'buy_wail', name: 'itemWail', desc: 'itemWailD', price: 500, icon: 'soul', apply() { P.ab.wail = true; G.banner = { title: tr('abil_wail'), desc: tr('abil_wail_d'), t: 0 }; G.state = 'banner'; } },
-  { id: 'buy_reach', charm: 'reach', price: 120, apply() { Charms.give('reach'); } },
-  { id: 'buy_boots', charm: 'boots', price: 100, apply() { Charms.give('boots'); } },
-  { id: 'buy_magnet', charm: 'magnet', price: 90, apply() { Charms.give('magnet'); } },
-];
-const shopList = () => SHOP_ITEMS.filter(it => !it.needs || G.flags[it.needs]);
-const shopName = it => (it.charm ? Charms.name(it.charm) : tr(it.name));
-const shopDesc = it => (it.charm ? Charms.desc(it.charm) : tr(it.desc));
 
 // ---------------------------------------------------------------- update
 function updateParticles(dt) {
@@ -323,7 +307,7 @@ function updatePlay(dt) {
   if (Input.pressed('up') && !P.sitting && P.onGround && P.hurtT <= 0 && P.atkT <= 0) interact();
   if (Input.pressed('mute')) Sound.toggle();
 
-  for (const e of G.enemies) e.update(dt);
+  for (const e of G.enemies) { if (e.frozenT > 0) { e.frozenT -= dt; e.flash = 0; continue; } e.update(dt); }
   for (const p of G.projs) p.update(dt);
   for (const c of G.geos) c.update(dt);
   for (const it of G.items) it.update(dt);
@@ -334,7 +318,7 @@ function updatePlay(dt) {
   if (!P.dead) {
     const hb = P.hurtbox();
     for (const e of G.enemies) {
-      if (e.dead || e.ghostly || e.dmg <= 0) continue;
+      if (e.dead || e.ghostly || e.dmg <= 0 || e.frozenT > 0) continue;
       if (e.isBoss && (e.state === 'intro' || e.state === 'dying')) continue;
       if (e.alpha !== undefined && e.alpha < 0.6) continue;
       if (overlap(hb, e.body())) P.hurt(e.dmg, e.cx);
@@ -354,6 +338,13 @@ function updatePlay(dt) {
     e.burnT -= dt;
     if (Math.random() < 0.45) G.burst(e.cx + rand(-10, 10), e.cy + rand(-16, 10), 1, { color: pick(['#ff8a3a', '#ffd070']), speed: 40, life: 0.5, size: 2, vy: -55 });
     if (e.burnT <= 0) e.hurt(3, 0, 'burn');
+  }
+  // Bone Saw: the wound keeps bleeding a little
+  for (const e of G.enemies) {
+    if (!(e.bleedT > 0) || e.dead) continue;
+    e.bleedT -= dt;
+    if (Math.random() < 0.5) G.burst(e.cx + rand(-8, 8), e.cy + rand(-10, 12), 1, { color: '#b8242a', speed: 30, life: 0.5, size: 2, vy: 30, grav: 260 });
+    if ((e.bleedTick = (e.bleedTick || 0) + dt) >= 0.35) { e.bleedTick = 0; e.hurt(1, 0, 'burn'); }
   }
 
   // arena trigger
@@ -458,7 +449,7 @@ function gfxLabel() {
   return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
 }
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'bestiary', label: tr('bestiary') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -472,6 +463,7 @@ function updatePause() {
     if (id === 'resume') G.state = 'play';
     else if (id === 'map') G.state = 'map';
     else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
+    else if (id === 'gear') { G.state = 'gear'; G.gearSel = 0; G.gearT = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
     else if (id === 'sound') Sound.toggle();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
@@ -487,26 +479,10 @@ function updateDialog(dt) {
   if (Input.pressed('confirm') || Input.pressed('attack') || Input.pressed('up')) {
     Sound.play('select');
     if (d.i < d.lines.length - 1) { d.i++; d.t = 0; }
-    else if (d.shop) { G.dialog = null; G.state = 'shop'; G.menuSel = 0; }
+    else if (d.shop) { G.dialog = null; G.state = 'shop'; G.menuSel = 0; G.shopTop = 0; }
     else { G.dialog = null; G.state = 'play'; }
   }
 }
-function updateShop() {
-  const list = shopList(), n = list.length + 1, VIS = 6;
-  if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); return; }
-  if (menuNav(n)) {
-    if (G.menuSel === n - 1) { G.state = 'play'; return; }
-    const it = list[G.menuSel];
-    if (G.flags[it.id]) { Sound.play('hit'); return; }
-    if (P.geo < it.price) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
-    P.geo -= it.price; G.flags[it.id] = true; it.apply(); Sound.play('ability');
-    G.toastMsg(shopName(it), 1.8);
-  }
-  G.menuSel = Math.min(G.menuSel, n - 1);
-  if (G.menuSel < G.shopTop) G.shopTop = G.menuSel;
-  if (G.menuSel >= G.shopTop + VIS) G.shopTop = G.menuSel - VIS + 1;
-}
-
 // ---------------------------------------------------------------- the charm screen
 const CHARM_COLS = 7;
 function updateCharms(dt) {
@@ -546,6 +522,7 @@ function update(dt) {
   switch (G.state) {
     case 'title': updateTitle(); break;
     case 'bestiary': updateBestiary(dt); break;
+    case 'gear': updateGear(dt); break;
     case 'trans': updateTrans(dt); break;
     case 'pause': updatePause(); break;
     case 'map': if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('confirm') || Input.pressed('attack')) { G.state = 'play'; Input.consume('map'); Input.consume('pause'); } break;
@@ -740,6 +717,7 @@ function drawWorld(g) {
     if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
     else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](ge, e, t); }
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](ge, e, t);
+    if (e.frozenT > 0) Art.frozenFx(ge, e, t);
   }
   Art.drawPlayer(ge, P, t);
   if (lum) Pixel.setFlat(false);
@@ -900,41 +878,6 @@ function drawDialog(g) {
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.beginPath(); const by = 492 + Math.sin(G.t * 5) * 2; g.moveTo(VW / 2 - 8, by - 6); g.lineTo(VW / 2 + 8, by - 6); g.lineTo(VW / 2, by + 3); g.fill();
   g.restore();
 }
-// small pictures for the shop rows that are not charms
-function shopIcon(g, kind, x, y) {
-  g.save(); g.translate(x, y);
-  if (kind === 'mask') drawMaskIcon(g, 0, 0, true, 0);
-  else if (kind === 'nail') { poly(g, [0, -16, 5, 8, -5, 8]); fs(g, '#e6eef7', INK, 2.5); poly(g, [-10, 8, 10, 8, 10, 12, -10, 12]); fs(g, '#8a96a8', INK, 2); }
-  else if (kind === 'soul') { g.beginPath(); g.moveTo(0, -15); g.bezierCurveTo(4, -7, 12, -2, 12, 4); g.arc(0, 4, 12, 0, Math.PI); g.bezierCurveTo(-12, -2, -4, -7, 0, -15); g.closePath(); fs(g, '#cfe8ff', INK, 2.5); }
-  else if (kind === 'notch') { ellipse(g, 0, 0, 13, 13); fs(g, '#0d1322', INK, 3); g.strokeStyle = '#7fe3d9'; g.lineWidth = 2.5; ellipse(g, 0, 0, 9, 9); g.stroke(); g.fillStyle = '#7fe3d9'; ellipse(g, 0, 0, 3.5, 3.5); g.fill(); }
-  g.restore();
-}
-function drawShop(g) {
-  const list = shopList(), VIS = 6, ROW = 58, Y0 = 138;
-  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH);
-  drawPanel(g, 130, 30, VW - 260, 480);
-  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('shopTitle'), VW / 2, 72, '#eef5ff');
-  g.font = font(22, '700'); g.textAlign = 'right'; g.direction = 'ltr';
-  g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 170, 72);
-  for (let i = G.shopTop; i < Math.min(list.length + 1, G.shopTop + VIS); i++) {
-    const y = Y0 + (i - G.shopTop) * ROW, on = G.menuSel === i;
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(160, y - 28, VW - 320, 56); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(160.5, y - 27.5, VW - 321, 55); }
-    if (i === list.length) {
-      setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(190,205,225,0.8)'; g.fillText(tr('leave'), VW / 2, y);
-      continue;
-    }
-    const it = list[i], sold = G.flags[it.id];
-    if (it.charm) Art.drawCharm(g, it.charm, 202, y, 21, { dim: sold });
-    else shopIcon(g, it.icon, 202, y);
-    setDir(g); g.textAlign = 'center'; g.font = font(23, '700'); g.fillStyle = sold ? '#6d7a8c' : '#eef5ff'; g.fillText(shopName(it), VW / 2, y - 9);
-    g.font = font(15, '500'); g.fillStyle = '#9db5d6'; g.fillText(shopDesc(it), VW / 2, y + 15);
-    g.textAlign = 'right'; g.direction = 'ltr'; g.font = font(21, '700'); g.fillStyle = sold ? '#6d7a8c' : (P.geo >= it.price ? '#ffe9a0' : '#c77'); g.fillText(sold ? tr('soldout') : it.price + ' ' + tr('price'), VW - 180, y);
-  }
-  g.fillStyle = 'rgba(230,240,255,0.55)';
-  if (G.shopTop > 0) { g.beginPath(); g.moveTo(VW / 2 - 8, 112); g.lineTo(VW / 2 + 8, 112); g.lineTo(VW / 2, 102); g.fill(); }
-  if (G.shopTop + VIS < list.length + 1) { g.beginPath(); g.moveTo(VW / 2 - 8, 488); g.lineTo(VW / 2 + 8, 488); g.lineTo(VW / 2, 498); g.fill(); }
-}
-
 function drawCharms(g) {
   g.fillStyle = 'rgba(3,5,10,0.95)'; g.fillRect(0, 0, VW, VH);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('charms'), VW / 2, 40, '#eef5ff');
@@ -1029,11 +972,12 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 110, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 152, 40); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 112, 36); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
         if (G.state === 'bestiary') drawBestiary(g);
+        if (G.state === 'gear') drawGear(g);
         if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
       }
@@ -1085,5 +1029,5 @@ function refreshTouchLabels() {
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;
-window.DW = { G, P, Charms, Lumen, draw: () => draw(), enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
+window.DW = { G, P, Charms, Gear, SHOPS, shopList, shopSold, shopLocked, buyItem, sealCount, Lumen, draw: () => draw(), enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
 window.addEventListener('DOMContentLoaded', boot);

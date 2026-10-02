@@ -63,7 +63,7 @@ Art.drawPixelHero = function (g, p, t, alpha) {
   const name = HeroStyle.sheet(), o = heroPose(p, t), k = Pixel.SCALE, feetY = p.y + p.h + o.dy;
   Pixel.shadow(g, p.cx, p.y + p.h, 20);
   Pixel.draw(g, name, o.frame, p.cx, feetY, { face: p.face, sx: o.sx, sy: o.sy, rot: o.rot * p.face, flash: o.flash, alpha, scale: k });
-  if (p.atkT > 0) drawSlash(g, p, p.cx, feetY, k);
+  if (p.atkT > 0 && Gear.weapon() === 'nail') drawSlash(g, p, p.cx, feetY, k);
   return true;
 };
 Art.drawPixelGhosts = function (g, p, t) {

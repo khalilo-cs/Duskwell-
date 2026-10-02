@@ -71,6 +71,7 @@
   sc6.solid(0, 18, 40, 4);
   sc6.door('w', 0, 15, 1, 3, 'sc5', 'e').door('e', 39, 15, 1, 3, 'sc7', 'w');
   sc6.bench(6, 17);
+  sc6.npc('trader', 11, 17, 'storm');
   sc6.sign(30, 17, 'sign_storm_roc');
   sc6.decor('light', 20, 14, { r: 240, c: '#bcd0ff' });
 

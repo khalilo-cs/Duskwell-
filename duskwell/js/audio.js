@@ -258,6 +258,13 @@ const Sound = (() => {
     sdcharge() { tone({ f: 160, f2: 640, d: 0.8, v: 0.08, a: 0.2, type: 'sawtooth' }); noise({ f: 600, f2: 2400, d: 0.8, v: 0.05, type: 'bandpass', q: 2 }); },
     sdready() { tone({ f: 1320, d: 0.25, v: 0.1, type: 'triangle' }); tone({ f: 1980, d: 0.3, v: 0.06, type: 'sine', delay: 0.04 }); },
     thunder() { noise({ f: 380, f2: 50, d: 2.2, v: 0.3 }); tone({ f: 60, f2: 28, d: 1.8, v: 0.22, type: 'sawtooth' }); noise({ f: 160, d: 1.2, v: 0.2, delay: 0.5 }); },
+    rendReady() { tone({ f: 1480, d: 0.35, v: 0.09, type: 'sine' }); tone({ f: 2220, d: 0.4, v: 0.06, type: 'sine', delay: 0.04 }); tone({ f: 2960, d: 0.5, v: 0.04, type: 'sine', delay: 0.09 }); },
+    rend() { noise({ f: 5000, f2: 700, d: 0.45, v: 0.26, type: 'bandpass', q: 0.9 }); tone({ f: 880, f2: 220, d: 0.5, v: 0.16, type: 'sawtooth' }); tone({ f: 1760, f2: 440, d: 0.4, v: 0.08, type: 'triangle' }); noise({ f: 300, f2: 80, d: 0.3, v: 0.22 }); },
+    rush() { noise({ f: 400, f2: 6000, d: 0.3, v: 0.24, type: 'bandpass', q: 0.7 }); tone({ f: 140, f2: 520, d: 0.3, v: 0.16, type: 'sawtooth' }); [0, 0.07, 0.14, 0.21].forEach(d => noise({ f: 3200, f2: 900, d: 0.08, v: 0.14, type: 'bandpass', q: 1.5, delay: d })); },
+    novaCharge() { tone({ f: 120, f2: 880, d: 0.55, v: 0.12, a: 0.3, type: 'sawtooth' }); tone({ f: 240, f2: 1760, d: 0.55, v: 0.07, a: 0.3, type: 'triangle' }); noise({ f: 500, f2: 5000, d: 0.55, v: 0.1, type: 'bandpass', q: 2 }); },
+    nova() { noise({ f: 6000, f2: 60, d: 1.2, v: 0.5 }); tone({ f: 70, f2: 30, d: 1.3, v: 0.38, type: 'sawtooth' }); [0, 7, 12, 16, 19].forEach((n, i) => tone({ f: 330 * Math.pow(2, n / 12), d: 1.4, v: 0.1, delay: 0.05 + i * 0.03, type: 'triangle' })); },
+    buy() { tone({ f: 1320, d: 0.08, v: 0.1, type: 'triangle' }); tone({ f: 1760, d: 0.14, v: 0.1, type: 'triangle', delay: 0.06 }); noise({ f: 5000, d: 0.05, v: 0.06, type: 'highpass' }); },
+    equip() { noise({ f: 2500, f2: 800, d: 0.14, v: 0.12, type: 'bandpass', q: 2 }); tone({ f: 330, f2: 200, d: 0.1, v: 0.1, type: 'square' }); tone({ f: 880, d: 0.12, v: 0.08, type: 'triangle', delay: 0.08 }); },
     sdlaunch() { noise({ f: 300, f2: 3000, d: 0.35, v: 0.22, type: 'bandpass', q: 0.8 }); tone({ f: 110, f2: 55, d: 0.4, v: 0.22, type: 'sawtooth' }); },
   };
 

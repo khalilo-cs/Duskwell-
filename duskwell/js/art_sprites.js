@@ -240,17 +240,19 @@ Art.drawPlayer = function (g, p, t) {
   else if (Art.drawPixelHero(g, p, t, alpha)) return;      // the artist's pixel hero, lit in 3D
   else wanderer(g, p.cx, p.y + p.h + (p.sitting ? 4 : 0), p.face, o, alpha, null);
   if (p.atkT > 0) {
-    const pr = 1 - clamp(p.atkT / 0.16, 0, 1), a = 1 - pr * 0.7, f = p.face, m = p.atkAlt ? 1 : -1;
+    const pr = 1 - clamp(p.atkT / 0.16, 0, 1), a = 1 - pr * 0.7, f = p.face, m = p.atkAlt ? 1 : -1, nailArc = Gear.weapon() === 'nail';
     let cx = p.cx, cy = p.cy - 4, a0, a1;
     if (p.atkDir === 'up') { a0 = -Math.PI * 0.85; a1 = -Math.PI * 0.15; cy = p.cy - 8; }
     else if (p.atkDir === 'down') { a0 = Math.PI * 0.15; a1 = Math.PI * 0.85; cy = p.cy + 6; }
     else { cx = p.cx + f * 6; a0 = -0.95 * m; a1 = 0.95 * m; if (f < 0) { a0 = Math.PI - a0; a1 = Math.PI - a1; } }
     const sweep = lerp(a0, a1, clamp(pr * 1.6, 0, 1)), span = (a1 - a0) * 0.8, ccw = a1 < a0;
+    if (nailArc) {
     g.save(); g.globalAlpha = a;
     g.fillStyle = INK; g.beginPath(); g.arc(cx, cy, 62, sweep - span, sweep, ccw); g.arc(cx, cy, 30, sweep, sweep - span, !ccw); g.closePath(); g.fill();
     const grd = g.createRadialGradient(cx, cy, 24, cx, cy, 60); grd.addColorStop(0, 'rgba(255,255,255,0)'); grd.addColorStop(0.55, 'rgba(236,246,255,0.9)'); grd.addColorStop(1, '#ffffff');
     g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, 58, sweep - span, sweep, ccw); g.arc(cx, cy, 34, sweep, sweep - span * 0.85, !ccw); g.closePath(); g.fill();
     g.restore();
+    }
     // the sword in the hand, at the leading edge of the swing
     // the hand sits in front of the chest so the blade never crosses the mask
     const hx = p.cx + f * 14, hy = p.cy + (p.atkDir === 'up' ? -6 : p.atkDir === 'down' ? 6 : 0);

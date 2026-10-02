@@ -73,6 +73,7 @@
   fr6.plat(5, 17, 6).plat(45, 17, 6);                                       // shelves
   fr6.door('w', 0, 19, 1, 3, 'fr5', 'e').door('e', 55, 19, 1, 3, 'fr7', 'w');
   fr6.bench(3, 21);
+  fr6.npc('trader', 7, 21, 'frost');
   fr6.enemy('chainman', 45, 21).enemy('slime', 14, 21).enemy('veil', 30, 12).enemy('moth', 10, 10).enemy('mole', 50, 21);
   fr6.item('seed_fr6', 28, 18, 'seed');
 

@@ -64,6 +64,7 @@
   mv6.solid(0, 18, 40, 4);
   mv6.door('e', 39, 15, 1, 3, 'mv5', 'w').door('w', 0, 15, 1, 3, 'mv7', 'e');
   mv6.bench(33, 17);
+  mv6.npc('trader', 37, 17, 'mirror');
   mv6.sign(8, 17, 'sign_mirror_twin');
   mv6.decor('light', 20, 14, { r: 240, c: '#d8c8ff' });
 

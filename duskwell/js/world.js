@@ -39,7 +39,7 @@ class RoomBuilder {
   door(id, x, y, w, h, to, toDoor) { this.doors.push({ id, x, y, w, h, to, toDoor }); return this; }
   enemy(type, x, y, o) { this.enemies.push(Object.assign({ type, x, y }, o || {})); return this; }
   item(id, x, y, kind, o) { this.items.push(Object.assign({ id, x, y, kind }, o || {})); return this; }
-  npc(type, x, y) { this.npcs.push({ type, x, y }); return this; }
+  npc(type, x, y, shop) { this.npcs.push({ type, x, y, shop }); return this; }
   bench(x, y) { this.benches.push({ x, y }); return this; }
   // wind zone (tiles): wy < 0 is an updraft (the hero rises at that speed in px/s), wy > 0 a downdraft, wx pushes sideways in the air
   wind(x, y, w, h, o) { this.winds.push(Object.assign({ x, y, w, h, wx: 0, wy: 0 }, o || {})); return this; }
@@ -72,7 +72,7 @@ class RoomBuilder {
         else if (e[0] === 'bench') this.bench(x, y);
         else if (e[0] === 'station') this.station(x, y);
         else if (e[0] === 'sign') this.sign(x, y, e[1]);
-        else if (e[0] === 'npc') this.npc(e[1], x, y);
+        else if (e[0] === 'npc') this.npc(e[1], x, y, e[2]);
         else if (e[0] === 'light') this.decor('light', x, y, e[1]);
         else throw new Error(this.id + ': unknown legend kind ' + e[0]);
       }
@@ -103,7 +103,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   town.decor('lamp', 12, 17).decor('lamp', 27, 17).decor('lamp', 46, 17).decor('lamp', 60, 17);
   town.decor('house', 4, 17, { w: 6, h: 5 }).decor('house', 20, 17, { w: 5, h: 4 }).decor('house', 48, 17, { w: 5, h: 6 });
   town.bench(31, 17);
-  town.npc('elder', 17, 17).npc('merchant', 40, 17);
+  town.npc('elder', 17, 17).npc('merchant', 40, 17).npc('smith', 22, 17).npc('outfitter', 51, 17);
   town.sign(7, 17, 'sign_controls');
   town.plat(24, 14, 5).plat(34, 13, 4);
   town.door('east', 63, 15, 1, 3, 'fr1', 'w').door('west', 0, 15, 1, 3, 'em1', 'e');          // Rimecrest to the east, Cinderdeep to the west

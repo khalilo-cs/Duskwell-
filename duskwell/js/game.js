@@ -2,12 +2,12 @@
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
+const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a', stormcrest: '#a8c0ff', mirror: '#e0d4ff' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
   level: null, player: new Player(), enemies: [], projs: [], geos: [], items: [], parts: [], fx: [],
-  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0,
+  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0, bolt: 0, boltCD: 4,
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
@@ -307,6 +307,9 @@ function updatePlay(dt) {
   if (Input.pressed('pause')) { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; Input.consume('pause'); return; }
   if (Input.pressed('map')) { G.state = 'map'; Input.consume('map'); Sound.play('select'); return; }
   G.time += dt;
+  // storm: a flash of lightning every few seconds, the thunder a moment behind it
+  if (G.bolt > 0) G.bolt = Math.max(0, G.bolt - dt * 2.6);
+  if (L.def.theme === 'storm' && (G.boltCD -= dt) <= 0) { G.bolt = 1; G.boltCD = rand(4.5, 11); setTimeout(() => Sound.play('thunder'), 350); }
   Mech.update(dt);
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
@@ -681,7 +684,7 @@ function drawMenu(g, items, sel, y0, step) {
 }
 
 // colour of the air, specular shine of the rock and how much the heat shimmers, per area
-const SHINE = { frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
+const SHINE = { storm: 0.55, mirror: 0.85, frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
   const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
@@ -738,13 +741,14 @@ function drawWorld(g) {
     const sun = L.def.theme === 'town' ? { x: VW * 0.72 - G.cam.x * 0.02, y: 200, k: 0.28 } : L.def.theme === 'throne' ? { x: VW * 0.5 - G.cam.x * 0.04, y: 190, k: 0.3 } : null;
     const img = lum.render({
       lights: collectLights(cx, cy), cx, cy, time: t,
-      dark: DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme], tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
+      dark: Math.max(0.05, (DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme]) - G.bolt * 0.32), tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
       aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
     });
     if (img) g.drawImage(img, 0, 0, VW, VH);
     else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
   }
   g.save(); g.translate(-cx, -cy);
+  Art.drawWinds(g, L, t, cx, cy);
   if (P.wailT > 0) Art.drawWail(g, P, t);
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
@@ -766,6 +770,7 @@ function drawWorld(g) {
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = vg; g.fillRect(0, 0, VW, VH);
   if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, G.flash) + ')'; g.fillRect(0, 0, VW, VH); }
+  if (G.bolt > 0) { g.fillStyle = 'rgba(200,215,255,' + 0.26 * G.bolt * G.bolt + ')'; g.fillRect(0, 0, VW, VH); }
   if (P.hp === 1 && P.hp < P.maxHp && G.state === 'play') { const a = 0.08 + 0.05 * Math.sin(G.t * 6); g.fillStyle = 'rgba(140,0,20,' + a + ')'; g.fillRect(0, 0, VW, VH); }
 }
 

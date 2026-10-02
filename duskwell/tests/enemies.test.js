@@ -22,7 +22,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     }
     return { out, w: out.filter(o => o.t === 'warden').length, r: out.filter(o => o.t === 'ram').length };
   });
-  ok('7 wardens and 8 rams, all standing on floor', r.w === 7 && r.r === 8 && r.out.every(o => o.ok), r);
+  ok('11 wardens and 10 rams, all standing on floor', r.w === 11 && r.r === 10 && r.out.every(o => o.ok), r);
 
   // ---------- Warden: the shield
   await setup('cx1', 20, 39);

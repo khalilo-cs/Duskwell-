@@ -84,6 +84,18 @@ Art.drawCharm = function (g, id, x, y, r, o) {
       g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(0.5, -0.6, 0.5, -0.2, 0.12, -0.05); g.lineTo(-0.12, -0.05); g.bezierCurveTo(-0.5, -0.25, -0.35, -0.6, 0, -1); g.closePath(); fs(g, fill, ink, lw);
       g.fillStyle = 'rgba(255,255,255,0.8)'; ellipse(g, 0, -0.32, 0.1, 0.22); g.fill();
       break;
+    case 'gale':       // a spiral of wind
+      g.strokeStyle = fill; g.lineWidth = 0.2; g.lineCap = 'round';
+      g.beginPath(); g.arc(0.05, 0, 0.78, Math.PI * 0.9, Math.PI * 2.05); g.stroke();
+      g.beginPath(); g.arc(0.05, 0.02, 0.46, Math.PI * 1.1, Math.PI * 2.4); g.stroke();
+      g.beginPath(); g.arc(0.05, 0.02, 0.16, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.moveTo(-0.85, 0.5); g.lineTo(-0.3, 0.5); g.stroke();
+      break;
+    case 'echo':       // a blade and its ghosts: nested crescents
+      g.strokeStyle = fill; g.lineCap = 'round';
+      for (const [r, a, w] of [[0.34, 1.2, 0.2], [0.6, 1.1, 0.17], [0.86, 1.0, 0.14]]) { g.lineWidth = w; g.beginPath(); g.arc(-0.5, 0, r + 0.2, -a, a); g.stroke(); }
+      shape([-0.62, -0.1, -0.1, -0.1, 0, 0, -0.1, 0.1, -0.62, 0.1]);
+      break;
     case 'shell':      // a ward shield
       g.beginPath(); g.moveTo(0, -0.98); g.lineTo(0.88, -0.6); g.bezierCurveTo(0.88, 0.4, 0.42, 0.82, 0, 1); g.bezierCurveTo(-0.42, 0.82, -0.88, 0.4, -0.88, -0.6); g.closePath(); fs(g, fill, ink, lw);
       g.strokeStyle = 'rgba(30,24,16,0.6)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(0, -0.7); g.lineTo(0, 0.75); g.moveTo(-0.6, -0.15); g.lineTo(0.6, -0.15); g.stroke();

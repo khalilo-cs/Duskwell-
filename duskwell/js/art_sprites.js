@@ -811,6 +811,15 @@ Art.drawProj = function (g, p, t) {
     g.restore();
     return;
   }
+  if (p.kind === 'wave') {                         // the Blade Echo: a crescent of pale light
+    const dir = sign(p.vx) || 1;
+    g.save(); g.translate(p.x, p.y); g.scale(dir, 1);
+    bloom(g, 0, 0, 44, p.color, 0.45);
+    g.lineCap = 'round';
+    for (const [r, w, a] of [[17, 7, 0.95], [24, 4, 0.55], [31, 2.4, 0.3]]) { g.strokeStyle = 'rgba(245,238,255,' + a + ')'; g.lineWidth = w; g.beginPath(); g.arc(-18, 0, r + 18, -0.8, 0.8); g.stroke(); }
+    g.restore();
+    return;
+  }
   if (p.pal && tintedProj(g, p, t)) return;
   baseDrawProj(g, p, t);
 };
@@ -1227,4 +1236,145 @@ Art.boss.colossus = function (g, b, t) {           // a walking furnace of basal
   for (let i = 0; i < 5; i++) { const u = (t * 0.6 + i * 0.37) % 1; g.fillStyle = 'rgba(255,170,80,' + (0.8 * (1 - u)) + ')'; g.fillRect(b.cx + Math.sin(i * 7 + t) * 40, b.y + b.h - 40 - u * 150, 3, 3); }
   g.restore();
   if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#ffe98a'; g.fillRect(b.cx + Math.cos(a) * 30 - 3, b.y - 6 + Math.sin(a) * 6, 6, 6); }
+};
+
+// ---------------------------------------------------------------- the bosses of Stormcrest
+Art.boss.thunderhoof = function (g, b, t) {        // a bull of storm-cloud and iron, lightning cracked across its flanks
+  const fl = b.flash > 0, tele = b.tele > 0, run = b.charging || Math.abs(b.vx) > 40;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 3, 0);
+  bloom(g, 0, -50, 130, '#a8c0ff', 0.12 + (tele ? 0.3 : 0) + (b.charging ? 0.2 : 0));
+  const hide = fl ? '#ffffff' : '#323d5e', hideL = fl ? '#ffffff' : '#56648e', hideD = fl ? '#ffffff' : '#192038';
+  const step = run ? Math.sin(t * 22) * 9 : 0;
+  // legs: far pair darker
+  for (const [x0, s, c] of [[-44, 1, hideD], [28, -1, hideD], [-26, -1, hide], [46, 1, hide]]) {
+    poly(g, [x0 - 8, -46, x0 + 8, -46, x0 + 7 + s * step, -8, x0 + 10 + s * step, 0, x0 - 9 + s * step, 0, x0 - 6 + s * step, -8]); fs(g, c, INK, 3);
+  }
+  // the tail, a bolt of cloud
+  g.strokeStyle = INK; g.lineWidth = 7; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(-58, -64); g.lineTo(-76, -76); g.lineTo(-70, -58); g.lineTo(-90, -62); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#cfe0ff'; g.lineWidth = 3; g.stroke();
+  // the body: a heavy hump of plates
+  const body = [[-62, -50], [-48, -86], [-10, -98], [30, -94], [58, -78], [66, -52], [48, -34], [0, -30], [-44, -34]];
+  g.beginPath(); body.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath();
+  const gr = g.createLinearGradient(0, -100, 0, -30); gr.addColorStop(0, hideL); gr.addColorStop(0.5, hide); gr.addColorStop(1, hideD); fs(g, gr, INK, 4);
+  g.save(); g.beginPath(); body.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+  g.strokeStyle = 'rgba(5,6,8,0.55)'; g.lineWidth = 2.4; for (let i = -2; i <= 3; i++) { g.beginPath(); g.moveTo(i * 20 - 6, -100); g.quadraticCurveTo(i * 20 + 10, -64, i * 20 - 4, -28); g.stroke(); }
+  g.restore();
+  // lightning cracks
+  g.strokeStyle = fl ? '#fff' : 'rgba(215,232,255,' + (0.6 + 0.35 * Math.sin(t * 9) + (tele ? 0.3 : 0)) + ')'; g.lineWidth = 2.4;
+  for (const pts of [[-40, -88, -30, -70, -42, -60, -28, -42], [10, -96, 20, -78, 8, -68, 22, -48], [44, -84, 38, -68, 52, -58]]) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); }
+  // the head, lowered to the charge
+  const dip = tele || b.charging || b.stunned ? 14 : 0;
+  g.save(); g.translate(56, -66 + dip); g.rotate(dip ? 0.25 : 0);
+  poly(g, [-16, -22, 14, -26, 38, -6, 40, 10, 14, 18, -14, 12]); fs(g, fl ? '#fff' : hide, INK, 3.6);
+  poly(g, [-16, -22, 14, -26, 20, -14, -10, -8]); fs(g, hideL, null);
+  g.strokeStyle = INK; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, -22); g.quadraticCurveTo(-8, -50, 18, -52); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#eef2ff'; g.lineWidth = 4.5; g.stroke();
+  g.fillStyle = tele ? '#ffffff' : '#bcd0ff'; poly(g, [10, -12, 24, -10, 22, -4, 8, -6]); g.fill(); bloom(g, 16, -9, 24, '#a8c0ff', tele ? 0.8 : 0.4);
+  ellipse(g, 36, 4, 3.2, 2.4); g.fillStyle = INK; g.fill();
+  g.restore();
+  g.restore();
+  if (b.charging) { g.save(); g.globalAlpha = 0.5; g.strokeStyle = '#dfe9ff'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { const yy = b.y + 20 + i * 18; g.beginPath(); g.moveTo(b.cx - b.face * 70, yy); g.lineTo(b.cx - b.face * (110 + i * 16), yy); g.stroke(); } g.restore(); }
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#e8f0ff'; g.fillRect(b.cx + b.face * 50 + Math.cos(a) * 26 - 3, b.y - 2 + Math.sin(a) * 6, 6, 6); }
+};
+
+Art.boss.roc = function (g, b, t) {                // a great storm bird: wings of slate feathers, a crest of lightning
+  const fl = b.flash > 0, tele = b.tele > 0, tuck = b.sweeping;
+  g.save(); g.globalAlpha = b.alpha; g.translate(b.cx, b.cy + (tuck ? 0 : Math.sin(t * 2.4) * 3));
+  if (b.state === 'dying') g.translate(Math.sin(t * 70) * 3, 0);
+  bloom(g, 0, 0, 190, '#a8c0ff', 0.16 + (tele ? 0.3 : 0) + (b.phase - 1) * 0.05);
+  g.scale(b.face, 1);
+  if (b.sweeping && b.vy > 200) g.rotate(0.6);
+  const flap = tuck ? 0.15 : Math.sin(t * (tele ? 11 : 6.5)) * 0.55 + (tele ? 0.35 : 0);
+  const feather = fl ? '#ffffff' : '#2c3860', featherL = fl ? '#ffffff' : '#5568a0', featherD = fl ? '#ffffff' : '#171f3a';
+  const wing = (rot, dark) => {
+    g.save(); g.translate(-8, -12); g.rotate(-1.1 + rot);
+    const pts = [[0, 0], [14, -26], [70, -52], [128, -46], [132, -22], [112, -8], [118, 12], [82, 8], [66, 22], [38, 10], [12, 14]];
+    g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); fs(g, dark ? featherD : feather, INK, 3.4);
+    g.strokeStyle = 'rgba(5,6,8,0.6)'; g.lineWidth = 2; for (let i = 1; i <= 5; i++) { g.beginPath(); g.moveTo(18 + i * 16, -44 + i * 3); g.lineTo(14 + i * 20, 14); g.stroke(); }
+    if (!dark) { g.fillStyle = featherL; poly(g, [14, -26, 70, -52, 128, -46, 70, -24]); g.fill(); }
+    g.restore();
+  };
+  wing(flap * 0.8 + 0.25, true);
+  // tail
+  poly(g, [-26, 4, -86, -2, -100, 14, -84, 22, -60, 30, -24, 18]); fs(g, featherD, INK, 3);
+  // talons
+  g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, 18); g.lineTo(-10, 36); g.lineTo(-18, 42); g.moveTo(-10, 36); g.lineTo(-2, 42); g.moveTo(10, 18); g.lineTo(8, 36); g.lineTo(0, 42); g.moveTo(8, 36); g.lineTo(18, 42); g.stroke();
+  // body
+  ellipse(g, 0, 2, 38, 25, -0.08); const bg = g.createLinearGradient(0, -24, 0, 28); bg.addColorStop(0, featherL); bg.addColorStop(0.5, feather); bg.addColorStop(1, fl ? '#fff' : '#d8e2ff'); fs(g, bg, INK, 4);
+  // head, beak and crest
+  ellipse(g, 38, -14, 15, 14); fs(g, fl ? '#fff' : feather, INK, 3.4);
+  poly(g, [48, -20, 78, -10, 48, -4]); fs(g, fl ? '#fff' : '#f2e6b8', INK, 3);
+  poly(g, [30, -26, 24, -48, 36, -34, 40, -54, 46, -32, 54, -44, 50, -24]); fs(g, fl ? '#fff' : '#cfe0ff', INK, 2.6);
+  ellipse(g, 42, -17, 3.6, 3.6); g.fillStyle = tele ? '#ffffff' : '#bcd0ff'; g.fill(); bloom(g, 42, -17, 22, '#a8c0ff', tele ? 0.9 : 0.4);
+  wing(flap, false);
+  // sparks while it gathers the storm
+  if (tele) { g.strokeStyle = 'rgba(235,244,255,0.9)'; g.lineWidth = 2.2; for (let i = 0; i < 3; i++) { const a = t * 7 + i * 2.1, r = 70 + 30 * Math.sin(t * 9 + i); g.beginPath(); g.moveTo(Math.cos(a) * 40, Math.sin(a) * 30); g.lineTo(Math.cos(a) * r * 0.7 + 8, Math.sin(a) * r * 0.5 - 6); g.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.6); g.stroke(); } }
+  g.restore();
+};
+
+// ---------------------------------------------------------------- the bosses of the Mirror Vault
+Art.boss.duelist = function (g, b, t) {            // a fencer of black glass: a coat of shards, a visor, a long rapier
+  const fl = b.flash > 0, tele = b.tele > 0, guard = b.guarding, lunge = b.lunging;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 3, 0);
+  bloom(g, 0, -46, 90, '#c8b8ff', 0.1 + (tele ? 0.3 : 0) + (guard ? 0.3 : 0));
+  const dark = fl ? '#ffffff' : '#1c1830', mid = fl ? '#ffffff' : '#3a3260', lit = fl ? '#ffffff' : '#8c80cc';
+  if (lunge) g.rotate(0.22);
+  const step = Math.abs(b.vx) > 40 ? Math.sin(t * 20) * 8 : 0;
+  // legs
+  g.strokeStyle = INK; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, -38); g.lineTo(-10 - step, 0); g.moveTo(6, -38); g.lineTo(12 + step + (lunge ? 14 : 0), 0); g.stroke();
+  g.strokeStyle = mid; g.lineWidth = 4.5; g.stroke();
+  // the coat of glass shards
+  g.beginPath(); g.moveTo(-18, -66); g.lineTo(-24, -34 + Math.sin(t * 3) * 2); g.lineTo(-14, -22); g.lineTo(-6, -36); g.lineTo(2, -18); g.lineTo(10, -36); g.lineTo(20, -26); g.lineTo(18, -62); g.closePath(); fs(g, dark, INK, 3.4);
+  poly(g, [-18, -66, -4, -60, -8, -38, -22, -36]); fs(g, mid, null); poly(g, [4, -62, 18, -62, 18, -34, 8, -38]); fs(g, lit, null);
+  // torso, a mirrored breastplate
+  poly(g, [-14, -78, 14, -78, 16, -46, 0, -38, -16, -46]); fs(g, mid, INK, 3.4);
+  poly(g, [-14, -78, 0, -78, 0, -40, -16, -46]); fs(g, lit, null);
+  // the helm and its visor
+  poly(g, [-12, -100, 12, -100, 14, -78, 0, -72, -14, -78]); fs(g, dark, INK, 3.4);
+  poly(g, [-8, -92, 10, -92, 10, -86, -8, -86]); g.fillStyle = tele || guard ? '#ffffff' : '#c8b8ff'; g.fill(); bloom(g, 1, -89, 22, '#c8b8ff', tele ? 0.9 : 0.45);
+  poly(g, [-4, -100, 0, -118, 4, -100]); fs(g, lit, INK, 2.4);
+  // the blade: up in front when it guards, level when it lunges, low otherwise
+  g.save(); g.translate(14, -62);
+  g.rotate(guard ? -1.45 : lunge ? 0 : b.slashing === 2 ? 1.0 : b.slashing === 1 ? -0.35 : tele ? -1.0 : 0.5);
+  g.strokeStyle = INK; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 0); g.lineTo(guard ? 86 : 100, 0); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#f2edff'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(0, 0); g.lineTo(guard ? 86 : 100, 0); g.stroke();
+  g.strokeStyle = INK; g.lineWidth = 5; g.beginPath(); g.moveTo(4, -9); g.lineTo(4, 9); g.stroke();
+  if (guard) bloom(g, 50, 0, 60, '#ffffff', 0.35 + 0.15 * Math.sin(t * 16));
+  g.restore();
+  g.restore();
+  if (lunge) { g.save(); g.globalAlpha = 0.45; g.strokeStyle = '#e8e0ff'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { const yy = b.y + 20 + i * 16; g.beginPath(); g.moveTo(b.cx - b.face * 30, yy); g.lineTo(b.cx - b.face * (90 + i * 14), yy); g.stroke(); } g.restore(); }
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#e8e0ff'; g.fillRect(b.cx + Math.cos(a) * 24 - 3, b.y - 14 + Math.sin(a) * 6, 6, 6); }
+};
+
+Art.boss.twin = function (g, b, t) {               // the Wanderer's dark reflection: a horned white mask, a black cloak, a pale nail
+  const fl = b.flash > 0, tele = b.tele > 0;
+  const pose = (ox, alpha) => {
+    g.save(); g.globalAlpha = alpha; g.translate(b.cx + ox, b.y + b.h); g.scale(b.face * 1.45, 1.45);
+    if (b.dashing) g.rotate(0.28);
+    const run = Math.abs(b.vx) > 40 && !b.airborne ? Math.sin(t * 22) * 5 : 0, air = b.airborne;
+    // cloak and legs
+    g.strokeStyle = INK; g.lineWidth = 6; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-3, -14); g.lineTo(air ? -8 : -5 - run, air ? -2 : 0); g.moveTo(3, -14); g.lineTo(air ? 9 : 6 + run, air ? -4 : 0); g.stroke();
+    g.strokeStyle = fl ? '#fff' : '#1a1730'; g.lineWidth = 3; g.stroke();
+    g.beginPath(); g.moveTo(-9, -22); g.quadraticCurveTo(-18 - run * 0.4, -14, -13, -3 + Math.sin(t * 5) * 1.5); g.lineTo(-3, -10); g.lineTo(5, -4); g.lineTo(10, -12); g.quadraticCurveTo(12, -22, 8, -26); g.closePath(); fs(g, fl ? '#fff' : '#0b0a16', INK, 2.4);
+    g.strokeStyle = fl ? '#fff' : 'rgba(200,170,255,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(-6, -22); g.quadraticCurveTo(-11, -12, -8, -4); g.stroke();
+    // torso, head
+    ellipse(g, 0, -24, 8, 9); fs(g, fl ? '#fff' : '#12101f', INK, 2.4);
+    ellipse(g, 0, -37, 9, 10); fs(g, fl ? '#fff' : '#f0ecff', INK, 2.4);
+    poly(g, [-6, -43, -11, -58, -2, -46]); fs(g, fl ? '#fff' : '#f0ecff', INK, 2); poly(g, [6, -43, 11, -58, 2, -46]); fs(g, fl ? '#fff' : '#f0ecff', INK, 2);
+    g.fillStyle = tele ? '#ffffff' : '#07060d'; ellipse(g, -3.4, -37, 2.2, 3.2); g.fill(); ellipse(g, 3.4, -37, 2.2, 3.2); g.fill();
+    if (!fl) { g.fillStyle = '#c8a8ff'; ellipse(g, -3.4, -37, 0.9, 1.6); g.fill(); ellipse(g, 3.4, -37, 0.9, 1.6); g.fill(); }
+    // the nail
+    g.save(); g.translate(7, -26); g.rotate(b.slashing === 2 ? -1.9 : b.slashing === 1 ? 0.25 : b.diving ? 1.65 : tele ? -1.2 : (b.casting ? -0.4 : 0.55));
+    heroSword(g, 0, 0, 0, 40, fl ? '#ffffff' : '#e8e0ff'); g.restore();
+    if (b.casting) { bloom(g, 14, -26, 26, '#d8c8ff', 0.8); }
+    g.restore();
+  };
+  if (b.state === 'dying') g.save(), g.translate(Math.sin(t * 70) * 2.5, 0);
+  if (b.dashing || b.diving) for (let k = 3; k >= 1; k--) pose(-b.face * (b.diving ? 0 : k * 22), 0.18);
+  bloom(g, b.cx, b.cy, 80, '#b898ff', 0.12 + (tele ? 0.3 : 0) + (b.phase - 1) * 0.04);
+  pose(0, b.alpha);
+  if (b.state === 'dying') g.restore();
 };

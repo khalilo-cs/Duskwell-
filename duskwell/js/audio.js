@@ -9,9 +9,9 @@ const Sound = (() => {
   let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
-  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember' };
+  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror' };
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
   const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   const MUSIC_VOL = 0.8;
@@ -257,6 +257,7 @@ const Sound = (() => {
     lever() { tone({ f: 180, f2: 120, d: 0.25, v: 0.16, type: 'square' }); tone({ f: 900, d: 0.12, v: 0.08, type: 'triangle', delay: 0.12 }); noise({ f: 800, d: 0.2, v: 0.12 }); },
     sdcharge() { tone({ f: 160, f2: 640, d: 0.8, v: 0.08, a: 0.2, type: 'sawtooth' }); noise({ f: 600, f2: 2400, d: 0.8, v: 0.05, type: 'bandpass', q: 2 }); },
     sdready() { tone({ f: 1320, d: 0.25, v: 0.1, type: 'triangle' }); tone({ f: 1980, d: 0.3, v: 0.06, type: 'sine', delay: 0.04 }); },
+    thunder() { noise({ f: 380, f2: 50, d: 2.2, v: 0.3 }); tone({ f: 60, f2: 28, d: 1.8, v: 0.22, type: 'sawtooth' }); noise({ f: 160, d: 1.2, v: 0.2, delay: 0.5 }); },
     sdlaunch() { noise({ f: 300, f2: 3000, d: 0.35, v: 0.22, type: 'bandpass', q: 0.8 }); tone({ f: 110, f2: 55, d: 0.4, v: 0.22, type: 'sawtooth' }); },
   };
 

@@ -19,6 +19,8 @@ function spawnPillar(x, y, tele, dur, h, pal) {
   G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: (pal && pal.glow) || '#ff9bd6', pierce: true, passWalls: true, pal }));
 }
 const ICE = { fill: '#bfe8ff', fill2: '#f4fcff', glow: '#9fdcff', rgb: '170,225,255', spike: true };
+const BOLT = { fill: '#d8e6ff', fill2: '#ffffff', glow: '#a8c0ff', rgb: '170,200,255' };
+const GLASS = { fill: '#d4ccff', fill2: '#ffffff', glow: '#c8b8ff', rgb: '200,185,255', spike: true };
 const SLAG = { fill: '#ff8a3a', fill2: '#ffe08a', glow: '#ff7a2a', rgb: '255,150,70' };
 
 class Boss extends Enemy {
@@ -767,4 +769,335 @@ class Colossus extends Boss {
   }
 }
 
-const BOSS_TYPES = { queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };
+// ---------------------------------------------------------------- Thunderhoof
+// A bull of the high peaks, armoured in storm-cloud, the mid-boss of Stormcrest. It charges, stamps and gores, and
+// once it is hurt enough it calls the lightning down. (Mid-bosses guard a way on; they leave geo, not a seal.)
+class Thunderhoof extends Boss {
+  constructor(d) { super(d, 132, 92, { key: 'thunderhoof', hp: 170, geo: 160, phases: [0.5], blood: '#cfe0ff' }); this.last = ''; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
+    const opts = ['charge', 'stomp', 'gore'];
+    if (this.phase >= 2) opts.push('thunder');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  bolts(n) {
+    const L = G.level;
+    for (let i = 0; i < n; i++) spawnBeam(clamp(G.player.cx + (i === 0 ? 0 : rand(-260, 260)), 3 * TILE, L.pw - 3 * TILE), 0.85 + i * 0.12, 0.3, 44, BOLT);
+  }
+  *charge() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.6 * this.spd);
+    this.tele = 0; this.charging = true;
+    let t = 1.7;
+    while (t > 0) {
+      this.vx = this.face * (this.phase >= 2 ? 620 : 520); this.doMelee(-this.w / 2, 12, this.w, this.h - 12, 1, 0.05);
+      if (Math.random() < 0.5) G.burst(this.cx - this.face * 50, this.y + this.h - 8, 1, { color: '#dfe9ff', speed: 100, life: 0.35, size: 3, vy: -40 });
+      t -= this.dt; if (this.hitL || this.hitR) break; yield;
+    }
+    this.vx = 0; this.charging = false; Sound.play('slam'); G.shake(9, 0.3); this.stunned = true;
+    this.bolts(this.phase >= 2 ? 3 : 2);
+    yield* this.wait(1.2);
+    this.stunned = false;
+  }
+  *stomp() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.7 * this.spd);
+    this.tele = 0; this.doMelee(24, 14, 150, 80, 2, 0.25);
+    Sound.play('slam'); G.shake(8, 0.3);
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 80, this.y + this.h, d, 430, '#dfe9ff');
+    yield* this.wait(0.8 * this.spd);
+  }
+  *gore() {
+    const lunges = this.phase >= 2 ? 2 : 1;
+    for (let i = 0; i < lunges; i++) {
+      this.facePlayer(); this.tele = 1; Sound.play('tele');
+      yield* this.wait(0.4 * this.spd);
+      this.tele = 0; Sound.play('dash');
+      let t = 0.38;
+      while (t > 0) { this.vx = this.face * 760; this.doMelee(-this.w / 2, 8, this.w + 20, this.h - 8, 1, 0.05); t -= this.dt; if (this.hitL || this.hitR) break; yield; }
+      this.vx = 0;
+      yield* this.wait(0.22);
+    }
+    yield* this.wait(0.5 * this.spd);
+  }
+  *thunder() {
+    this.tele = 1; Sound.play('roar'); G.shake(5, 0.6);
+    yield* this.wait(0.4);
+    this.bolts(this.phase >= 2 ? 4 : 3);
+    yield* this.wait(1.5);
+    this.tele = 0;
+  }
+}
+
+// ---------------------------------------------------------------- The Storm Roc
+// A great bird that rules the summit. It strafes the hall dropping needles, swoops across it, dives, calls lightning
+// in columns, and (from the first wound on) beats up a gale that shoves the hero along the floor.
+class Roc extends Boss {
+  constructor(d) { super(d, 124, 90, { key: 'roc', hp: 260, geo: 280, phases: [0.66, 0.33], blood: '#cfe0ff' }); this.grav = false; this.last = ''; this.galeZone = null; }
+  get hoverY() { return this.floorY - 5.5 * TILE; }
+  *chooseAttack() {
+    yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.4 : 0.28);
+    const opts = ['strafe', 'swoop', 'lightning'];
+    if (this.phase >= 2) opts.push('dive', 'gale');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  needle(x, y, vx, vy) { G.projs.push(new Proj({ kind: 'needle', x, y, vx, vy, r: 8, dmg: 1, color: '#e8f0ff', life: 2.6 })); }
+  *strafe() {                                    // fly the length of the hall, a rain of needles behind
+    const L = G.level, side = this.cx < L.pw / 2 ? 1 : -1;
+    yield* this.flyTo(side > 0 ? 4 * TILE : L.pw - 4 * TILE, this.hoverY - 30, 420);
+    this.face = side; this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.5 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    let t = 3, n = 0;
+    while (t > 0 && ((side > 0 && this.cx < L.pw - 4 * TILE) || (side < 0 && this.cx > 4 * TILE))) {
+      this.vx = side * (this.phase >= 3 ? 400 : 320); this.vy = Math.sin(this.t * 6) * 20; this.face = side;
+      if (++n % (this.phase >= 2 ? 9 : 13) === 0) { this.needle(this.cx, this.cy + 20, rand(-40, 40), 380); if (this.phase >= 2) this.needle(this.cx, this.cy + 20, (G.player.cx - this.cx) * 0.9, 330); }
+      t -= this.dt; yield;
+    }
+    this.vx = this.vy = 0;
+    yield* this.flyTo(L.pw / 2, this.hoverY, 380);
+  }
+  *swoop() {                                     // a diagonal pass across the hall, low over the floor
+    const L = G.level, side = G.player.cx < L.pw / 2 ? -1 : 1;           // start on the far side from the hero
+    yield* this.flyTo(side > 0 ? L.pw - 3 * TILE : 3 * TILE, this.hoverY - 70, 420);
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.55 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.sweeping = true;
+    const tx = clamp(2 * G.player.cx - this.cx, 3 * TILE, L.pw - 3 * TILE), ty = this.floorY - 56;
+    const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1, sp = this.phase >= 3 ? 740 : 640;
+    let t = 1.4;
+    while (t > 0 && Math.hypot(tx - this.cx, ty - this.cy) > 40) {
+      this.vx = dx / d * sp; this.vy = dy / d * sp; this.face = sign(dx) || this.face; this.doMelee(-this.w / 2, 4, this.w, this.h - 4, 1, 0.05);
+      t -= this.dt; yield;
+    }
+    this.sweeping = false; this.vx = this.vy = 0; Sound.play('slam'); G.shake(6, 0.2);
+    for (const dd of [-1, 1]) spawnShock(this.cx + dd * 30, this.floorY, dd, 380, '#dfe9ff');
+    yield* this.flyTo(this.cx, this.hoverY, 380);
+  }
+  *lightning() {
+    const L = G.level, n = 3 + this.phase;
+    yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
+    this.tele = 1; Sound.play('roar');
+    for (let i = 0; i < n; i++) {
+      spawnBeam(i % 2 === 0 ? G.player.cx : clamp(G.player.cx + rand(-260, 260), 3 * TILE, L.pw - 3 * TILE), 0.85, 0.3, 44, BOLT);
+      yield* this.hover(0.45);
+    }
+    yield* this.hover(0.9);
+    this.tele = 0;
+  }
+  *dive() {
+    const L = G.level;
+    yield* this.flyTo(clamp(G.player.cx, 4 * TILE, L.pw - 4 * TILE), this.hoverY - 60, 440);
+    this.tele = 1; Sound.play('tele');
+    let t = 0.5 * this.spd;
+    while (t > 0) { this.vx = clamp((G.player.cx - this.cx) * 4, -320, 320); this.vy = 0; t -= this.dt; yield; }
+    this.tele = 0; Sound.play('dash'); this.sweeping = true;
+    let tt = 1.1;
+    while (tt > 0 && this.cy < this.floorY - 52) { this.vx = 0; this.vy = 760; this.doMelee(-this.w / 2, 4, this.w, this.h, 1, 0.05); tt -= this.dt; yield; }
+    this.sweeping = false; this.vx = this.vy = 0; Sound.play('slam'); G.shake(9, 0.3);
+    for (const dd of [-1, 1]) { spawnShock(this.cx + dd * 30, this.floorY, dd, 420, '#dfe9ff'); }
+    yield* this.wait(0.35);
+    yield* this.flyTo(this.cx, this.hoverY, 340);
+  }
+  *gale() {                                      // a crosswind across the whole hall, and needles to dodge while it shoves
+    const L = G.level, dir = pick([-1, 1]);
+    yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
+    this.tele = 1; Sound.play('roar');
+    yield* this.hover(0.6);
+    this.galeZone = { x: 0, y: 0, w: L.pw, h: L.ph, wx: dir * (this.phase >= 3 ? 190 : 150), wy: 0 };
+    L.winds.push(this.galeZone);
+    for (let i = 0; i < 6; i++) {
+      this.needle(clamp(G.player.cx + rand(-90, 90), 3 * TILE, L.pw - 3 * TILE), this.cy, 0, 360);
+      yield* this.hover(0.42);
+    }
+    this.endGale(); this.tele = 0;
+  }
+  endGale() { if (this.galeZone) { const L = G.level; L.winds = L.winds.filter(w => w !== this.galeZone); this.galeZone = null; } }
+  shiftRoutine() { this.endGale(); return super.shiftRoutine(); }
+  kill() { this.endGale(); super.kill(); }
+}
+
+// ---------------------------------------------------------------- The Glass Duelist
+// The mid-boss of the Mirror Vault: a fencer of black glass. It lunges, strings blows together and, above all, guards:
+// while the blade is up your strikes ring off it and it answers with a riposte. Wait out the guard, strike after.
+class Duelist extends Boss {
+  constructor(d) { super(d, 46, 90, { key: 'duelist', hp: 190, geo: 170, phases: [0.5], blood: '#d4ccff' }); this.last = ''; this.guarding = false; this.parried = false; }
+  hurt(dmg, dir, how) {
+    if (this.guarding && this.state === 'fight' && !this.invul && how !== 'burn') {            // the blade is up: it turns the blow aside
+      this.parried = true; Sound.play('clank'); G.hitstop(0.04);
+      G.burst(this.cx + this.face * 30, this.cy - 10, 10, { color: '#f4efff', speed: 240, life: 0.3, size: 2 });
+      return false;                              // the player gains no soul from a parried blow
+    }
+    super.hurt(dmg, dir, how);
+  }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.6 : 0.35);
+    const opts = ['lunge', 'combo', 'guard'];
+    if (this.phase >= 2) opts.push('shatter', 'rain');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  *step(dir, speed, t) { let x = t; while (x > 0) { this.vx = dir * speed; x -= this.dt; if (this.hitL || this.hitR) break; yield; } this.vx = 0; }
+  *lunge() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.4 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.lunging = true;
+    let t = 0.3;
+    while (t > 0) { this.vx = this.face * 880; this.doMelee(10, 30, 120, 22, 1, 0.06); t -= this.dt; if (this.hitL || this.hitR) break; yield; }
+    this.vx = 0; this.lunging = false;
+    yield* this.wait(0.7 * this.spd);
+  }
+  *combo() {
+    const n = this.phase >= 2 ? 4 : 3;
+    for (let i = 0; i < n; i++) {
+      this.facePlayer(); this.tele = 1; Sound.play('tele');
+      yield* this.wait(0.26 * this.spd);
+      this.tele = 0; Sound.play('slash'); this.slashing = i % 2 + 1;
+      this.doMelee(6, i % 2 ? 40 : 14, 100, i % 2 ? 24 : 60, 1, 0.14);
+      yield* this.step(this.face, 300, 0.14);
+      yield* this.wait(0.12);
+      this.slashing = 0;
+    }
+    yield* this.wait(0.7 * this.spd);
+  }
+  *guard() {                                    // blade up; a blow that lands on it is answered at once
+    this.facePlayer(); this.guarding = true; this.parried = false; Sound.play('clank');
+    let t = 1.5 * (this.phase >= 2 ? 0.85 : 1), answered = false;
+    while (t > 0) {
+      this.facePlayer(); this.vx = 0;
+      if (this.parried) { answered = true; break; }
+      t -= this.dt; yield;
+    }
+    this.guarding = false;
+    if (answered) {                              // the riposte: fast, long, and not telegraphed enough, which is the lesson
+      this.parried = false; this.facePlayer(); this.tele = 1;
+      yield* this.wait(0.12);
+      this.tele = 0; Sound.play('dash'); this.lunging = true;
+      let x = 0.34; while (x > 0) { this.vx = this.face * 900; this.doMelee(10, 30, 130, 24, 2, 0.06); x -= this.dt; if (this.hitL || this.hitR) break; yield; }
+      this.vx = 0; this.lunging = false;
+      yield* this.wait(0.55);
+    } else {                                     // nobody struck: it comes down in a slow overhead, wide open afterwards
+      this.tele = 1; Sound.play('tele'); yield* this.wait(0.5); this.tele = 0; Sound.play('slam'); G.shake(5, 0.2);
+      this.slashing = 2; this.doMelee(10, -10, 90, 100, 1, 0.2); yield* this.wait(0.2); this.slashing = 0;
+      this.stunned = true; yield* this.wait(1.1); this.stunned = false;
+    }
+  }
+  *shatter() {                                  // a back-step, a fan of glass, then straight at you
+    this.facePlayer(); this.vy = -380; this.vx = -this.face * 340; this.onGround = false;
+    yield; yield; yield* this.until(() => this.onGround, 1); this.vx = 0;
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.35 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    const a = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx);
+    for (let i = -2; i <= 2; i++) G.projs.push(new Proj({ kind: 'shard', x: this.cx + this.face * 30, y: this.cy - 10, vx: Math.cos(a + i * 0.2) * 420, vy: Math.sin(a + i * 0.2) * 420, r: 7, dmg: 1, color: '#c8b8ff', life: 2.4, rot: a + i * 0.2, pal: GLASS }));
+    yield* this.wait(0.3);
+    yield* this.lunge();
+  }
+  *rain() {
+    const L = G.level; this.tele = 1; Sound.play('roar');
+    for (let i = 0; i < 7; i++) { spawnRock(clamp(G.player.cx + rand(-300, 300), 3 * TILE, L.pw - 3 * TILE), 0.8, GLASS); yield* this.wait(0.2); }
+    yield* this.wait(1.0); this.tele = 0;
+  }
+}
+
+// ---------------------------------------------------------------- The Wanderer's Twin
+// The dark reflection of the hero, the last secret of the Mirror Vault. It fights with your own tools: the nail, the
+// dash, the double jump, the soul bolt, the Dusk Cry. Third phase: it steps through the mirror to strike from behind.
+class Twin extends Boss {
+  constructor(d) { super(d, 32, 58, { key: 'twin', hp: 330, geo: 400, phases: [0.66, 0.33], blood: '#d8c8ff' }); this.last = ''; this.dashing = false; this.slashing = 0; this.airborne = false; }
+  hb() { return { x: this.x + 3, y: this.y + 2, w: this.w - 6, h: this.h - 2 }; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.38 : 0.26);
+    const opts = ['rush', 'dashSlash', 'leap', 'bolt'];
+    if (this.phase >= 2) opts.push('cry', 'echo');
+    if (this.phase >= 3) opts.push('mirrorStep');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  *slash(up) {                                   // one swing of the nail
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.2 * this.spd);
+    this.tele = 0; Sound.play('slash'); this.slashing = up ? 2 : 1;
+    this.doMelee(up ? -20 : 4, up ? -36 : 6, up ? 50 : 96, up ? 70 : 54, 1, 0.14);
+    yield* this.wait(0.2);
+    this.slashing = 0;
+  }
+  *rush() {                                      // run in, two or three swings
+    this.facePlayer(); let t = 1.4;
+    while (t > 0 && Math.abs(G.player.cx - this.cx) > 70) { this.facePlayer(); this.vx = this.face * (this.phase >= 3 ? 420 : 360); t -= this.dt; yield; }
+    this.vx = 0;
+    const n = this.phase >= 2 ? 3 : 2;
+    for (let i = 0; i < n; i++) { yield* this.slash(false); this.vx = this.face * 140; yield* this.wait(0.05); this.vx = 0; }
+    yield* this.wait(0.4 * this.spd);
+  }
+  *dashSlash() {                                 // the Shadow Dash: through your side, a swing on the far side
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.38 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.dashing = true;
+    const dir = this.face; let t = 0.24;
+    while (t > 0) { this.vx = dir * 820; t -= this.dt; if (this.hitL || this.hitR) break; yield; }
+    this.vx = 0; this.dashing = false;
+    this.face = -dir; this.facePlayer();
+    yield* this.slash(false);
+    yield* this.wait(0.45 * this.spd);
+  }
+  *leap() {                                      // jump, a second jump in the air, then the Soul Dive
+    this.facePlayer(); this.vy = -720; this.vx = clamp((G.player.cx - this.cx) * 0.8, -300, 300); this.onGround = false; this.airborne = true; Sound.play('jump');
+    yield* this.wait(0.3);
+    this.vy = -560; Sound.play('djump'); G.ring(this.cx, this.cy + 20, '#d8c8ff');
+    yield* this.wait(0.22);
+    this.tele = 1; this.vx = 0; this.vy = -60; yield* this.wait(0.18); this.tele = 0;
+    this.diving = true; this.vy = 1000; this.vx = clamp((G.player.cx - this.cx) * 1.2, -260, 260);
+    while (!this.onGround) { this.doMelee(-24, this.h - 20, 48, 46, 2, 0.05); yield; }
+    this.diving = false; this.airborne = false; this.vx = 0; Sound.play('slam'); G.shake(8, 0.25);
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 30, this.y + this.h, d, 380, '#d8c8ff');
+    yield* this.wait(0.6 * this.spd);
+  }
+  *bolt() {                                      // your own soul bolt, sent back
+    this.facePlayer(); this.tele = 1; this.casting = true; Sound.play('tele');
+    yield* this.wait(0.4 * this.spd);
+    this.tele = 0; Sound.play('cast');
+    const n = this.phase >= 2 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      this.facePlayer();
+      G.projs.push(new Proj({ kind: 'bolt', x: this.cx + this.face * 30, y: this.cy - 4 + i * 26, vx: this.face * 520, vy: 0, r: 12, dmg: 1, color: '#d8c8ff', life: 2.2, pierce: false }));
+      yield* this.wait(0.25);
+    }
+    this.casting = false;
+    yield* this.wait(0.5 * this.spd);
+  }
+  *cry() {                                       // the Dusk Cry: a column of violet light where you stand
+    this.tele = 1; this.casting = true; Sound.play('roar');
+    yield* this.wait(0.3);
+    const L = G.level, n = this.phase >= 3 ? 3 : 2;
+    for (let i = 0; i < n; i++) { spawnPillar(clamp(G.player.cx + (i ? rand(-200, 200) : 0), 3 * TILE, L.pw - 3 * TILE), this.floorY, 0.8, 0.45, 300, { fill: '#d8c8ff', fill2: '#ffffff', glow: '#c8b8ff', rgb: '200,185,255' }); yield* this.wait(0.3); }
+    yield* this.wait(1.0); this.tele = 0; this.casting = false;
+  }
+  *echo() {                                      // three crescents of the Blade Echo, one above the other
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.45 * this.spd);
+    this.tele = 0; Sound.play('slash'); this.slashing = 1;
+    for (let i = 0; i < 3; i++) G.projs.push(new Proj({ kind: 'wave', x: this.cx + this.face * 34, y: this.y + 10 + i * 24, vx: this.face * 420, vy: 0, r: 15, dmg: 1, color: '#d8c8ff', life: 1.8, pierce: true }));
+    yield* this.wait(0.25); this.slashing = 0;
+    yield* this.wait(0.6 * this.spd);
+  }
+  *mirrorStep() {                                // out of the glass behind you
+    const L = G.level;
+    this.ghostly = true;
+    for (let a = 1; a > 0; a -= 0.1) { this.alpha = a; yield; }
+    this.alpha = 0; yield* this.wait(0.3);
+    this.x = clamp(G.player.cx - G.player.face * 90, 3 * TILE, L.pw - 3 * TILE) - this.w / 2; this.y = this.floorY - this.h - 2; this.vy = 0;
+    for (let a = 0; a < 1; a += 0.12) { this.alpha = a; yield; }
+    this.alpha = 1; this.ghostly = false; this.facePlayer();
+    yield* this.slash(false);
+    yield* this.slash(true);
+    yield* this.wait(0.45);
+  }
+}
+
+const BOSS_TYPES = { duelist: Duelist, twin: Twin, thunderhoof: Thunderhoof, roc: Roc, queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };

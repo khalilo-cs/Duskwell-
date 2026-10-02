@@ -167,6 +167,13 @@ const STR = {
     sign_ember: 'لافتة: الحمم تحرق. لا تلمسها.',
     sign_ember_colossus: 'لافتة: قلب الفرن يخفق خلف هذا الباب. العملاق الجمري لا يرحم.',
     boss_queen: 'ملكة الصقيع', boss_colossus: 'العملاق الجمري',
+    area_stormcrest: 'ذرى العاصفة', area_mirror: 'قبو المرايا',
+    sign_storm: 'لافتة: الريح هنا حيّة. ادخل التيار الصاعد فيرفعك، واحذر التي تدفعك إلى الهاوية.',
+    sign_storm_bridge: 'لافتة: جسر الرعد. الريح خلفك تدفعك أسرع مما تريد، والريح أمامك تعيدك.',
+    sign_storm_roc: 'لافتة: عشّ طائر العاصفة خلف هذا الباب. اجلس على المقعد أولاً.',
+    sign_mirror: 'لافتة: المرايا هنا تحفظ وجوه من مرّوا. لا تطل النظر في الفضّة السائلة، فهي تحرق.',
+    sign_mirror_twin: 'لافتة: خلف هذا الباب من يشبهك. اجلس على المقعد أولاً.',
+    boss_thunderhoof: 'حافر الرعد', boss_roc: 'طائر العاصفة', boss_duelist: 'مبارز الزجاج', boss_twin: 'توأم الجوّال',
     area_rustworks: 'ورشة الصدأ', gate_opened: 'دوّى صوت بوابةٍ تنفتح.',
     sign_rust: 'لافتة: ورشة الصدأ. الألواح المتآكلة لا تحتمل الوقوف طويلاً.',
     sign_lever: 'لافتة: الذراع يوقظ الآلات ويفتح باب الورشة. اضربه.',
@@ -227,6 +234,13 @@ const STR = {
     sign_ember: 'Sign: lava burns. Do not touch it.',
     sign_ember_colossus: 'Sign: the Furnace Heart beats behind this door. The Cinder Colossus shows no mercy.',
     boss_queen: 'The Rime Queen', boss_colossus: 'The Cinder Colossus',
+    area_stormcrest: 'Stormcrest', area_mirror: 'Mirror Vault',
+    sign_storm: 'Sign: the wind here is alive. Step into an updraft and it will lift you; beware the ones that push you toward the pit.',
+    sign_storm_bridge: 'Sign: the Thunder Bridge. The wind behind you pushes faster than you want; the wind ahead pushes you back.',
+    sign_storm_roc: 'Sign: the Storm Roc nests behind this door. Rest on the bench first.',
+    sign_mirror: 'Sign: the mirrors here keep the faces of those who passed. Do not linger by the quicksilver: it burns.',
+    sign_mirror_twin: 'Sign: behind this door waits one who looks like you. Rest on the bench first.',
+    boss_thunderhoof: 'Thunderhoof', boss_roc: 'The Storm Roc', boss_duelist: 'The Glass Duelist', boss_twin: "The Wanderer's Twin",
     area_rustworks: 'The Rustworks', gate_opened: 'Somewhere, a gate grinds open.',
     sign_rust: 'Sign: The Rustworks. The corroded plates will not hold you for long.',
     sign_lever: 'Sign: The lever wakes the machines and opens the works. Strike it.',
@@ -385,9 +399,9 @@ const Sound = (() => {
   let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
-  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember' };
+  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror' };
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
   const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   const MUSIC_VOL = 0.8;
@@ -633,6 +647,7 @@ const Sound = (() => {
     lever() { tone({ f: 180, f2: 120, d: 0.25, v: 0.16, type: 'square' }); tone({ f: 900, d: 0.12, v: 0.08, type: 'triangle', delay: 0.12 }); noise({ f: 800, d: 0.2, v: 0.12 }); },
     sdcharge() { tone({ f: 160, f2: 640, d: 0.8, v: 0.08, a: 0.2, type: 'sawtooth' }); noise({ f: 600, f2: 2400, d: 0.8, v: 0.05, type: 'bandpass', q: 2 }); },
     sdready() { tone({ f: 1320, d: 0.25, v: 0.1, type: 'triangle' }); tone({ f: 1980, d: 0.3, v: 0.06, type: 'sine', delay: 0.04 }); },
+    thunder() { noise({ f: 380, f2: 50, d: 2.2, v: 0.3 }); tone({ f: 60, f2: 28, d: 1.8, v: 0.22, type: 'sawtooth' }); noise({ f: 160, d: 1.2, v: 0.2, delay: 0.5 }); },
     sdlaunch() { noise({ f: 300, f2: 3000, d: 0.35, v: 0.22, type: 'bandpass', q: 0.8 }); tone({ f: 110, f2: 55, d: 0.4, v: 0.22, type: 'sawtooth' }); },
   };
 
@@ -703,7 +718,7 @@ class RoomBuilder {
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
     this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = []; this.iceCells = new Set();
-    this.signs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
+    this.signs = []; this.winds = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
   fill(x, y, w, h, v) {
@@ -733,6 +748,8 @@ class RoomBuilder {
   item(id, x, y, kind, o) { this.items.push(Object.assign({ id, x, y, kind }, o || {})); return this; }
   npc(type, x, y) { this.npcs.push({ type, x, y }); return this; }
   bench(x, y) { this.benches.push({ x, y }); return this; }
+  // wind zone (tiles): wy < 0 is an updraft (the hero rises at that speed in px/s), wy > 0 a downdraft, wx pushes sideways in the air
+  wind(x, y, w, h, o) { this.winds.push(Object.assign({ x, y, w, h, wx: 0, wy: 0 }, o || {})); return this; }
   station(x, y) { this.stations.push({ x, y }); return this; }          // lantern station: fast travel between lit stations
   sign(x, y, text) { this.signs.push({ x, y, text }); return this; }
   decor(type, x, y, o) { this.deco.push(Object.assign({ type, x, y }, o || {})); return this; }
@@ -1286,7 +1303,8 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   fr4.plat(6, 23, 5).plat(13, 20, 5).plat(20, 17, 5).plat(27, 14, 6);
   fr4.solid(36, 12, 12, 3);                                   // a block at the top of the stair
   fr4.plat(50, 15, 5).plat(55, 19, 5);
-  fr4.door('w', 0, 23, 1, 3, 'fr3', 'e').door('e', 63, 23, 1, 3, 'fr5', 'w');
+  fr4.plat(51, 10, 5).plat(57, 8, 5);                           // up to the north-east door: the way to Stormcrest
+  fr4.door('w', 0, 23, 1, 3, 'fr3', 'e').door('e', 63, 23, 1, 3, 'fr5', 'w').door('ne', 63, 5, 1, 3, 'sc1', 'w');
   fr4.enemy('veil', 18, 14).enemy('veil', 31, 9).enemy('chainman', 46, 25).enemy('moth', 55, 11).enemy('slime', 58, 25);
   fr4.item('charm_soles', 41, 11, 'charm', { charm: 'soles' });
 
@@ -1404,8 +1422,9 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   const em6 = ember('em6', 56, 26, 19, 24);
   em6.solid(0, 22, 56, 4);
   em6.plat(10, 18, 6).plat(24, 15, 6).plat(36, 18, 6);
+  em6.plat(5, 15, 4).plat(1, 12, 5);                            // up to the north-west door: the way to the Mirror Vault
   em6.solid(42, 14, 12, 8).air(44, 17, 8, 5).breakable(42, 17, 2, 5);         // a vault, opened from the left
-  em6.door('e', 55, 19, 1, 3, 'em5', 'w').door('w', 0, 19, 1, 3, 'em7', 'e');
+  em6.door('e', 55, 19, 1, 3, 'em5', 'w').door('w', 0, 19, 1, 3, 'em7', 'e').door('nw', 0, 9, 1, 3, 'mv1', 'e');
   em6.bench(50, 21);
   em6.enemy('chainman', 18, 21).enemy('chainman', 33, 21).enemy('roller', 8, 21).enemy('lavaworm', 28, 21).enemy('imp', 38, 17).enemy('moth', 20, 9);
   em6.item('seed_em6', 48, 21, 'seed');
@@ -1435,6 +1454,181 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
 </script>
 <script>
 'use strict';
+// World data: Stormcrest, the storm-wracked peaks above Rimecrest (entered from the Hall of Rime). Seven rooms. The
+// air itself is the puzzle here: updrafts lift the hero, crosswinds push at him while he is airborne (see Level.winds).
+// A mid-boss (Thunderhoof) guards the middle, the Storm Roc waits at the top.
+(function build() {
+  const storm = (id, w, h, mx, my) => room(id, w, h, { area: 'stormcrest', theme: 'storm', map: { x: mx, y: my } });
+
+  // ===================== sc1: the Gale Gate. A wide pit with an updraft in it, then a headwind. =====================
+  const sc1 = storm('sc1', 72, 22, 42, -24);
+  sc1.solid(0, 18, 72, 4);
+  sc1.air(22, 18, 12, 4).hazard(22, 21, 12, 1);               // a 12-wide pit: let the updraft carry you over
+  sc1.wind(24, 5, 6, 15, { wy: -340 });
+  sc1.wind(40, 8, 20, 10, { wx: -110 });                      // a headwind on the far side
+  sc1.solid(47, 15, 4, 3);
+  sc1.door('w', 0, 15, 1, 3, 'fr4', 'ne').door('e', 71, 15, 1, 3, 'sc2', 'w');
+  sc1.enemy('ram', 12, 17).enemy('warden', 64, 17).enemy('flyer', 36, 9).enemy('diver', 52, 7);
+  sc1.sign(5, 17, 'sign_storm');
+
+  // ===================== sc2: the Updraft Shaft. Three lifts, three ledges. =====================
+  const sc2 = storm('sc2', 30, 46, 52, -28);
+  sc2.solid(0, 44, 30, 2);
+  sc2.wind(3, 26, 5, 18, { wy: -340 });                       // lift one, from the floor
+  sc2.solid(9, 33, 15, 1);                                    // ledge A
+  sc2.wind(20, 12, 5, 21, { wy: -340 });                      // lift two, from ledge A
+  sc2.solid(2, 17, 18, 1);                                    // ledge B
+  sc2.wind(3, 3, 5, 14, { wy: -340 });                        // lift three, from ledge B
+  sc2.solid(8, 6, 21, 1);                                     // the top ledge, level with the door
+  sc2.door('w', 0, 41, 1, 3, 'sc1', 'e').door('e', 29, 3, 1, 3, 'sc3', 'w');
+  sc2.enemy('flyer', 14, 38).enemy('diver', 12, 25).enemy('moth', 10, 12).enemy('moth', 22, 22);
+  sc2.item('cache_sc2', 3, 16, 'cache', { amount: 130 });
+
+  // ===================== sc3: the Thunder Bridge. Planks over spikes under a tailwind, then a headwind. A bench and a station. =====================
+  const sc3 = storm('sc3', 84, 22, 56, -24);
+  sc3.solid(0, 18, 12, 4).solid(72, 18, 12, 4);
+  sc3.hazard(12, 21, 60, 1);
+  sc3.plat(14, 16, 5).plat(21, 15, 4).plat(27, 14, 5).plat(34, 16, 4).plat(40, 13, 5).plat(47, 15, 4).plat(53, 14, 5).plat(60, 16, 4).plat(66, 15, 4);
+  sc3.wind(12, 2, 30, 19, { wx: 110 });                       // a tailwind: easy to overshoot
+  sc3.wind(44, 2, 28, 19, { wx: -110 });                      // a headwind
+  sc3.door('w', 0, 15, 1, 3, 'sc2', 'e').door('e', 83, 15, 1, 3, 'sc4', 'w');
+  sc3.bench(76, 17).station(80, 17);
+  sc3.enemy('moth', 30, 9).enemy('moth', 56, 8).enemy('diver', 44, 6).enemy('flyer', 20, 9);
+  sc3.sign(3, 17, 'sign_storm_bridge');
+
+  // ===================== sc4: the Rod Hall. Thunderhoof, a bull of thunder, guards the way on. =====================
+  const sc4 = storm('sc4', 44, 22, 67, -24);
+  sc4.solid(0, 20, 44, 2);
+  sc4.plat(6, 15, 6).plat(32, 15, 6);
+  sc4.door('w', 0, 17, 1, 3, 'sc3', 'e').door('e', 43, 17, 1, 3, 'sc5', 'w');
+  sc4.arena = {
+    boss: 'thunderhoof', flag: 'boss_thunderhoof', trigger: 9, spawn: { x: 32, y: 19 },
+    gates: [{ x: 0, y: 17, w: 1, h: 3, close: 'start' }, { x: 43, y: 17, w: 1, h: 3, close: 'always' }],
+    reward: { id: 'cache_thunderhoof', kind: 'cache', amount: 300, x: 21, y: 19 },
+  };
+
+  // ===================== sc5: the Cloudsea. Lifts and a tailwind to cross the open sky. =====================
+  const sc5 = storm('sc5', 76, 30, 73, -27);
+  sc5.solid(0, 26, 10, 4).solid(66, 7, 10, 23);               // the landing and the far cliff
+  sc5.hazard(10, 29, 56, 1);
+  sc5.wind(11, 6, 5, 22, { wy: -340 });                       // lift one
+  sc5.plat(17, 9, 6);
+  sc5.wind(23, 0, 44, 16, { wx: 110 });                       // a tailwind carries you over the sea
+  sc5.plat(29, 11, 4).plat(37, 12, 4).plat(45, 10, 4).plat(53, 12, 4);
+  sc5.wind(58, 10, 6, 19, { wy: -340 });                      // lift two, to the cliff top
+  sc5.door('w', 0, 23, 1, 3, 'sc4', 'e').door('e', 75, 4, 1, 3, 'sc6', 'w');
+  sc5.air(66, 4, 10, 3);
+  sc5.enemy('moth', 20, 14).enemy('moth', 40, 8).enemy('diver', 50, 6).enemy('flyer', 30, 16).enemy('flyer', 54, 18);
+  sc5.item('seed_sc5', 70, 6, 'seed');
+
+  // ===================== sc6: the Eyrie Antechamber. Quiet; a bench and the way to the roc. =====================
+  const sc6 = storm('sc6', 40, 22, 83, -26);
+  sc6.solid(0, 18, 40, 4);
+  sc6.door('w', 0, 15, 1, 3, 'sc5', 'e').door('e', 39, 15, 1, 3, 'sc7', 'w');
+  sc6.bench(6, 17);
+  sc6.sign(30, 17, 'sign_storm_roc');
+  sc6.decor('light', 20, 14, { r: 240, c: '#bcd0ff' });
+
+  // ===================== sc7: the Roc's Nest. =====================
+  const sc7 = storm('sc7', 52, 26, 89, -27);
+  sc7.solid(0, 22, 52, 4);
+  sc7.plat(8, 16, 6).plat(38, 16, 6).plat(23, 12, 6);
+  sc7.door('w', 0, 19, 1, 3, 'sc6', 'e');
+  sc7.arena = {
+    boss: 'roc', flag: 'boss_roc', trigger: 9, spawn: { x: 40, y: 21 },
+    gates: [{ x: 0, y: 19, w: 1, h: 3, close: 'start' }],
+    reward: { id: 'seed_roc', kind: 'seed', x: 24, y: 20 },
+    reward2: { id: 'charm_gale', kind: 'charm', charm: 'gale', x: 28, y: 21 },
+  };
+})();
+
+</script>
+<script>
+'use strict';
+// World data: the Mirror Vault, a hall of black glass and quicksilver below Cinderdeep (entered from the Forgotten
+// Armory). Seven rooms, entered from the right and left by the left like Cinderdeep. A mid-boss (the Glass Duelist)
+// guards the middle; the Wanderer's Twin waits in the last room.
+(function build() {
+  const mirror = (id, w, h, mx, my) => room(id, w, h, { area: 'mirror', theme: 'mirror', map: { x: mx, y: my } });
+
+  // ===================== mv1: the Gate of Glass. A ten-wide pool of quicksilver. =====================
+  const mv1 = mirror('mv1', 72, 22, 19, 29);
+  mv1.solid(0, 18, 72, 4);
+  mv1.air(22, 18, 11, 4).acid(22, 19, 11, 3);                 // the pool: x22..33, a dash and a double jump
+  mv1.solid(14, 15, 6, 3);
+  mv1.door('e', 71, 15, 1, 3, 'em6', 'nw').door('w', 0, 15, 1, 3, 'mv2', 'e');
+  mv1.enemy('veil', 54, 17).enemy('ram', 42, 17).enemy('flyer', 30, 9).enemy('warden', 8, 17);
+  mv1.sign(66, 17, 'sign_mirror');
+
+  // ===================== mv2: the Shard Gallery. A four-wide shaft to climb, spikes of glass on the way in. =====================
+  const mv2 = mirror('mv2', 56, 32, 29, 29);
+  mv2.solid(0, 29, 56, 3);
+  mv2.solid(1, 6, 25, 17).solid(30, 6, 25, 17);               // two blocks leave a shaft x26..29
+  mv2.plat(26, 26, 4);                                        // a step to reach the foot of the shaft
+  mv2.hazard(34, 28, 10, 1);                                  // glass spikes: ten wide, the dash and the double jump
+  mv2.door('e', 55, 26, 1, 3, 'mv1', 'w').door('w', 0, 3, 1, 3, 'mv3', 'e');
+  mv2.enemy('veil', 46, 28).enemy('flyer', 28, 14).enemy('flyer', 27, 22).enemy('warden', 14, 28);
+  mv2.item('cache_mv2', 44, 5, 'cache', { amount: 150 });
+
+  // ===================== mv3: the Reflecting Pools. Three pools of quicksilver; a bench, a station and a hidden seal. =====================
+  const mv3 = mirror('mv3', 72, 24, 37, 29);
+  mv3.solid(0, 20, 72, 4);
+  mv3.air(16, 20, 8, 4).acid(16, 21, 8, 3);
+  mv3.air(34, 20, 8, 4).acid(34, 21, 8, 3);
+  mv3.air(52, 20, 8, 4).acid(52, 21, 8, 3);
+  mv3.solid(25, 14, 8, 6).air(27, 17, 4, 3).breakable(25, 17, 2, 3);          // a hidden alcove between the first two pools
+  mv3.door('e', 71, 17, 1, 3, 'mv2', 'w').door('w', 0, 17, 1, 3, 'mv4', 'e');
+  mv3.bench(66, 19).station(62, 19);
+  mv3.enemy('veil', 48, 19).enemy('veil', 10, 19).enemy('flyer', 20, 11).enemy('flyer', 56, 11).enemy('warden', 46, 19);
+  mv3.item('seed_mv3', 30, 19, 'seed');
+  mv3.decor('light', 64, 16, { r: 220, c: '#d8c8ff' });
+
+  // ===================== mv4: the Duelist's Hall. The Glass Duelist bars the way on. =====================
+  const mv4 = mirror('mv4', 44, 22, 47, 29);
+  mv4.solid(0, 20, 44, 2);
+  mv4.plat(6, 15, 6).plat(32, 15, 6);
+  mv4.door('e', 43, 17, 1, 3, 'mv3', 'w').door('w', 0, 17, 1, 3, 'mv5', 'e');
+  mv4.arena = {
+    boss: 'duelist', flag: 'boss_duelist', trigger: 34, triggerDir: -1, spawn: { x: 10, y: 19 },
+    gates: [{ x: 43, y: 17, w: 1, h: 3, close: 'start' }, { x: 0, y: 17, w: 1, h: 3, close: 'always' }],
+    reward: { id: 'cache_duelist', kind: 'cache', amount: 300, x: 22, y: 19 },
+  };
+
+  // ===================== mv5: the Echo Stair. A stair of glass plates above spikes. =====================
+  const mv5 = mirror('mv5', 40, 46, 53, 29);
+  mv5.solid(0, 44, 40, 2);
+  mv5.hazard(1, 43, 31, 1);                                   // the whole floor under the stair is glass spikes
+  mv5.plat(26, 41, 6).plat(14, 38, 6).plat(3, 35, 6).plat(14, 32, 6).plat(26, 29, 6).plat(14, 26, 6)
+    .plat(3, 23, 6).plat(14, 20, 6).plat(26, 17, 6).plat(14, 14, 6).plat(3, 11, 6).plat(11, 7, 4);
+  mv5.solid(1, 6, 9, 1);
+  mv5.door('e', 39, 41, 1, 3, 'mv4', 'w').door('w', 0, 3, 1, 3, 'mv6', 'e');
+  mv5.enemy('flyer', 18, 36).enemy('flyer', 22, 24).enemy('veil', 30, 28 + 0).enemy('flyer', 8, 17);
+  mv5.item('cache_mv5', 5, 34, 'cache', { amount: 160 });
+
+  // ===================== mv6: the Antechamber of Mirrors. Quiet; a bench and the way to the twin. =====================
+  const mv6 = mirror('mv6', 40, 22, 59, 30);
+  mv6.solid(0, 18, 40, 4);
+  mv6.door('e', 39, 15, 1, 3, 'mv5', 'w').door('w', 0, 15, 1, 3, 'mv7', 'e');
+  mv6.bench(33, 17);
+  mv6.sign(8, 17, 'sign_mirror_twin');
+  mv6.decor('light', 20, 14, { r: 240, c: '#d8c8ff' });
+
+  // ===================== mv7: the Twin's Chamber. =====================
+  const mv7 = mirror('mv7', 52, 26, 64, 29);
+  mv7.solid(0, 22, 52, 4);
+  mv7.plat(8, 16, 6).plat(38, 16, 6).plat(23, 12, 6);
+  mv7.door('e', 51, 19, 1, 3, 'mv6', 'w');
+  mv7.arena = {
+    boss: 'twin', flag: 'boss_twin', trigger: 40, triggerDir: -1, spawn: { x: 12, y: 21 },
+    gates: [{ x: 51, y: 19, w: 1, h: 3, close: 'start' }],
+    reward: { id: 'seed_twin', kind: 'seed', x: 24, y: 20 },
+    reward2: { id: 'charm_echo', kind: 'charm', charm: 'echo', x: 28, y: 21 },
+  };
+})();
+
+</script>
+<script>
+'use strict';
 // The last world file: it lists the rooms in order and cuts the doors, after every area file has added its rooms.
 WORLD.order = Object.keys(WORLD.rooms);
 for (const id of WORLD.order) WORLD.rooms[id].finish();
@@ -1454,6 +1648,8 @@ const THEMES = {
   aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
   foundry: { sky: ['#0d0604', '#2a120a', '#5a2a12'], far: '#3a1a0e', mid: '#26120a', near: '#160a06', tile: '#24140e', hi: '#ffb27a', edge: '#060201', fog: '#ff7a3a', part: '#ffc890', glow: '#ff9a50', name: 'foundry' },
+  storm:   { sky: ['#05060f', '#1a2042', '#3c4c7e'], far: '#2a3560', mid: '#1b2447', near: '#0e1430', tile: '#1c2336', hi: '#c4d4ff', edge: '#03040a', fog: '#6a80c0', part: '#e4ecff', glow: '#a8c0ff', name: 'storm' },
+  mirror:  { sky: ['#030308', '#0e0a1c', '#261c40'], far: '#1c1636', mid: '#120e24', near: '#08060f', tile: '#16111f', hi: '#ece4ff', edge: '#020106', fog: '#8a78c8', part: '#f2ecff', glow: '#d8c8ff', name: 'mirror' },
   frost:   { sky: ['#0c1a2a', '#2a4a6a', '#8cb8d8'], far: '#5a86a8', mid: '#3a6080', near: '#1e3a54', tile: '#2b4256', hi: '#e6f8ff', edge: '#050b12', fog: '#a8d8f0', part: '#ffffff', glow: '#cfeeff', name: 'frost' },
   ember:   { sky: ['#0a0304', '#2a0a0a', '#6a1a0a'], far: '#4a1410', mid: '#2a0c0a', near: '#150606', tile: '#201316', hi: '#ff7a3a', edge: '#050203', fog: '#ff4a1a', part: '#ffb060', glow: '#ff8a3a', name: 'ember' },
   title:   { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#060a18', tile: '#0e1430', hi: '#9cc4ff', edge: '#020308', fog: '#5a6aa8', part: '#dfe8ff', glow: '#ffe9b0', name: 'title' },
@@ -1461,6 +1657,30 @@ const THEMES = {
 };
 
 // ---------- tile layer (rendered once per room and scale) ----------
+// wind zones: pale streaks that run with the wind (up for an updraft, sideways for a crosswind)
+Art.drawWinds = function (g, L, t, cx, cy) {
+  for (const w of L.winds) {
+    if (w.x > cx + VW || w.x + w.w < cx || w.y > cy + VH || w.y + w.h < cy) continue;
+    const n = Math.max(4, Math.round(w.w * w.h / 2600));
+    g.save(); g.beginPath(); g.rect(w.x, w.y, w.w, w.h); g.clip();
+    g.lineCap = 'round'; g.lineWidth = 2;
+    for (let i = 0; i < n; i++) {
+      const h1 = hash2(i, 7, w.x | 0), h2 = hash2(i, 11, w.y | 0), len = 22 + h1 * 34;
+      g.strokeStyle = 'rgba(214,230,255,' + (0.22 + 0.3 * h2) + ')';
+      g.beginPath();
+      if (w.wy) {
+        const span = w.h + len, d = (h2 * span - Math.sign(w.wy) * t * Math.abs(w.wy) * 0.8) % span, y = w.y + (d < 0 ? d + span : d), x = w.x + 6 + h1 * (w.w - 12);
+        g.moveTo(x, y); g.lineTo(x, y + (w.wy < 0 ? len : -len));
+      } else {
+        const span = w.w + len, d = (h2 * span + Math.sign(w.wx) * t * Math.abs(w.wx) * 2.4) % span, x = w.x + (d < 0 ? d + span : d), y = w.y + 6 + h1 * (w.h - 12);
+        g.moveTo(x, y); g.lineTo(x - Math.sign(w.wx) * len, y);
+      }
+      g.stroke();
+    }
+    g.restore();
+  }
+};
+
 Art.renderLevel = function (L, s) {
   const th = THEMES[L.def.theme];
   const c = document.createElement('canvas');
@@ -1960,15 +2180,17 @@ Art.ambientInit = function () {
 Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
-    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4, snow = theme === 'frost';
-    const fall = leafy ? 34 : snow ? 30 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'foundry' || theme === 'ember') ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
-    m.x += (Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
+    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4, snow = theme === 'frost', rain = theme === 'storm';
+    const fall = rain ? 420 : leafy ? 34 : snow ? 30 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'foundry' || theme === 'ember') ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
+    m.x += (rain ? -110 : Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
     m.y += (fall - rise) * dt * m.z;
     m.rot += dt * (leafy ? 2 : 0);
     if (m.y < -12) m.y = VH + 12; if (m.y > VH + 12) m.y = -12;
     if (m.x < -12) m.x = VW + 12; if (m.x > VW + 12) m.x = -12;
     const a = (0.3 + 0.5 * Math.abs(Math.sin(t * 1.3 + m.p))) * m.z;
-    if (snow) {
+    if (rain) {
+      g.strokeStyle = 'rgba(205,220,255,' + (0.18 + 0.25 * m.z) + ')'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(m.x, m.y); g.lineTo(m.x + 4 + 3 * m.z, m.y - 12 - 8 * m.z); g.stroke();
+    } else if (snow) {
       g.fillStyle = 'rgba(255,255,255,' + Math.min(0.9, 0.35 + a) + ')'; g.beginPath(); g.arc(m.x, m.y, 1.2 + m.s * m.z * 0.7, 0, 7); g.fill();
     } else if (leafy) {
       g.save(); g.translate(m.x, m.y); g.rotate(m.rot); g.scale(1, Math.abs(Math.cos(m.rot * 1.3)) * 0.8 + 0.2);
@@ -2043,6 +2265,16 @@ Art.drawAcid = function (g, x, y, surface, t, th) {
     if (Math.sin(t * 1.7 + x * 5) > 0.93) { g.fillStyle = 'rgba(255,230,150,0.9)'; ellipse(g, px + 16, py + 3, 3, 4); g.fill(); }
     return;
   }
+  if (th && th.name === 'mirror') {             // quicksilver
+    const g1 = g.createLinearGradient(0, py, 0, py + TILE); g1.addColorStop(0, 'rgba(230,224,250,0.92)'); g1.addColorStop(1, 'rgba(110,96,170,0.9)');
+    g.fillStyle = g1; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
+    if (!surface) { g.fillStyle = 'rgba(255,255,255,' + (0.06 + 0.06 * Math.sin(t * 2 + x * 3 + y)) + ')'; g.fillRect(px, py, TILE, TILE); return; }
+    bloom(g, px + 16, py + 8, 34, '#e8e0ff', 0.22);
+    g.beginPath(); g.moveTo(px, py + 10);
+    for (let i = 0; i <= 4; i++) g.lineTo(px + i * 8, py + 8 + Math.sin(t * 2 + (x * 4 + i) * 0.9) * 2);
+    g.lineTo(px + TILE, py + 14); g.lineTo(px, py + 14); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.9)'; g.fill();
+    return;
+  }
   g.fillStyle = 'rgba(70,200,80,0.55)'; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
   if (!surface) return;
   bloom(g, px + 16, py + 10, 30, '#9dff6a', 0.18);
@@ -2074,7 +2306,7 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
-const DARKNESS = { frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+const DARKNESS = { storm: 0.42, mirror: 0.62, frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }
@@ -2928,6 +3160,15 @@ Art.drawProj = function (g, p, t) {
     g.restore();
     return;
   }
+  if (p.kind === 'wave') {                         // the Blade Echo: a crescent of pale light
+    const dir = sign(p.vx) || 1;
+    g.save(); g.translate(p.x, p.y); g.scale(dir, 1);
+    bloom(g, 0, 0, 44, p.color, 0.45);
+    g.lineCap = 'round';
+    for (const [r, w, a] of [[17, 7, 0.95], [24, 4, 0.55], [31, 2.4, 0.3]]) { g.strokeStyle = 'rgba(245,238,255,' + a + ')'; g.lineWidth = w; g.beginPath(); g.arc(-18, 0, r + 18, -0.8, 0.8); g.stroke(); }
+    g.restore();
+    return;
+  }
   if (p.pal && tintedProj(g, p, t)) return;
   baseDrawProj(g, p, t);
 };
@@ -3344,6 +3585,147 @@ Art.boss.colossus = function (g, b, t) {           // a walking furnace of basal
   for (let i = 0; i < 5; i++) { const u = (t * 0.6 + i * 0.37) % 1; g.fillStyle = 'rgba(255,170,80,' + (0.8 * (1 - u)) + ')'; g.fillRect(b.cx + Math.sin(i * 7 + t) * 40, b.y + b.h - 40 - u * 150, 3, 3); }
   g.restore();
   if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#ffe98a'; g.fillRect(b.cx + Math.cos(a) * 30 - 3, b.y - 6 + Math.sin(a) * 6, 6, 6); }
+};
+
+// ---------------------------------------------------------------- the bosses of Stormcrest
+Art.boss.thunderhoof = function (g, b, t) {        // a bull of storm-cloud and iron, lightning cracked across its flanks
+  const fl = b.flash > 0, tele = b.tele > 0, run = b.charging || Math.abs(b.vx) > 40;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 3, 0);
+  bloom(g, 0, -50, 130, '#a8c0ff', 0.12 + (tele ? 0.3 : 0) + (b.charging ? 0.2 : 0));
+  const hide = fl ? '#ffffff' : '#323d5e', hideL = fl ? '#ffffff' : '#56648e', hideD = fl ? '#ffffff' : '#192038';
+  const step = run ? Math.sin(t * 22) * 9 : 0;
+  // legs: far pair darker
+  for (const [x0, s, c] of [[-44, 1, hideD], [28, -1, hideD], [-26, -1, hide], [46, 1, hide]]) {
+    poly(g, [x0 - 8, -46, x0 + 8, -46, x0 + 7 + s * step, -8, x0 + 10 + s * step, 0, x0 - 9 + s * step, 0, x0 - 6 + s * step, -8]); fs(g, c, INK, 3);
+  }
+  // the tail, a bolt of cloud
+  g.strokeStyle = INK; g.lineWidth = 7; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(-58, -64); g.lineTo(-76, -76); g.lineTo(-70, -58); g.lineTo(-90, -62); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#cfe0ff'; g.lineWidth = 3; g.stroke();
+  // the body: a heavy hump of plates
+  const body = [[-62, -50], [-48, -86], [-10, -98], [30, -94], [58, -78], [66, -52], [48, -34], [0, -30], [-44, -34]];
+  g.beginPath(); body.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath();
+  const gr = g.createLinearGradient(0, -100, 0, -30); gr.addColorStop(0, hideL); gr.addColorStop(0.5, hide); gr.addColorStop(1, hideD); fs(g, gr, INK, 4);
+  g.save(); g.beginPath(); body.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+  g.strokeStyle = 'rgba(5,6,8,0.55)'; g.lineWidth = 2.4; for (let i = -2; i <= 3; i++) { g.beginPath(); g.moveTo(i * 20 - 6, -100); g.quadraticCurveTo(i * 20 + 10, -64, i * 20 - 4, -28); g.stroke(); }
+  g.restore();
+  // lightning cracks
+  g.strokeStyle = fl ? '#fff' : 'rgba(215,232,255,' + (0.6 + 0.35 * Math.sin(t * 9) + (tele ? 0.3 : 0)) + ')'; g.lineWidth = 2.4;
+  for (const pts of [[-40, -88, -30, -70, -42, -60, -28, -42], [10, -96, 20, -78, 8, -68, 22, -48], [44, -84, 38, -68, 52, -58]]) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); }
+  // the head, lowered to the charge
+  const dip = tele || b.charging || b.stunned ? 14 : 0;
+  g.save(); g.translate(56, -66 + dip); g.rotate(dip ? 0.25 : 0);
+  poly(g, [-16, -22, 14, -26, 38, -6, 40, 10, 14, 18, -14, 12]); fs(g, fl ? '#fff' : hide, INK, 3.6);
+  poly(g, [-16, -22, 14, -26, 20, -14, -10, -8]); fs(g, hideL, null);
+  g.strokeStyle = INK; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, -22); g.quadraticCurveTo(-8, -50, 18, -52); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#eef2ff'; g.lineWidth = 4.5; g.stroke();
+  g.fillStyle = tele ? '#ffffff' : '#bcd0ff'; poly(g, [10, -12, 24, -10, 22, -4, 8, -6]); g.fill(); bloom(g, 16, -9, 24, '#a8c0ff', tele ? 0.8 : 0.4);
+  ellipse(g, 36, 4, 3.2, 2.4); g.fillStyle = INK; g.fill();
+  g.restore();
+  g.restore();
+  if (b.charging) { g.save(); g.globalAlpha = 0.5; g.strokeStyle = '#dfe9ff'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { const yy = b.y + 20 + i * 18; g.beginPath(); g.moveTo(b.cx - b.face * 70, yy); g.lineTo(b.cx - b.face * (110 + i * 16), yy); g.stroke(); } g.restore(); }
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#e8f0ff'; g.fillRect(b.cx + b.face * 50 + Math.cos(a) * 26 - 3, b.y - 2 + Math.sin(a) * 6, 6, 6); }
+};
+
+Art.boss.roc = function (g, b, t) {                // a great storm bird: wings of slate feathers, a crest of lightning
+  const fl = b.flash > 0, tele = b.tele > 0, tuck = b.sweeping;
+  g.save(); g.globalAlpha = b.alpha; g.translate(b.cx, b.cy + (tuck ? 0 : Math.sin(t * 2.4) * 3));
+  if (b.state === 'dying') g.translate(Math.sin(t * 70) * 3, 0);
+  bloom(g, 0, 0, 190, '#a8c0ff', 0.16 + (tele ? 0.3 : 0) + (b.phase - 1) * 0.05);
+  g.scale(b.face, 1);
+  if (b.sweeping && b.vy > 200) g.rotate(0.6);
+  const flap = tuck ? 0.15 : Math.sin(t * (tele ? 11 : 6.5)) * 0.55 + (tele ? 0.35 : 0);
+  const feather = fl ? '#ffffff' : '#2c3860', featherL = fl ? '#ffffff' : '#5568a0', featherD = fl ? '#ffffff' : '#171f3a';
+  const wing = (rot, dark) => {
+    g.save(); g.translate(-8, -12); g.rotate(-1.1 + rot);
+    const pts = [[0, 0], [14, -26], [70, -52], [128, -46], [132, -22], [112, -8], [118, 12], [82, 8], [66, 22], [38, 10], [12, 14]];
+    g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); fs(g, dark ? featherD : feather, INK, 3.4);
+    g.strokeStyle = 'rgba(5,6,8,0.6)'; g.lineWidth = 2; for (let i = 1; i <= 5; i++) { g.beginPath(); g.moveTo(18 + i * 16, -44 + i * 3); g.lineTo(14 + i * 20, 14); g.stroke(); }
+    if (!dark) { g.fillStyle = featherL; poly(g, [14, -26, 70, -52, 128, -46, 70, -24]); g.fill(); }
+    g.restore();
+  };
+  wing(flap * 0.8 + 0.25, true);
+  // tail
+  poly(g, [-26, 4, -86, -2, -100, 14, -84, 22, -60, 30, -24, 18]); fs(g, featherD, INK, 3);
+  // talons
+  g.strokeStyle = INK; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, 18); g.lineTo(-10, 36); g.lineTo(-18, 42); g.moveTo(-10, 36); g.lineTo(-2, 42); g.moveTo(10, 18); g.lineTo(8, 36); g.lineTo(0, 42); g.moveTo(8, 36); g.lineTo(18, 42); g.stroke();
+  // body
+  ellipse(g, 0, 2, 38, 25, -0.08); const bg = g.createLinearGradient(0, -24, 0, 28); bg.addColorStop(0, featherL); bg.addColorStop(0.5, feather); bg.addColorStop(1, fl ? '#fff' : '#d8e2ff'); fs(g, bg, INK, 4);
+  // head, beak and crest
+  ellipse(g, 38, -14, 15, 14); fs(g, fl ? '#fff' : feather, INK, 3.4);
+  poly(g, [48, -20, 78, -10, 48, -4]); fs(g, fl ? '#fff' : '#f2e6b8', INK, 3);
+  poly(g, [30, -26, 24, -48, 36, -34, 40, -54, 46, -32, 54, -44, 50, -24]); fs(g, fl ? '#fff' : '#cfe0ff', INK, 2.6);
+  ellipse(g, 42, -17, 3.6, 3.6); g.fillStyle = tele ? '#ffffff' : '#bcd0ff'; g.fill(); bloom(g, 42, -17, 22, '#a8c0ff', tele ? 0.9 : 0.4);
+  wing(flap, false);
+  // sparks while it gathers the storm
+  if (tele) { g.strokeStyle = 'rgba(235,244,255,0.9)'; g.lineWidth = 2.2; for (let i = 0; i < 3; i++) { const a = t * 7 + i * 2.1, r = 70 + 30 * Math.sin(t * 9 + i); g.beginPath(); g.moveTo(Math.cos(a) * 40, Math.sin(a) * 30); g.lineTo(Math.cos(a) * r * 0.7 + 8, Math.sin(a) * r * 0.5 - 6); g.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.6); g.stroke(); } }
+  g.restore();
+};
+
+// ---------------------------------------------------------------- the bosses of the Mirror Vault
+Art.boss.duelist = function (g, b, t) {            // a fencer of black glass: a coat of shards, a visor, a long rapier
+  const fl = b.flash > 0, tele = b.tele > 0, guard = b.guarding, lunge = b.lunging;
+  g.save(); g.translate(b.cx, b.y + b.h); g.scale(b.face, 1);
+  if (b.state === 'dying') g.translate(Math.sin(t * 60) * 3, 0);
+  bloom(g, 0, -46, 90, '#c8b8ff', 0.1 + (tele ? 0.3 : 0) + (guard ? 0.3 : 0));
+  const dark = fl ? '#ffffff' : '#1c1830', mid = fl ? '#ffffff' : '#3a3260', lit = fl ? '#ffffff' : '#8c80cc';
+  if (lunge) g.rotate(0.22);
+  const step = Math.abs(b.vx) > 40 ? Math.sin(t * 20) * 8 : 0;
+  // legs
+  g.strokeStyle = INK; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(-6, -38); g.lineTo(-10 - step, 0); g.moveTo(6, -38); g.lineTo(12 + step + (lunge ? 14 : 0), 0); g.stroke();
+  g.strokeStyle = mid; g.lineWidth = 4.5; g.stroke();
+  // the coat of glass shards
+  g.beginPath(); g.moveTo(-18, -66); g.lineTo(-24, -34 + Math.sin(t * 3) * 2); g.lineTo(-14, -22); g.lineTo(-6, -36); g.lineTo(2, -18); g.lineTo(10, -36); g.lineTo(20, -26); g.lineTo(18, -62); g.closePath(); fs(g, dark, INK, 3.4);
+  poly(g, [-18, -66, -4, -60, -8, -38, -22, -36]); fs(g, mid, null); poly(g, [4, -62, 18, -62, 18, -34, 8, -38]); fs(g, lit, null);
+  // torso, a mirrored breastplate
+  poly(g, [-14, -78, 14, -78, 16, -46, 0, -38, -16, -46]); fs(g, mid, INK, 3.4);
+  poly(g, [-14, -78, 0, -78, 0, -40, -16, -46]); fs(g, lit, null);
+  // the helm and its visor
+  poly(g, [-12, -100, 12, -100, 14, -78, 0, -72, -14, -78]); fs(g, dark, INK, 3.4);
+  poly(g, [-8, -92, 10, -92, 10, -86, -8, -86]); g.fillStyle = tele || guard ? '#ffffff' : '#c8b8ff'; g.fill(); bloom(g, 1, -89, 22, '#c8b8ff', tele ? 0.9 : 0.45);
+  poly(g, [-4, -100, 0, -118, 4, -100]); fs(g, lit, INK, 2.4);
+  // the blade: up in front when it guards, level when it lunges, low otherwise
+  g.save(); g.translate(14, -62);
+  g.rotate(guard ? -1.45 : lunge ? 0 : b.slashing === 2 ? 1.0 : b.slashing === 1 ? -0.35 : tele ? -1.0 : 0.5);
+  g.strokeStyle = INK; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 0); g.lineTo(guard ? 86 : 100, 0); g.stroke();
+  g.strokeStyle = fl ? '#fff' : '#f2edff'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(0, 0); g.lineTo(guard ? 86 : 100, 0); g.stroke();
+  g.strokeStyle = INK; g.lineWidth = 5; g.beginPath(); g.moveTo(4, -9); g.lineTo(4, 9); g.stroke();
+  if (guard) bloom(g, 50, 0, 60, '#ffffff', 0.35 + 0.15 * Math.sin(t * 16));
+  g.restore();
+  g.restore();
+  if (lunge) { g.save(); g.globalAlpha = 0.45; g.strokeStyle = '#e8e0ff'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { const yy = b.y + 20 + i * 16; g.beginPath(); g.moveTo(b.cx - b.face * 30, yy); g.lineTo(b.cx - b.face * (90 + i * 14), yy); g.stroke(); } g.restore(); }
+  if (b.stunned) for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; g.fillStyle = '#e8e0ff'; g.fillRect(b.cx + Math.cos(a) * 24 - 3, b.y - 14 + Math.sin(a) * 6, 6, 6); }
+};
+
+Art.boss.twin = function (g, b, t) {               // the Wanderer's dark reflection: a horned white mask, a black cloak, a pale nail
+  const fl = b.flash > 0, tele = b.tele > 0;
+  const pose = (ox, alpha) => {
+    g.save(); g.globalAlpha = alpha; g.translate(b.cx + ox, b.y + b.h); g.scale(b.face * 1.45, 1.45);
+    if (b.dashing) g.rotate(0.28);
+    const run = Math.abs(b.vx) > 40 && !b.airborne ? Math.sin(t * 22) * 5 : 0, air = b.airborne;
+    // cloak and legs
+    g.strokeStyle = INK; g.lineWidth = 6; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-3, -14); g.lineTo(air ? -8 : -5 - run, air ? -2 : 0); g.moveTo(3, -14); g.lineTo(air ? 9 : 6 + run, air ? -4 : 0); g.stroke();
+    g.strokeStyle = fl ? '#fff' : '#1a1730'; g.lineWidth = 3; g.stroke();
+    g.beginPath(); g.moveTo(-9, -22); g.quadraticCurveTo(-18 - run * 0.4, -14, -13, -3 + Math.sin(t * 5) * 1.5); g.lineTo(-3, -10); g.lineTo(5, -4); g.lineTo(10, -12); g.quadraticCurveTo(12, -22, 8, -26); g.closePath(); fs(g, fl ? '#fff' : '#0b0a16', INK, 2.4);
+    g.strokeStyle = fl ? '#fff' : 'rgba(200,170,255,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(-6, -22); g.quadraticCurveTo(-11, -12, -8, -4); g.stroke();
+    // torso, head
+    ellipse(g, 0, -24, 8, 9); fs(g, fl ? '#fff' : '#12101f', INK, 2.4);
+    ellipse(g, 0, -37, 9, 10); fs(g, fl ? '#fff' : '#f0ecff', INK, 2.4);
+    poly(g, [-6, -43, -11, -58, -2, -46]); fs(g, fl ? '#fff' : '#f0ecff', INK, 2); poly(g, [6, -43, 11, -58, 2, -46]); fs(g, fl ? '#fff' : '#f0ecff', INK, 2);
+    g.fillStyle = tele ? '#ffffff' : '#07060d'; ellipse(g, -3.4, -37, 2.2, 3.2); g.fill(); ellipse(g, 3.4, -37, 2.2, 3.2); g.fill();
+    if (!fl) { g.fillStyle = '#c8a8ff'; ellipse(g, -3.4, -37, 0.9, 1.6); g.fill(); ellipse(g, 3.4, -37, 0.9, 1.6); g.fill(); }
+    // the nail
+    g.save(); g.translate(7, -26); g.rotate(b.slashing === 2 ? -1.9 : b.slashing === 1 ? 0.25 : b.diving ? 1.65 : tele ? -1.2 : (b.casting ? -0.4 : 0.55));
+    heroSword(g, 0, 0, 0, 40, fl ? '#ffffff' : '#e8e0ff'); g.restore();
+    if (b.casting) { bloom(g, 14, -26, 26, '#d8c8ff', 0.8); }
+    g.restore();
+  };
+  if (b.state === 'dying') g.save(), g.translate(Math.sin(t * 70) * 2.5, 0);
+  if (b.dashing || b.diving) for (let k = 3; k >= 1; k--) pose(-b.face * (b.diving ? 0 : k * 22), 0.18);
+  bloom(g, b.cx, b.cy, 80, '#b898ff', 0.12 + (tele ? 0.3 : 0) + (b.phase - 1) * 0.04);
+  pose(0, b.alpha);
+  if (b.state === 'dying') g.restore();
 };
 
 </script>
@@ -4184,7 +4566,9 @@ class Level {
     this.t = Uint8Array.from(def.t);
     this.pw = def.w * TILE; this.ph = def.h * TILE;
     this.ice = def.iceCells || new Set();
+    this.winds = (def.winds || []).map(w => ({ x: w.x * TILE, y: w.y * TILE, w: w.w * TILE, h: w.h * TILE, wx: w.wx, wy: w.wy }));
   }
+  windAt(px, py) { for (const w of this.winds) if (px >= w.x && px < w.x + w.w && py >= w.y && py < w.y + w.h) return w; return null; }
   isIce(tx, ty) { return this.ice.size > 0 && tx >= 0 && ty >= 0 && tx < this.w && ty < this.h && this.ice.has(ty * this.w + tx); }
   get(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return T_SOLID;
@@ -4405,7 +4789,7 @@ class Player {
         this.jumpBuf = 0; this.wallCoyote = 0; this.dashT = 0; this.airDash = true; this.djAvail = true;
         Sound.play('jump'); G.burst(this.cx + this.wallDir * 10, this.cy, 6, { color: '#cfd8e0', speed: 90, life: 0.3, size: 2 });
       } else if (this.ab.double && this.djAvail) {
-        this.vy = -630; this.djAvail = false; this.jumping = true; this.jumpBuf = 0; this.dashT = 0;
+        this.vy = Charms.has('gale') ? -770 : -630; this.djAvail = false; this.jumping = true; this.jumpBuf = 0; this.dashT = 0;
         Sound.play('djump'); G.burst(this.cx, this.y + this.h, 12, { color: '#e8f4ff', speed: 140, life: 0.45, size: 3, vy: 40 });
         G.ring(this.cx, this.y + this.h - 4, '#d8ecff');
       }
@@ -4419,12 +4803,27 @@ class Player {
       this.atkDir = iy < 0 ? 'up' : (iy > 0 && !this.onGround ? 'down' : 'side');
       this.atkT = 0.16; this.atkCD = Charms.has('swift') ? 0.21 : 0.34; this.atkAlt ^= 1; this.hits = new Set();
       Sound.play('slash');
+      if (Charms.has('echo') && this.atkDir === 'side' && (this.echoN = (this.echoN || 0) + 1) % 3 === 0) {     // Blade Echo: every third strike sends a wave
+        G.projs.push(new Proj({ kind: 'wave', x: this.cx + this.face * 34, y: this.cy - 4, vx: this.face * 560, vy: 0, r: 17, dmg: Math.max(2, Math.round(this.nailDamage() * 0.6)), friendly: true, pierce: true, life: 0.55, color: '#d8c8ff' }));
+        G.burst(this.cx + this.face * 34, this.cy - 4, 8, { color: '#d8c8ff', speed: 140, life: 0.3, size: 3 });
+      }
     }
     if (this.atkT > 0) this.attackHits();
 
+    // ---- wind: updrafts lift to their own speed, crosswinds push the hero sideways while airborne ----
+    let windPush = 0;
+    const wz = this.dashT <= 0 && !this.dead ? L.windAt(this.cx, this.cy) : null;
+    if (wz) {
+      if (wz.wy < 0 && this.vy > wz.wy) this.vy = Math.max(wz.wy, this.vy - 3600 * dt);
+      else if (wz.wy > 0 && this.vy < wz.wy) this.vy = Math.min(wz.wy, this.vy + 3600 * dt);
+      if (wz.wx && !this.onGround) windPush = wz.wx * (Charms.has('gale') ? 0.4 : 1);
+    }
+    this.inWind = !!wz;
     // ---- move ----
     const wasGround = this.onGround, fallV = this.vy, prevBottom = this.y + this.h;
+    this.vx += windPush;
     moveBody(this, dt, L);
+    if (windPush) this.vx = this.hitL || this.hitR ? 0 : this.vx - windPush;
     Mech.land(this, prevBottom);
     if (this.onGround && this.face !== faceBefore && this.atkT <= 0) this.turnT = 0.1;
     if (this.onGround && !wasGround && fallV > 300) { Sound.play('land'); this.landT = 0.12; G.burst(this.cx, this.y + this.h, 6, { color: '#8d9aa8', speed: 80, life: 0.3, size: 2 }); }
@@ -5947,6 +6346,8 @@ function spawnPillar(x, y, tele, dur, h, pal) {
   G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: (pal && pal.glow) || '#ff9bd6', pierce: true, passWalls: true, pal }));
 }
 const ICE = { fill: '#bfe8ff', fill2: '#f4fcff', glow: '#9fdcff', rgb: '170,225,255', spike: true };
+const BOLT = { fill: '#d8e6ff', fill2: '#ffffff', glow: '#a8c0ff', rgb: '170,200,255' };
+const GLASS = { fill: '#d4ccff', fill2: '#ffffff', glow: '#c8b8ff', rgb: '200,185,255', spike: true };
 const SLAG = { fill: '#ff8a3a', fill2: '#ffe08a', glow: '#ff7a2a', rgb: '255,150,70' };
 
 class Boss extends Enemy {
@@ -6695,7 +7096,338 @@ class Colossus extends Boss {
   }
 }
 
-const BOSS_TYPES = { queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };
+// ---------------------------------------------------------------- Thunderhoof
+// A bull of the high peaks, armoured in storm-cloud, the mid-boss of Stormcrest. It charges, stamps and gores, and
+// once it is hurt enough it calls the lightning down. (Mid-bosses guard a way on; they leave geo, not a seal.)
+class Thunderhoof extends Boss {
+  constructor(d) { super(d, 132, 92, { key: 'thunderhoof', hp: 170, geo: 160, phases: [0.5], blood: '#cfe0ff' }); this.last = ''; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
+    const opts = ['charge', 'stomp', 'gore'];
+    if (this.phase >= 2) opts.push('thunder');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  bolts(n) {
+    const L = G.level;
+    for (let i = 0; i < n; i++) spawnBeam(clamp(G.player.cx + (i === 0 ? 0 : rand(-260, 260)), 3 * TILE, L.pw - 3 * TILE), 0.85 + i * 0.12, 0.3, 44, BOLT);
+  }
+  *charge() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.6 * this.spd);
+    this.tele = 0; this.charging = true;
+    let t = 1.7;
+    while (t > 0) {
+      this.vx = this.face * (this.phase >= 2 ? 620 : 520); this.doMelee(-this.w / 2, 12, this.w, this.h - 12, 1, 0.05);
+      if (Math.random() < 0.5) G.burst(this.cx - this.face * 50, this.y + this.h - 8, 1, { color: '#dfe9ff', speed: 100, life: 0.35, size: 3, vy: -40 });
+      t -= this.dt; if (this.hitL || this.hitR) break; yield;
+    }
+    this.vx = 0; this.charging = false; Sound.play('slam'); G.shake(9, 0.3); this.stunned = true;
+    this.bolts(this.phase >= 2 ? 3 : 2);
+    yield* this.wait(1.2);
+    this.stunned = false;
+  }
+  *stomp() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.7 * this.spd);
+    this.tele = 0; this.doMelee(24, 14, 150, 80, 2, 0.25);
+    Sound.play('slam'); G.shake(8, 0.3);
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 80, this.y + this.h, d, 430, '#dfe9ff');
+    yield* this.wait(0.8 * this.spd);
+  }
+  *gore() {
+    const lunges = this.phase >= 2 ? 2 : 1;
+    for (let i = 0; i < lunges; i++) {
+      this.facePlayer(); this.tele = 1; Sound.play('tele');
+      yield* this.wait(0.4 * this.spd);
+      this.tele = 0; Sound.play('dash');
+      let t = 0.38;
+      while (t > 0) { this.vx = this.face * 760; this.doMelee(-this.w / 2, 8, this.w + 20, this.h - 8, 1, 0.05); t -= this.dt; if (this.hitL || this.hitR) break; yield; }
+      this.vx = 0;
+      yield* this.wait(0.22);
+    }
+    yield* this.wait(0.5 * this.spd);
+  }
+  *thunder() {
+    this.tele = 1; Sound.play('roar'); G.shake(5, 0.6);
+    yield* this.wait(0.4);
+    this.bolts(this.phase >= 2 ? 4 : 3);
+    yield* this.wait(1.5);
+    this.tele = 0;
+  }
+}
+
+// ---------------------------------------------------------------- The Storm Roc
+// A great bird that rules the summit. It strafes the hall dropping needles, swoops across it, dives, calls lightning
+// in columns, and (from the first wound on) beats up a gale that shoves the hero along the floor.
+class Roc extends Boss {
+  constructor(d) { super(d, 124, 90, { key: 'roc', hp: 260, geo: 280, phases: [0.66, 0.33], blood: '#cfe0ff' }); this.grav = false; this.last = ''; this.galeZone = null; }
+  get hoverY() { return this.floorY - 5.5 * TILE; }
+  *chooseAttack() {
+    yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.4 : 0.28);
+    const opts = ['strafe', 'swoop', 'lightning'];
+    if (this.phase >= 2) opts.push('dive', 'gale');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  needle(x, y, vx, vy) { G.projs.push(new Proj({ kind: 'needle', x, y, vx, vy, r: 8, dmg: 1, color: '#e8f0ff', life: 2.6 })); }
+  *strafe() {                                    // fly the length of the hall, a rain of needles behind
+    const L = G.level, side = this.cx < L.pw / 2 ? 1 : -1;
+    yield* this.flyTo(side > 0 ? 4 * TILE : L.pw - 4 * TILE, this.hoverY - 30, 420);
+    this.face = side; this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.5 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    let t = 3, n = 0;
+    while (t > 0 && ((side > 0 && this.cx < L.pw - 4 * TILE) || (side < 0 && this.cx > 4 * TILE))) {
+      this.vx = side * (this.phase >= 3 ? 400 : 320); this.vy = Math.sin(this.t * 6) * 20; this.face = side;
+      if (++n % (this.phase >= 2 ? 9 : 13) === 0) { this.needle(this.cx, this.cy + 20, rand(-40, 40), 380); if (this.phase >= 2) this.needle(this.cx, this.cy + 20, (G.player.cx - this.cx) * 0.9, 330); }
+      t -= this.dt; yield;
+    }
+    this.vx = this.vy = 0;
+    yield* this.flyTo(L.pw / 2, this.hoverY, 380);
+  }
+  *swoop() {                                     // a diagonal pass across the hall, low over the floor
+    const L = G.level, side = G.player.cx < L.pw / 2 ? -1 : 1;           // start on the far side from the hero
+    yield* this.flyTo(side > 0 ? L.pw - 3 * TILE : 3 * TILE, this.hoverY - 70, 420);
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.hover(0.55 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.sweeping = true;
+    const tx = clamp(2 * G.player.cx - this.cx, 3 * TILE, L.pw - 3 * TILE), ty = this.floorY - 56;
+    const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1, sp = this.phase >= 3 ? 740 : 640;
+    let t = 1.4;
+    while (t > 0 && Math.hypot(tx - this.cx, ty - this.cy) > 40) {
+      this.vx = dx / d * sp; this.vy = dy / d * sp; this.face = sign(dx) || this.face; this.doMelee(-this.w / 2, 4, this.w, this.h - 4, 1, 0.05);
+      t -= this.dt; yield;
+    }
+    this.sweeping = false; this.vx = this.vy = 0; Sound.play('slam'); G.shake(6, 0.2);
+    for (const dd of [-1, 1]) spawnShock(this.cx + dd * 30, this.floorY, dd, 380, '#dfe9ff');
+    yield* this.flyTo(this.cx, this.hoverY, 380);
+  }
+  *lightning() {
+    const L = G.level, n = 3 + this.phase;
+    yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
+    this.tele = 1; Sound.play('roar');
+    for (let i = 0; i < n; i++) {
+      spawnBeam(i % 2 === 0 ? G.player.cx : clamp(G.player.cx + rand(-260, 260), 3 * TILE, L.pw - 3 * TILE), 0.85, 0.3, 44, BOLT);
+      yield* this.hover(0.45);
+    }
+    yield* this.hover(0.9);
+    this.tele = 0;
+  }
+  *dive() {
+    const L = G.level;
+    yield* this.flyTo(clamp(G.player.cx, 4 * TILE, L.pw - 4 * TILE), this.hoverY - 60, 440);
+    this.tele = 1; Sound.play('tele');
+    let t = 0.5 * this.spd;
+    while (t > 0) { this.vx = clamp((G.player.cx - this.cx) * 4, -320, 320); this.vy = 0; t -= this.dt; yield; }
+    this.tele = 0; Sound.play('dash'); this.sweeping = true;
+    let tt = 1.1;
+    while (tt > 0 && this.cy < this.floorY - 52) { this.vx = 0; this.vy = 760; this.doMelee(-this.w / 2, 4, this.w, this.h, 1, 0.05); tt -= this.dt; yield; }
+    this.sweeping = false; this.vx = this.vy = 0; Sound.play('slam'); G.shake(9, 0.3);
+    for (const dd of [-1, 1]) { spawnShock(this.cx + dd * 30, this.floorY, dd, 420, '#dfe9ff'); }
+    yield* this.wait(0.35);
+    yield* this.flyTo(this.cx, this.hoverY, 340);
+  }
+  *gale() {                                      // a crosswind across the whole hall, and needles to dodge while it shoves
+    const L = G.level, dir = pick([-1, 1]);
+    yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
+    this.tele = 1; Sound.play('roar');
+    yield* this.hover(0.6);
+    this.galeZone = { x: 0, y: 0, w: L.pw, h: L.ph, wx: dir * (this.phase >= 3 ? 190 : 150), wy: 0 };
+    L.winds.push(this.galeZone);
+    for (let i = 0; i < 6; i++) {
+      this.needle(clamp(G.player.cx + rand(-90, 90), 3 * TILE, L.pw - 3 * TILE), this.cy, 0, 360);
+      yield* this.hover(0.42);
+    }
+    this.endGale(); this.tele = 0;
+  }
+  endGale() { if (this.galeZone) { const L = G.level; L.winds = L.winds.filter(w => w !== this.galeZone); this.galeZone = null; } }
+  shiftRoutine() { this.endGale(); return super.shiftRoutine(); }
+  kill() { this.endGale(); super.kill(); }
+}
+
+// ---------------------------------------------------------------- The Glass Duelist
+// The mid-boss of the Mirror Vault: a fencer of black glass. It lunges, strings blows together and, above all, guards:
+// while the blade is up your strikes ring off it and it answers with a riposte. Wait out the guard, strike after.
+class Duelist extends Boss {
+  constructor(d) { super(d, 46, 90, { key: 'duelist', hp: 190, geo: 170, phases: [0.5], blood: '#d4ccff' }); this.last = ''; this.guarding = false; this.parried = false; }
+  hurt(dmg, dir, how) {
+    if (this.guarding && this.state === 'fight' && !this.invul && how !== 'burn') {            // the blade is up: it turns the blow aside
+      this.parried = true; Sound.play('clank'); G.hitstop(0.04);
+      G.burst(this.cx + this.face * 30, this.cy - 10, 10, { color: '#f4efff', speed: 240, life: 0.3, size: 2 });
+      return false;                              // the player gains no soul from a parried blow
+    }
+    super.hurt(dmg, dir, how);
+  }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.6 : 0.35);
+    const opts = ['lunge', 'combo', 'guard'];
+    if (this.phase >= 2) opts.push('shatter', 'rain');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  *step(dir, speed, t) { let x = t; while (x > 0) { this.vx = dir * speed; x -= this.dt; if (this.hitL || this.hitR) break; yield; } this.vx = 0; }
+  *lunge() {
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.4 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.lunging = true;
+    let t = 0.3;
+    while (t > 0) { this.vx = this.face * 880; this.doMelee(10, 30, 120, 22, 1, 0.06); t -= this.dt; if (this.hitL || this.hitR) break; yield; }
+    this.vx = 0; this.lunging = false;
+    yield* this.wait(0.7 * this.spd);
+  }
+  *combo() {
+    const n = this.phase >= 2 ? 4 : 3;
+    for (let i = 0; i < n; i++) {
+      this.facePlayer(); this.tele = 1; Sound.play('tele');
+      yield* this.wait(0.26 * this.spd);
+      this.tele = 0; Sound.play('slash'); this.slashing = i % 2 + 1;
+      this.doMelee(6, i % 2 ? 40 : 14, 100, i % 2 ? 24 : 60, 1, 0.14);
+      yield* this.step(this.face, 300, 0.14);
+      yield* this.wait(0.12);
+      this.slashing = 0;
+    }
+    yield* this.wait(0.7 * this.spd);
+  }
+  *guard() {                                    // blade up; a blow that lands on it is answered at once
+    this.facePlayer(); this.guarding = true; this.parried = false; Sound.play('clank');
+    let t = 1.5 * (this.phase >= 2 ? 0.85 : 1), answered = false;
+    while (t > 0) {
+      this.facePlayer(); this.vx = 0;
+      if (this.parried) { answered = true; break; }
+      t -= this.dt; yield;
+    }
+    this.guarding = false;
+    if (answered) {                              // the riposte: fast, long, and not telegraphed enough, which is the lesson
+      this.parried = false; this.facePlayer(); this.tele = 1;
+      yield* this.wait(0.12);
+      this.tele = 0; Sound.play('dash'); this.lunging = true;
+      let x = 0.34; while (x > 0) { this.vx = this.face * 900; this.doMelee(10, 30, 130, 24, 2, 0.06); x -= this.dt; if (this.hitL || this.hitR) break; yield; }
+      this.vx = 0; this.lunging = false;
+      yield* this.wait(0.55);
+    } else {                                     // nobody struck: it comes down in a slow overhead, wide open afterwards
+      this.tele = 1; Sound.play('tele'); yield* this.wait(0.5); this.tele = 0; Sound.play('slam'); G.shake(5, 0.2);
+      this.slashing = 2; this.doMelee(10, -10, 90, 100, 1, 0.2); yield* this.wait(0.2); this.slashing = 0;
+      this.stunned = true; yield* this.wait(1.1); this.stunned = false;
+    }
+  }
+  *shatter() {                                  // a back-step, a fan of glass, then straight at you
+    this.facePlayer(); this.vy = -380; this.vx = -this.face * 340; this.onGround = false;
+    yield; yield; yield* this.until(() => this.onGround, 1); this.vx = 0;
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.35 * this.spd);
+    this.tele = 0; Sound.play('shoot');
+    const a = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx);
+    for (let i = -2; i <= 2; i++) G.projs.push(new Proj({ kind: 'shard', x: this.cx + this.face * 30, y: this.cy - 10, vx: Math.cos(a + i * 0.2) * 420, vy: Math.sin(a + i * 0.2) * 420, r: 7, dmg: 1, color: '#c8b8ff', life: 2.4, rot: a + i * 0.2, pal: GLASS }));
+    yield* this.wait(0.3);
+    yield* this.lunge();
+  }
+  *rain() {
+    const L = G.level; this.tele = 1; Sound.play('roar');
+    for (let i = 0; i < 7; i++) { spawnRock(clamp(G.player.cx + rand(-300, 300), 3 * TILE, L.pw - 3 * TILE), 0.8, GLASS); yield* this.wait(0.2); }
+    yield* this.wait(1.0); this.tele = 0;
+  }
+}
+
+// ---------------------------------------------------------------- The Wanderer's Twin
+// The dark reflection of the hero, the last secret of the Mirror Vault. It fights with your own tools: the nail, the
+// dash, the double jump, the soul bolt, the Dusk Cry. Third phase: it steps through the mirror to strike from behind.
+class Twin extends Boss {
+  constructor(d) { super(d, 32, 58, { key: 'twin', hp: 330, geo: 400, phases: [0.66, 0.33], blood: '#d8c8ff' }); this.last = ''; this.dashing = false; this.slashing = 0; this.airborne = false; }
+  hb() { return { x: this.x + 3, y: this.y + 2, w: this.w - 6, h: this.h - 2 }; }
+  *chooseAttack() {
+    this.facePlayer();
+    yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.38 : 0.26);
+    const opts = ['rush', 'dashSlash', 'leap', 'bolt'];
+    if (this.phase >= 2) opts.push('cry', 'echo');
+    if (this.phase >= 3) opts.push('mirrorStep');
+    this.last = pick(opts.filter(o => o !== this.last));
+    yield* this[this.last]();
+  }
+  *slash(up) {                                   // one swing of the nail
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.2 * this.spd);
+    this.tele = 0; Sound.play('slash'); this.slashing = up ? 2 : 1;
+    this.doMelee(up ? -20 : 4, up ? -36 : 6, up ? 50 : 96, up ? 70 : 54, 1, 0.14);
+    yield* this.wait(0.2);
+    this.slashing = 0;
+  }
+  *rush() {                                      // run in, two or three swings
+    this.facePlayer(); let t = 1.4;
+    while (t > 0 && Math.abs(G.player.cx - this.cx) > 70) { this.facePlayer(); this.vx = this.face * (this.phase >= 3 ? 420 : 360); t -= this.dt; yield; }
+    this.vx = 0;
+    const n = this.phase >= 2 ? 3 : 2;
+    for (let i = 0; i < n; i++) { yield* this.slash(false); this.vx = this.face * 140; yield* this.wait(0.05); this.vx = 0; }
+    yield* this.wait(0.4 * this.spd);
+  }
+  *dashSlash() {                                 // the Shadow Dash: through your side, a swing on the far side
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.38 * this.spd);
+    this.tele = 0; Sound.play('dash'); this.dashing = true;
+    const dir = this.face; let t = 0.24;
+    while (t > 0) { this.vx = dir * 820; t -= this.dt; if (this.hitL || this.hitR) break; yield; }
+    this.vx = 0; this.dashing = false;
+    this.face = -dir; this.facePlayer();
+    yield* this.slash(false);
+    yield* this.wait(0.45 * this.spd);
+  }
+  *leap() {                                      // jump, a second jump in the air, then the Soul Dive
+    this.facePlayer(); this.vy = -720; this.vx = clamp((G.player.cx - this.cx) * 0.8, -300, 300); this.onGround = false; this.airborne = true; Sound.play('jump');
+    yield* this.wait(0.3);
+    this.vy = -560; Sound.play('djump'); G.ring(this.cx, this.cy + 20, '#d8c8ff');
+    yield* this.wait(0.22);
+    this.tele = 1; this.vx = 0; this.vy = -60; yield* this.wait(0.18); this.tele = 0;
+    this.diving = true; this.vy = 1000; this.vx = clamp((G.player.cx - this.cx) * 1.2, -260, 260);
+    while (!this.onGround) { this.doMelee(-24, this.h - 20, 48, 46, 2, 0.05); yield; }
+    this.diving = false; this.airborne = false; this.vx = 0; Sound.play('slam'); G.shake(8, 0.25);
+    for (const d of [-1, 1]) spawnShock(this.cx + d * 30, this.y + this.h, d, 380, '#d8c8ff');
+    yield* this.wait(0.6 * this.spd);
+  }
+  *bolt() {                                      // your own soul bolt, sent back
+    this.facePlayer(); this.tele = 1; this.casting = true; Sound.play('tele');
+    yield* this.wait(0.4 * this.spd);
+    this.tele = 0; Sound.play('cast');
+    const n = this.phase >= 2 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      this.facePlayer();
+      G.projs.push(new Proj({ kind: 'bolt', x: this.cx + this.face * 30, y: this.cy - 4 + i * 26, vx: this.face * 520, vy: 0, r: 12, dmg: 1, color: '#d8c8ff', life: 2.2, pierce: false }));
+      yield* this.wait(0.25);
+    }
+    this.casting = false;
+    yield* this.wait(0.5 * this.spd);
+  }
+  *cry() {                                       // the Dusk Cry: a column of violet light where you stand
+    this.tele = 1; this.casting = true; Sound.play('roar');
+    yield* this.wait(0.3);
+    const L = G.level, n = this.phase >= 3 ? 3 : 2;
+    for (let i = 0; i < n; i++) { spawnPillar(clamp(G.player.cx + (i ? rand(-200, 200) : 0), 3 * TILE, L.pw - 3 * TILE), this.floorY, 0.8, 0.45, 300, { fill: '#d8c8ff', fill2: '#ffffff', glow: '#c8b8ff', rgb: '200,185,255' }); yield* this.wait(0.3); }
+    yield* this.wait(1.0); this.tele = 0; this.casting = false;
+  }
+  *echo() {                                      // three crescents of the Blade Echo, one above the other
+    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    yield* this.wait(0.45 * this.spd);
+    this.tele = 0; Sound.play('slash'); this.slashing = 1;
+    for (let i = 0; i < 3; i++) G.projs.push(new Proj({ kind: 'wave', x: this.cx + this.face * 34, y: this.y + 10 + i * 24, vx: this.face * 420, vy: 0, r: 15, dmg: 1, color: '#d8c8ff', life: 1.8, pierce: true }));
+    yield* this.wait(0.25); this.slashing = 0;
+    yield* this.wait(0.6 * this.spd);
+  }
+  *mirrorStep() {                                // out of the glass behind you
+    const L = G.level;
+    this.ghostly = true;
+    for (let a = 1; a > 0; a -= 0.1) { this.alpha = a; yield; }
+    this.alpha = 0; yield* this.wait(0.3);
+    this.x = clamp(G.player.cx - G.player.face * 90, 3 * TILE, L.pw - 3 * TILE) - this.w / 2; this.y = this.floorY - this.h - 2; this.vy = 0;
+    for (let a = 0; a < 1; a += 0.12) { this.alpha = a; yield; }
+    this.alpha = 1; this.ghostly = false; this.facePlayer();
+    yield* this.slash(false);
+    yield* this.slash(true);
+    yield* this.wait(0.45);
+  }
+}
+
+const BOSS_TYPES = { duelist: Duelist, twin: Twin, thunderhoof: Thunderhoof, roc: Roc, queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };
 
 </script>
 <script>
@@ -6717,7 +7449,8 @@ const Skins = (() => {
     ['boss_king', 'زعيم: الملك المجوّف', 'Boss: Hollow King'],
     ['mole', 'الخلد', 'Mole'], ['lavaworm', 'دودة الحمم', 'Lava Worm'], ['imp', 'عفريت القنابل', 'Bomb Imp'], ['veil', 'الحجاب', 'Veil'],
     ['roller', 'المدحرج', 'Roller'], ['slime', 'الهلام', 'Slime'], ['chainman', 'حامل السلسلة', 'Chain Bearer'], ['moth', 'فراشة الليل', 'Night Moth'], ['icicle', 'الجليدة', 'Icicle'],
-    ['boss_queen', 'زعيم: ملكة الصقيع', 'Boss: Rime Queen'], ['boss_colossus', 'زعيم: العملاق الجمري', 'Boss: Cinder Colossus'],
+    ['boss_queen', 'زعيم: ملكة الصقيع', 'Boss: Rime Queen'], ['boss_thunderhoof', 'زعيم: حافر الرعد', 'Boss: Thunderhoof'], ['boss_roc', 'زعيم: طائر العاصفة', 'Boss: Storm Roc'],
+    ['boss_duelist', 'زعيم: مبارز الزجاج', 'Boss: Glass Duelist'], ['boss_twin', 'زعيم: توأم الجوّال', 'Boss: Wanderer\'s Twin'], ['boss_colossus', 'زعيم: العملاق الجمري', 'Boss: Cinder Colossus'],
   ];
   const imgs = {};          // slot -> HTMLImageElement
   let data = {};            // slot -> data URL
@@ -6854,6 +7587,8 @@ const Charms = (() => {
     soles:      { cost: 1, color: '#bfe8ff', ar: 'نعل المسامير', en: 'Spiked Soles', dAr: 'تثبت قدماك على الجليد فلا تنزلق.', dEn: 'Your feet grip the ice: no more sliding.' },
     wick:       { cost: 1, color: '#ffd890', ar: 'فتيل الفانوس', en: 'Lantern Wick', dAr: 'يتسع ضوء فانوسك فترى أبعد في العتمة.', dEn: 'Your lantern burns wider: you see further in the dark.' },
     cinder:     { cost: 2, color: '#ff8a4a', ar: 'نصل الجمر', en: 'Cinder Edge', dAr: 'ضرباتك تترك حرقاً يؤذي العدو بعد لحظة.', dEn: 'Your strikes leave a burn that wounds the enemy a moment later.' },
+    gale:       { cost: 2, color: '#a8c0ff', ar: 'عباءة العاصفة', en: 'Storm Cloak', dAr: 'قفزتك الثانية أعلى بنحو الربع، وتدفعك الرياح الجانبية أقل.', dEn: 'Your second jump rises about a quarter higher, and crosswinds shove you less.' },
+    echo:       { cost: 2, color: '#d8c8ff', ar: 'صدى النصل', en: 'Blade Echo', dAr: 'كل ضربة ثالثة تُطلق موجة شبحية أمامك.', dEn: 'Every third strike sends a spectral wave ahead of you.' },
     shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
   };
   const ORDER = Object.keys(DEFS);
@@ -6991,6 +7726,18 @@ Art.drawCharm = function (g, id, x, y, r, o) {
       g.beginPath(); g.moveTo(0, -1); g.bezierCurveTo(0.5, -0.6, 0.5, -0.2, 0.12, -0.05); g.lineTo(-0.12, -0.05); g.bezierCurveTo(-0.5, -0.25, -0.35, -0.6, 0, -1); g.closePath(); fs(g, fill, ink, lw);
       g.fillStyle = 'rgba(255,255,255,0.8)'; ellipse(g, 0, -0.32, 0.1, 0.22); g.fill();
       break;
+    case 'gale':       // a spiral of wind
+      g.strokeStyle = fill; g.lineWidth = 0.2; g.lineCap = 'round';
+      g.beginPath(); g.arc(0.05, 0, 0.78, Math.PI * 0.9, Math.PI * 2.05); g.stroke();
+      g.beginPath(); g.arc(0.05, 0.02, 0.46, Math.PI * 1.1, Math.PI * 2.4); g.stroke();
+      g.beginPath(); g.arc(0.05, 0.02, 0.16, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.moveTo(-0.85, 0.5); g.lineTo(-0.3, 0.5); g.stroke();
+      break;
+    case 'echo':       // a blade and its ghosts: nested crescents
+      g.strokeStyle = fill; g.lineCap = 'round';
+      for (const [r, a, w] of [[0.34, 1.2, 0.2], [0.6, 1.1, 0.17], [0.86, 1.0, 0.14]]) { g.lineWidth = w; g.beginPath(); g.arc(-0.5, 0, r + 0.2, -a, a); g.stroke(); }
+      shape([-0.62, -0.1, -0.1, -0.1, 0, 0, -0.1, 0.1, -0.62, 0.1]);
+      break;
     case 'shell':      // a ward shield
       g.beginPath(); g.moveTo(0, -0.98); g.lineTo(0.88, -0.6); g.bezierCurveTo(0.88, 0.4, 0.42, 0.82, 0, 1); g.bezierCurveTo(-0.42, 0.82, -0.88, 0.4, -0.88, -0.6); g.closePath(); fs(g, fill, ink, lw);
       g.strokeStyle = 'rgba(30,24,16,0.6)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(0, -0.7); g.lineTo(0, 0.75); g.moveTo(-0.6, -0.15); g.lineTo(0.6, -0.15); g.stroke();
@@ -7006,12 +7753,12 @@ Art.drawCharm = function (g, id, x, y, r, o) {
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a' };
+const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a', stormcrest: '#a8c0ff', mirror: '#e0d4ff' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
   level: null, player: new Player(), enemies: [], projs: [], geos: [], items: [], parts: [], fx: [],
-  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0,
+  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0, bolt: 0, boltCD: 4,
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
@@ -7311,6 +8058,9 @@ function updatePlay(dt) {
   if (Input.pressed('pause')) { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; Input.consume('pause'); return; }
   if (Input.pressed('map')) { G.state = 'map'; Input.consume('map'); Sound.play('select'); return; }
   G.time += dt;
+  // storm: a flash of lightning every few seconds, the thunder a moment behind it
+  if (G.bolt > 0) G.bolt = Math.max(0, G.bolt - dt * 2.6);
+  if (L.def.theme === 'storm' && (G.boltCD -= dt) <= 0) { G.bolt = 1; G.boltCD = rand(4.5, 11); setTimeout(() => Sound.play('thunder'), 350); }
   Mech.update(dt);
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
@@ -7685,7 +8435,7 @@ function drawMenu(g, items, sel, y0, step) {
 }
 
 // colour of the air, specular shine of the rock and how much the heat shimmers, per area
-const SHINE = { frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
+const SHINE = { storm: 0.55, mirror: 0.85, frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
   const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
@@ -7742,13 +8492,14 @@ function drawWorld(g) {
     const sun = L.def.theme === 'town' ? { x: VW * 0.72 - G.cam.x * 0.02, y: 200, k: 0.28 } : L.def.theme === 'throne' ? { x: VW * 0.5 - G.cam.x * 0.04, y: 190, k: 0.3 } : null;
     const img = lum.render({
       lights: collectLights(cx, cy), cx, cy, time: t,
-      dark: DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme], tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
+      dark: Math.max(0.05, (DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme]) - G.bolt * 0.32), tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
       aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
     });
     if (img) g.drawImage(img, 0, 0, VW, VH);
     else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
   }
   g.save(); g.translate(-cx, -cy);
+  Art.drawWinds(g, L, t, cx, cy);
   if (P.wailT > 0) Art.drawWail(g, P, t);
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
@@ -7770,6 +8521,7 @@ function drawWorld(g) {
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = vg; g.fillRect(0, 0, VW, VH);
   if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, G.flash) + ')'; g.fillRect(0, 0, VW, VH); }
+  if (G.bolt > 0) { g.fillStyle = 'rgba(200,215,255,' + 0.26 * G.bolt * G.bolt + ')'; g.fillRect(0, 0, VW, VH); }
   if (P.hp === 1 && P.hp < P.maxHp && G.state === 'play') { const a = 0.08 + 0.05 * Math.sin(G.t * 6); g.fillStyle = 'rgba(140,0,20,' + a + ')'; g.fillRect(0, 0, VW, VH); }
 }
 

@@ -567,7 +567,90 @@ def ember():
     return s, len(prog)
 
 
-PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, boss, king]
+def storm():
+    """Stormcrest: peaks under a thunderstorm. F minor at a driving pace: tremolo strings and a cello pulse under
+    gusting flute runs, timpani like thunder, a horn tune that the trumpet takes up the second time."""
+    s = Song('storm', 126, seed=25)
+    s.track('strings', STRINGS, vol=84, pan=58, reverb=70)
+    s.track('low', CELLO, vol=96, pan=54, reverb=55)
+    s.track('bass', CONTRABASS, vol=88, pan=60, reverb=45)
+    s.track('timpani', TIMPANI, vol=100, pan=64, reverb=65)
+    s.track('taiko', TAIKO, vol=84, pan=64, reverb=60)
+    s.track('brass', BRASS, vol=86, pan=72, reverb=70)
+    s.track('flute', FLUTE, vol=66, pan=80, reverb=85)
+    s.track('horn', HORN, vol=96, pan=46, reverb=80)
+    s.track('trumpet', TRUMPET, vol=84, pan=40, reverb=80)
+    s.track('choir', CHOIR, vol=62, pan=64, reverb=95)
+    A = ['Fm', 'Db', 'Ab', 'Eb', 'Fm', 'Bbm', 'Db', 'C']
+    B = ['Db', 'Ab', 'Bbm', 'Fm', 'Db', 'Eb', 'Bbm', 'C']
+    prog = A + A + B + A
+    for b, c in enumerate(prog):
+        s.arp('strings', b, c, [0, 1, 2, 1, 0, 2, 1, 2], step=0.5, low=53, vel=62, dur=0.35, accent=12)
+        s.bass('low', b, c, low=36, rhythm=tuple((k * 0.5, 0.4) for k in range(8)), vel=64)
+        s.bass('bass', b, c, low=24, rhythm=((0, 1.8), (2, 1.8)), vel=70)
+        s.hits('timpani', b, bass_note(c, 36), (0, 1.5, 2), dur=0.5, vel=84)
+        if b >= 4:
+            s.hits('taiko', b, 50, (1, 3), dur=0.3, vel=64)
+        if b >= 8 and b % 2 == 0:
+            for p in tones(c, 53, 3):
+                s.note('brass', s.bar(b), 0.55, p, 82)
+        if b >= 8 and b % 2 == 1:
+            s.arp('flute', b, c, [0, 1, 2, 3, 4, 5, 4, 3], step=0.25, low=72, vel=44, dur=0.3)
+        if b >= 16:
+            s.pad('choir', b, c, low=53, count=3, vel=40)
+    mel_a = ('F4:1.5 Ab4:0.5 C5:2  Db5:1.5 C5:0.5 Ab4:2  Eb5:2 C5:1 Ab4:1  G4:1.5 Bb4:0.5 Eb5:2  '
+             'F5:1.5 Eb5:0.5 C5:2  Db5:1 F5:1 Bb4:2  Ab4:1 Db5:1 F5:2  E5:2 G4:1 C5:1')
+    mel_b = ('F5:2 Ab5:2  Eb5:1.5 C5:0.5 Ab4:2  Db5:1 F5:1 Bb5:2  Ab5:2 F5:1 C5:1  '
+             'F5:1.5 Db5:0.5 Ab4:2  G5:2 Bb5:1 Eb5:1  F5:1 Db5:1 Bb4:2  G4:1 E5:1 G5:2')
+    s.melody('horn', 8, mel_a, vel=90)
+    s.melody('trumpet', 16, mel_b, vel=88)
+    s.melody('horn', 24, mel_a, vel=94)
+    s.melody('trumpet', 24, mel_a, vel=70, shift=12)
+    return s, len(prog)
+
+
+def mirror():
+    """The Mirror Vault: black glass and quicksilver. B flat minor, slow and glassy: celesta and glockenspiel
+    arpeggios that seem to answer themselves, tremolo strings and a cello line, a choir far behind."""
+    s = Song('mirror', 68, seed=26)
+    s.track('celesta', CELESTA, vol=82, pan=36, reverb=100)
+    s.track('glock', GLOCK, vol=66, pan=92, reverb=100)
+    s.track('vibes', VIBES, vol=62, pan=60, reverb=95)
+    s.track('piano', PIANO, vol=76, pan=48, reverb=90)
+    s.track('tremolo', TREMOLO, vol=70, pan=64, reverb=95)
+    s.track('cello', CELLO, vol=92, pan=56, reverb=85)
+    s.track('violin', VIOLIN, vol=84, pan=72, reverb=90)
+    s.track('choir', CHOIR, vol=58, pan=64, reverb=100)
+    s.track('bass', CONTRABASS, vol=78, pan=60, reverb=60)
+    s.track('swell', REVERSE_CYMBAL, vol=44, pan=64, reverb=100)
+    A = ['Bbm', 'Gb', 'Db', 'Ab', 'Bbm', 'Ebm', 'Gb', 'F']
+    B = ['Gb', 'Db', 'Ebm', 'Bbm', 'Gb', 'Ab', 'Ebm', 'F']
+    prog = A + B + A
+    for b, c in enumerate(prog):
+        s.arp('celesta', b, c, [0, 2, 1, 3, 2, 4, 3, 5], step=0.5, low=70, vel=40, dur=0.7)
+        s.arp('glock', b, c, [3, 1, 2, 0], step=1, low=79, vel=36, dur=1.2)
+        s.note('piano', s.bar(b), 3.6, bass_note(c, 33), 54)
+        s.note('piano', s.bar(b) + 2, 1.8, bass_note(c, 45), 42)
+        s.pad('tremolo', b, c, low=51, count=3, vel=40)
+        s.bass('bass', b, c, low=22, rhythm=((0, 3.9),), vel=56)
+        if b >= 8:
+            s.pad('choir', b, c, low=58, count=3, vel=38)
+            s.note('vibes', s.bar(b), 3.5, tones(c, 66, 3)[1], 44)
+        if b % 8 == 7:
+            s.note('swell', s.bar(b) + 1, 3, 60, 58)
+    mel_a = ('Bb4:2 Db5:1 F5:1  Gb5:3 Db5:1  F5:1.5 Ab5:0.5 Db6:2  C6:3 Eb6:1  '
+             'Db6:2 Bb5:1 F5:1  Gb5:1.5 Bb5:0.5 Eb6:2  Db6:2 Bb5:2  A5:3 C6:1')
+    mel_b = ('Gb5:2 Bb5:1 Db6:1  F6:3 Db6:1  Gb5:1.5 Bb5:0.5 Eb6:2  F6:2 Db6:1 Bb5:1  '
+             'Db6:2 Gb6:2  Eb6:1.5 C6:0.5 Ab5:2  Bb5:1.5 Gb5:0.5 Eb5:2  A5:2 C6:2')
+    s.melody('violin', 0, mel_a, vel=74, shift=-12)
+    s.melody('cello', 8, mel_b, vel=80, shift=-24)
+    s.melody('violin', 8, mel_b, vel=70, shift=-12)
+    s.melody('celesta', 16, mel_a, vel=60)
+    s.melody('cello', 16, mel_a, vel=76, shift=-24)
+    return s, len(prog)
+
+
+PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, storm, mirror, boss, king]
 
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'build'

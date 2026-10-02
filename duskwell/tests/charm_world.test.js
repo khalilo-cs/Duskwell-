@@ -24,7 +24,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     ok(sp.room + ' ' + sp.charm + ': placed in air, collected on touch', r.has && r.here === 0 && (r.below === 1 || r.below === 2) && r.owned.join() === sp.charm && r.state === 'banner' && r.flag, r);
   }
   // guardians drop a charm after the reward
-  for (const [room, charm, flag, x, y] of [['mg3', 'siphon', 'boss_weaver', 23, 17], ['aq4', 'thrift', 'boss_drowned', 25, 19], ['wd4', 'deep', 'boss_brood', 25, 19], ['fr8', 'wick', 'boss_queen', 23, 19], ['em8', 'cinder', 'boss_colossus', 28, 21]]) {
+  for (const [room, charm, flag, x, y] of [['mg3', 'siphon', 'boss_weaver', 23, 17], ['aq4', 'thrift', 'boss_drowned', 25, 19], ['wd4', 'deep', 'boss_brood', 25, 19], ['fr8', 'wick', 'boss_queen', 23, 19], ['em8', 'cinder', 'boss_colossus', 28, 21], ['sc7', 'gale', 'boss_roc', 28, 21], ['mv7', 'echo', 'boss_twin', 28, 21]]) {
     const r = await page.evaluate(([room, charm, flag, x, y]) => {
       const { G, P, Charms, enterRoom } = DW; Charms.reset(); G.flags = {};
       enterRoom(room, { pos: { x: 4 * 32, y: 18 * 32 } }); G.state = 'play'; G.areaBanner = null; G.fadeA = 0; G.trans = null;

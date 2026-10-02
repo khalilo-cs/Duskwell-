@@ -20,6 +20,8 @@ const PAL = {
   title:    { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#2a3466', hi: '#9cc4ff', fog: '#5a6aa8', glow: '#ffe9b0', light: [0.6, -0.8] },
   frost:    { sky: ['#030a14', '#0d2a4a', '#2c6a96'], far: '#1c4670', mid: '#12304f', near: '#091d33', hi: '#d8f2ff', fog: '#8cc8ee', glow: '#bfe8ff', light: [-0.4, -0.9] },
   ember:    { sky: ['#0a0304', '#2b0c08', '#7a2a0c'], far: '#4a1a0c', mid: '#2c0f08', near: '#170705', hi: '#ffb070', fog: '#ff6a2a', glow: '#ff9a50', light: [0.3, -0.95] },
+  storm:    { sky: ['#05060f', '#1a2042', '#3c4c7e'], far: '#2a3560', mid: '#1b2447', near: '#0e1430', hi: '#c4d4ff', fog: '#6a80c0', glow: '#a8c0ff', light: [-0.3, -0.95] },
+  mirror:   { sky: ['#030308', '#0e0a1c', '#261c40'], far: '#1c1636', mid: '#120e24', near: '#08060f', hi: '#ece4ff', fog: '#8a78c8', glow: '#d8c8ff', light: [0.15, -0.99] },
   throne:   { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', hi: '#c6d6f4', fog: '#5e72a0', glow: '#ffe2a8', light: [0, -1] },
 };
 
@@ -59,6 +61,7 @@ function blobPath(g, cx, cy, rx, ry, seed, rough) {
   }
   jagPath(g, pts, 2, seed + 1, 12);
 }
+function poly(g, pts) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); }
 function glowAt(g, x, y, r, col, a) {
   const gr = g.createRadialGradient(x, y, 0, x, y, r);
   gr.addColorStop(0, rgba(col, a)); gr.addColorStop(0.35, rgba(col, a * 0.45)); gr.addColorStop(1, rgba(col, 0));
@@ -835,6 +838,104 @@ SCENES.ember = th => {
     layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.3; blobPath(g, x, y, rx, ry, i * 9, 0.3); g.fill(); g.globalAlpha = 1; } });
   }
   return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { haze: [1.2, 0.9, 0.7][li] })) };
+};
+
+// Stormcrest: thunderheads, wet crags and lightning
+SCENES.storm = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (let i = 0; i < 30; i++) {                      // heavy cloud banks
+      const x = R() * P, y = 30 + R() * 420, rx = 180 + R() * 300, ry = 40 + R() * 80;
+      g.fillStyle = rgba(i % 3 ? '#070a18' : '#2a3560', 0.2 + R() * 0.25); g.filter = 'blur(' + 12 * S + 'px)';
+      for (const dx of [-P, 0, P]) { g.beginPath(); g.ellipse(x + dx, y, rx, ry, 0, 0, 7); g.fill(); }
+      g.filter = 'none';
+    }
+    for (let k = 0; k < 5; k++) {                       // forked lightning far away, lit from behind the clouds
+      const x0 = R() * P, y0 = 60 + R() * 120; let x = x0, y = y0;
+      for (const dx of [-P, 0, P]) {
+        g.save(); g.strokeStyle = rgba('#dfe8ff', 0.5); g.lineWidth = 2.4; g.lineJoin = 'round'; g.beginPath(); x = x0 + dx; y = y0; g.moveTo(x, y);
+        const rr = mulberry32(k * 31 + 5); for (let j = 0; j < 9; j++) { x += (rr() - 0.5) * 70; y += 38 + rr() * 30; g.lineTo(x, y); } g.stroke();
+        glowAt(g, x0 + dx, y0 + 120, 220, '#9fb4ff', 0.22); g.restore();
+      }
+    }
+  });
+  const R = mulberry32(83), layers = [[], [], []];
+  // far: a range of black peaks
+  for (let i = 0; i < 10; i++) {
+    const x = i / 10 * P + R() * 40, w = 160 + R() * 160, h = 240 + R() * 280, s = i * 7;
+    layers[0].push({ x, reach: w + 40,
+      shape(g) { jagPath(g, [[x - w, H + 20], [x - w * 0.5, H - h * 0.5], [x - w * 0.15, H - h * 0.8], [x + w * 0.02, H - h], [x + w * 0.22, H - h * 0.7], [x + w * 0.5, H - h * 0.45], [x + w, H + 20]], 7, s); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.1); g.beginPath(); g.moveTo(x + w * 0.02, H - h); g.lineTo(x + w * 0.22, H - h * 0.7); g.lineTo(x + w * 0.5, H - h * 0.45); g.lineTo(x + w * 0.1, H); g.lineTo(x - w * 0.04, H - h * 0.5); g.closePath(); g.fill(); },
+      glow(g) { if (i % 3 === 0) glowAt(g, x, H - h, 90, th.glow, 0.12); } });
+  }
+  // mid: floating spires and the ropes of broken bridges
+  for (let i = 0; i < 9; i++) {
+    const x = i / 9 * P + R() * 60, y = 120 + R() * 360, w = 50 + R() * 70, h = 90 + R() * 160, s = i * 5 + 40;
+    layers[1].push({ x, reach: w + 60,
+      shape(g) { jagPath(g, [[x - w / 2, y], [x - w * 0.42, y + h * 0.55], [x - w * 0.1, y + h], [x + w * 0.1, y + h * 0.8], [x + w * 0.45, y + h * 0.5], [x + w / 2, y]], 3.5, s); g.fill(); g.fillRect(x - w / 2 - 6, y - 14, w + 12, 18); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.13); g.beginPath(); g.moveTo(x, y); g.lineTo(x + w / 2, y); g.lineTo(x + w * 0.45, y + h * 0.5); g.lineTo(x + w * 0.1, y + h * 0.8); g.closePath(); g.fill(); } });
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = i * 400 + 120 + R() * 100, y = 250 + R() * 160;
+    layers[1].push({ x, reach: 260, shape(g) { g.lineWidth = 3; g.beginPath(); g.moveTo(x - 220, y); g.quadraticCurveTo(x, y + 60, x + 220, y); g.stroke(); for (let k = -4; k <= 4; k++) { g.beginPath(); g.moveTo(x + k * 50, y + 60 * (1 - (k / 4.4) ** 2) * 0.9); g.lineTo(x + k * 50, y + 20 + 60 * (1 - (k / 4.4) ** 2) * 0.9); g.stroke(); } } });
+  }
+  // near: crags at the roof and the floor, rain-bright
+  for (let i = 0; i < 6; i++) {
+    const x = i / 6 * P + R() * 100, w = 70 + R() * 70, h = 200 + R() * 260;
+    layers[2].push({ x, reach: w + 40, shape(g) { jagPath(g, spike(x, -40, w, h, -1, i * 3 + 300), 5, i * 3 + 301); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.16); g.beginPath(); g.moveTo(x, h - 70); g.lineTo(x + w * 0.5, -40); g.lineTo(x, -40); g.closePath(); g.fill(); } });
+  }
+  for (let i = 0; i < 7; i++) {
+    const x = R() * P, rx = 100 + R() * 160, ry = 50 + R() * 90;
+    layers[2].push({ x, reach: rx + 40, shape(g) { jagPath(g, [[x - rx, H + 30], [x - rx * 0.5, H - ry * 0.7], [x - rx * 0.1, H - ry], [x + rx * 0.3, H - ry * 0.65], [x + rx, H + 30]], 5, i * 6 + 9); g.fill(); } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, y = 420 + R() * 200, rx = 170 + R() * 230, ry = 20 + R() * 30;
+    layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.3; blobPath(g, x, y, rx, ry, i * 9 + 3, 0.3); g.fill(); g.globalAlpha = 1; } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { rim: 0.85, haze: [1.1, 0.8, 0.5][li] })) };
+};
+
+// the Mirror Vault: black glass, tall frames and falling shards
+SCENES.mirror = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (let i = 0; i < 8; i++) { const x = R() * P, y = 80 + R() * 440; for (const dx of [-P, 0, P]) glowAt(g, x + dx, y, 200 + R() * 220, i % 2 ? '#8a78c8' : '#d8c8ff', 0.1); }
+    for (let i = 0; i < 200; i++) { const x = R() * P, y = R() * H, r = R() * 1.4 + 0.3; g.fillStyle = rgba('#efe8ff', 0.2 + R() * 0.5); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, r, 0, 7); g.fill(); } }
+  });
+  const R = mulberry32(97), layers = [[], [], []];
+  // far: tall arched mirror frames with a faint reflection
+  for (let i = 0; i < 9; i++) {
+    const x = i / 9 * P + R() * 40, w = 90 + R() * 50, top = 120 + R() * 200;
+    layers[0].push({ x, reach: w + 30,
+      shape(g) { g.beginPath(); g.moveTo(x, H + 20); g.lineTo(x, top + w * 0.5); g.quadraticCurveTo(x, top - w * 0.15, x + w / 2, top - w * 0.3); g.quadraticCurveTo(x + w, top - w * 0.15, x + w, top + w * 0.5); g.lineTo(x + w, H + 20); g.closePath(); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.1); g.beginPath(); g.moveTo(x + 10, H); g.lineTo(x + 10, top + w * 0.5); g.quadraticCurveTo(x + 10, top, x + w / 2, top - 10); g.lineTo(x + w * 0.45, H); g.closePath(); g.fill(); g.strokeStyle = rgba(th.hi, 0.22); g.lineWidth = 2; g.beginPath(); g.moveTo(x + w * 0.75, top + w * 0.35); g.lineTo(x + w * 0.62, H); g.stroke(); },
+      glow(g) { glowAt(g, x + w / 2, top + 30, 80, th.glow, 0.1); } });
+  }
+  // mid: hanging shards, chandeliers of glass, a floor of fallen panes
+  for (let i = 0; i < 12; i++) {
+    const x = i / 12 * P + R() * 50, prisms = [];
+    for (let k = 0; k < 3 + (R() * 3 | 0); k++) prisms.push({ dx: (R() - 0.5) * 100, w: 14 + R() * 24, h: 70 + R() * 190 });
+    layers[1].push({ x, reach: 160,
+      shape(g) { for (const pr of prisms) { g.beginPath(); g.moveTo(x + pr.dx - pr.w / 2, -30); g.lineTo(x + pr.dx - pr.w / 2, pr.h * 0.7); g.lineTo(x + pr.dx, pr.h); g.lineTo(x + pr.dx + pr.w / 2, pr.h * 0.7); g.lineTo(x + pr.dx + pr.w / 2, -30); g.closePath(); g.fill(); } },
+      detail(g) { for (const pr of prisms) { g.fillStyle = rgba(th.hi, 0.18); g.beginPath(); g.moveTo(x + pr.dx, -30); g.lineTo(x + pr.dx + pr.w / 2, -30); g.lineTo(x + pr.dx + pr.w / 2, pr.h * 0.7); g.lineTo(x + pr.dx, pr.h); g.closePath(); g.fill(); } },
+      glow(g) { const pr = prisms[0]; glowAt(g, x + pr.dx, pr.h * 0.7, 60, th.glow, 0.18); } });
+  }
+  for (let i = 0; i < 3; i++) {
+    const x = 160 + i * 520 + R() * 80, y = 120 + R() * 70;
+    layers[1].push({ x, reach: 100, shape(g) { g.lineWidth = 3; g.beginPath(); g.moveTo(x, -20); g.lineTo(x, y); g.stroke(); for (let k = -3; k <= 3; k++) { const a = Math.PI * 0.5 + k * 0.3, len = 50 + 12 * (3 - Math.abs(k)); g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * len * 0.9, y + Math.sin(a) * len); g.stroke(); poly(g, [x + Math.cos(a) * len * 0.9 - 4, y + Math.sin(a) * len, x + Math.cos(a) * len * 0.9, y + Math.sin(a) * len + 18, x + Math.cos(a) * len * 0.9 + 4, y + Math.sin(a) * len]); g.fill(); } },
+      glow(g) { glowAt(g, x, y + 50, 110, '#d8c8ff', 0.18); } });
+  }
+  // near: big shards from the ceiling and the floor, shining along their edges
+  for (let i = 0; i < 7; i++) {
+    const top = i % 2 === 0, x = i / 7 * P + R() * 90, w = 56 + R() * 60, h = 190 + R() * 240, base = top ? -40 : H + 40, dir = top ? -1 : 1;
+    layers[2].push({ x, reach: w + 40, shape(g) { jagPath(g, spike(x, base, w, h, dir, i * 4 + 500), 3, i * 4 + 501); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.2); g.beginPath(); g.moveTo(x, base - dir * h * 0.8); g.lineTo(x + w * 0.5, base); g.lineTo(x, base); g.closePath(); g.fill(); },
+      glow(g) { glowAt(g, x, base - dir * h * 0.8, 70, th.glow, 0.2); } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, y = 470 + R() * 160, rx = 160 + R() * 220, ry = 18 + R() * 28;
+    layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.28; blobPath(g, x, y, rx, ry, i * 9 + 7, 0.3); g.fill(); g.globalAlpha = 1; } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { rim: 0.95, haze: [1.1, 0.8, 0.55][li] })) };
 };
 
 SCENES.title = th => {

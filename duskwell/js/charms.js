@@ -23,6 +23,8 @@ const Charms = (() => {
     soles:      { cost: 1, color: '#bfe8ff', ar: 'نعل المسامير', en: 'Spiked Soles', dAr: 'تثبت قدماك على الجليد فلا تنزلق.', dEn: 'Your feet grip the ice: no more sliding.' },
     wick:       { cost: 1, color: '#ffd890', ar: 'فتيل الفانوس', en: 'Lantern Wick', dAr: 'يتسع ضوء فانوسك فترى أبعد في العتمة.', dEn: 'Your lantern burns wider: you see further in the dark.' },
     cinder:     { cost: 2, color: '#ff8a4a', ar: 'نصل الجمر', en: 'Cinder Edge', dAr: 'ضرباتك تترك حرقاً يؤذي العدو بعد لحظة.', dEn: 'Your strikes leave a burn that wounds the enemy a moment later.' },
+    gale:       { cost: 2, color: '#a8c0ff', ar: 'عباءة العاصفة', en: 'Storm Cloak', dAr: 'قفزتك الثانية أعلى بنحو الربع، وتدفعك الرياح الجانبية أقل.', dEn: 'Your second jump rises about a quarter higher, and crosswinds shove you less.' },
+    echo:       { cost: 2, color: '#d8c8ff', ar: 'صدى النصل', en: 'Blade Echo', dAr: 'كل ضربة ثالثة تُطلق موجة شبحية أمامك.', dEn: 'Every third strike sends a spectral wave ahead of you.' },
     shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
   };
   const ORDER = Object.keys(DEFS);

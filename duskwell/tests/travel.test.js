@@ -23,7 +23,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     }
     return { out, areas: areas.size, rooms: DW.WORLD.order.length };
   });
-  ok('11 stations, one per area, on the floor beside a bench', r.out.length === 11 && r.areas === 11 && r.out.every(o => o.ok), r);
+  ok('13 stations, one per area, on the floor beside a bench', r.out.length === 13 && r.areas === 13 && r.out.every(o => o.ok), r);
 
   // ---------- lighting
   await goto('cx2');

@@ -11,6 +11,8 @@ const THEMES = {
   aqueduct:{ sky: ['#02080c', '#0a2430', '#16505e'], far: '#0f3a46', mid: '#0a2a33', near: '#051a20', tile: '#0d2026', hi: '#8fe0ff', edge: '#010507', fog: '#4fb0c8', part: '#c8f4ff', glow: '#8fe0ff', name: 'aqueduct' },
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
   foundry: { sky: ['#0d0604', '#2a120a', '#5a2a12'], far: '#3a1a0e', mid: '#26120a', near: '#160a06', tile: '#24140e', hi: '#ffb27a', edge: '#060201', fog: '#ff7a3a', part: '#ffc890', glow: '#ff9a50', name: 'foundry' },
+  storm:   { sky: ['#05060f', '#1a2042', '#3c4c7e'], far: '#2a3560', mid: '#1b2447', near: '#0e1430', tile: '#1c2336', hi: '#c4d4ff', edge: '#03040a', fog: '#6a80c0', part: '#e4ecff', glow: '#a8c0ff', name: 'storm' },
+  mirror:  { sky: ['#030308', '#0e0a1c', '#261c40'], far: '#1c1636', mid: '#120e24', near: '#08060f', tile: '#16111f', hi: '#ece4ff', edge: '#020106', fog: '#8a78c8', part: '#f2ecff', glow: '#d8c8ff', name: 'mirror' },
   frost:   { sky: ['#0c1a2a', '#2a4a6a', '#8cb8d8'], far: '#5a86a8', mid: '#3a6080', near: '#1e3a54', tile: '#2b4256', hi: '#e6f8ff', edge: '#050b12', fog: '#a8d8f0', part: '#ffffff', glow: '#cfeeff', name: 'frost' },
   ember:   { sky: ['#0a0304', '#2a0a0a', '#6a1a0a'], far: '#4a1410', mid: '#2a0c0a', near: '#150606', tile: '#201316', hi: '#ff7a3a', edge: '#050203', fog: '#ff4a1a', part: '#ffb060', glow: '#ff8a3a', name: 'ember' },
   title:   { sky: ['#04060e', '#10183a', '#2a2552'], far: '#1a2048', mid: '#0e1430', near: '#060a18', tile: '#0e1430', hi: '#9cc4ff', edge: '#020308', fog: '#5a6aa8', part: '#dfe8ff', glow: '#ffe9b0', name: 'title' },
@@ -18,6 +20,30 @@ const THEMES = {
 };
 
 // ---------- tile layer (rendered once per room and scale) ----------
+// wind zones: pale streaks that run with the wind (up for an updraft, sideways for a crosswind)
+Art.drawWinds = function (g, L, t, cx, cy) {
+  for (const w of L.winds) {
+    if (w.x > cx + VW || w.x + w.w < cx || w.y > cy + VH || w.y + w.h < cy) continue;
+    const n = Math.max(4, Math.round(w.w * w.h / 2600));
+    g.save(); g.beginPath(); g.rect(w.x, w.y, w.w, w.h); g.clip();
+    g.lineCap = 'round'; g.lineWidth = 2;
+    for (let i = 0; i < n; i++) {
+      const h1 = hash2(i, 7, w.x | 0), h2 = hash2(i, 11, w.y | 0), len = 22 + h1 * 34;
+      g.strokeStyle = 'rgba(214,230,255,' + (0.22 + 0.3 * h2) + ')';
+      g.beginPath();
+      if (w.wy) {
+        const span = w.h + len, d = (h2 * span - Math.sign(w.wy) * t * Math.abs(w.wy) * 0.8) % span, y = w.y + (d < 0 ? d + span : d), x = w.x + 6 + h1 * (w.w - 12);
+        g.moveTo(x, y); g.lineTo(x, y + (w.wy < 0 ? len : -len));
+      } else {
+        const span = w.w + len, d = (h2 * span + Math.sign(w.wx) * t * Math.abs(w.wx) * 2.4) % span, x = w.x + (d < 0 ? d + span : d), y = w.y + 6 + h1 * (w.h - 12);
+        g.moveTo(x, y); g.lineTo(x - Math.sign(w.wx) * len, y);
+      }
+      g.stroke();
+    }
+    g.restore();
+  }
+};
+
 Art.renderLevel = function (L, s) {
   const th = THEMES[L.def.theme];
   const c = document.createElement('canvas');
@@ -517,15 +543,17 @@ Art.ambientInit = function () {
 Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
-    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4, snow = theme === 'frost';
-    const fall = leafy ? 34 : snow ? 30 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'foundry' || theme === 'ember') ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
-    m.x += (Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
+    const leafy = theme === 'town' && m.kind < 0.6, bubble = (theme === 'moss' || theme === 'aqueduct') && m.kind < 0.4, snow = theme === 'frost', rain = theme === 'storm';
+    const fall = rain ? 420 : leafy ? 34 : snow ? 30 : theme === 'throne' ? 12 : 0, rise = bubble ? 26 : (theme === 'foundry' || theme === 'ember') ? 30 : (theme === 'crystal' || theme === 'cave' || theme === 'spore') ? 10 : 4;
+    m.x += (rain ? -110 : Math.sin(t * 0.5 + m.p) * (leafy ? 30 : 8)) * dt * m.z;
     m.y += (fall - rise) * dt * m.z;
     m.rot += dt * (leafy ? 2 : 0);
     if (m.y < -12) m.y = VH + 12; if (m.y > VH + 12) m.y = -12;
     if (m.x < -12) m.x = VW + 12; if (m.x > VW + 12) m.x = -12;
     const a = (0.3 + 0.5 * Math.abs(Math.sin(t * 1.3 + m.p))) * m.z;
-    if (snow) {
+    if (rain) {
+      g.strokeStyle = 'rgba(205,220,255,' + (0.18 + 0.25 * m.z) + ')'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(m.x, m.y); g.lineTo(m.x + 4 + 3 * m.z, m.y - 12 - 8 * m.z); g.stroke();
+    } else if (snow) {
       g.fillStyle = 'rgba(255,255,255,' + Math.min(0.9, 0.35 + a) + ')'; g.beginPath(); g.arc(m.x, m.y, 1.2 + m.s * m.z * 0.7, 0, 7); g.fill();
     } else if (leafy) {
       g.save(); g.translate(m.x, m.y); g.rotate(m.rot); g.scale(1, Math.abs(Math.cos(m.rot * 1.3)) * 0.8 + 0.2);
@@ -600,6 +628,16 @@ Art.drawAcid = function (g, x, y, surface, t, th) {
     if (Math.sin(t * 1.7 + x * 5) > 0.93) { g.fillStyle = 'rgba(255,230,150,0.9)'; ellipse(g, px + 16, py + 3, 3, 4); g.fill(); }
     return;
   }
+  if (th && th.name === 'mirror') {             // quicksilver
+    const g1 = g.createLinearGradient(0, py, 0, py + TILE); g1.addColorStop(0, 'rgba(230,224,250,0.92)'); g1.addColorStop(1, 'rgba(110,96,170,0.9)');
+    g.fillStyle = g1; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
+    if (!surface) { g.fillStyle = 'rgba(255,255,255,' + (0.06 + 0.06 * Math.sin(t * 2 + x * 3 + y)) + ')'; g.fillRect(px, py, TILE, TILE); return; }
+    bloom(g, px + 16, py + 8, 34, '#e8e0ff', 0.22);
+    g.beginPath(); g.moveTo(px, py + 10);
+    for (let i = 0; i <= 4; i++) g.lineTo(px + i * 8, py + 8 + Math.sin(t * 2 + (x * 4 + i) * 0.9) * 2);
+    g.lineTo(px + TILE, py + 14); g.lineTo(px, py + 14); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.9)'; g.fill();
+    return;
+  }
   g.fillStyle = 'rgba(70,200,80,0.55)'; g.fillRect(px, py + (surface ? 8 : 0), TILE, TILE - (surface ? 8 : 0));
   if (!surface) return;
   bloom(g, px + 16, py + 10, 30, '#9dff6a', 0.18);
@@ -631,7 +669,7 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
-const DARKNESS = { frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+const DARKNESS = { storm: 0.42, mirror: 0.62, frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }

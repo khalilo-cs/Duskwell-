@@ -47,7 +47,8 @@
   fr4.plat(6, 23, 5).plat(13, 20, 5).plat(20, 17, 5).plat(27, 14, 6);
   fr4.solid(36, 12, 12, 3);                                   // a block at the top of the stair
   fr4.plat(50, 15, 5).plat(55, 19, 5);
-  fr4.door('w', 0, 23, 1, 3, 'fr3', 'e').door('e', 63, 23, 1, 3, 'fr5', 'w');
+  fr4.plat(51, 10, 5).plat(57, 8, 5);                           // up to the north-east door: the way to Stormcrest
+  fr4.door('w', 0, 23, 1, 3, 'fr3', 'e').door('e', 63, 23, 1, 3, 'fr5', 'w').door('ne', 63, 5, 1, 3, 'sc1', 'w');
   fr4.enemy('veil', 18, 14).enemy('veil', 31, 9).enemy('chainman', 46, 25).enemy('moth', 55, 11).enemy('slime', 58, 25);
   fr4.item('charm_soles', 41, 11, 'charm', { charm: 'soles' });
 

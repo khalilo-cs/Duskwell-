@@ -4,6 +4,7 @@
 // but not complete, so a room that passes is playable; a room that fails needs a look.
 //   const { install, run } = require('./explore'); await install(page); const r = await run(page, 'fr1', {...abilities}, { door: 'w' });
 // Moving platforms, crumbling floors and enemies are not simulated: use rooms without them for the check.
+// Wind zones are real physics (Level.winds): pass { neutral: true } to add programs that ride a lift straight up before steering.
 const SRC = `(() => {
   const DT = 1 / 60;
   function run(roomId, abilities, spawn, opt) {
@@ -33,6 +34,9 @@ const SRC = `(() => {
         progs.push({ dir, st, h, d, j, wall: false });
       }
       if (ab.wall) for (const dir of [-1, 1]) for (const st of ['edge', 'center']) for (const h of [0.2, 0.45]) for (const flip of [false, true]) for (const d of dashes) progs.push({ dir, st, h, d, j: null, wall: true, flip });
+      // wind: ride a lift straight up for a while, then steer (lag = seconds before any direction is held)
+      if (opt.neutral) for (const dir of [-1, 1]) for (const h of [0, 0.45]) for (const lag of [0.3, 0.6, 0.9, 1.2, 1.6, 2.0]) for (const j of ab.double ? [null, 0.5] : [null]) progs.push({ dir, st: 'center', h, d: null, j, lag, wall: false, long: true });
+      if (opt.neutral) for (const dir of [-1, 1]) for (const st of ['edge', 'center']) for (const h of [0.2, 0.45]) for (const a of [0.12, 0.22, 0.34]) for (const b of [0.9, 1.3, 1.7, 2.1, 2.6]) for (const j of ab.double ? [null, 0.9] : [null]) progs.push({ dir, st, h, d: null, j, win: [a, b], wall: false, long: true });
       const touch = () => {
         const cx = P.cx, cy = P.cy;
         for (const d of L.def.doors) if (cx > d.x * TILE && cx < (d.x + d.w) * TILE && cy > d.y * TILE && cy < (d.y + d.h) * TILE) doors.add(d.id);
@@ -42,11 +46,12 @@ const SRC = `(() => {
         for (const k of Object.keys(held)) delete held[k];
         P.place(x, y, p.dir); P.ab = Object.assign({}, ab); P.hp = P.maxHp = 5; P.invuln = 1e9; P.hurtT = 0; P.dead = false; P.sitting = null; P.onGround = true;
         let air = 0, dir = p.dir, wallT = -1, lands = [], wj = 0;
-        for (let f = 0; f < (p.wall ? 480 : 150); f++) {
+        for (let f = 0; f < (p.wall ? 480 : p.long ? 300 : 150); f++) {
           const t = f * DT;
           for (const k of Object.keys(edge)) delete edge[k];
           if (p.wall && P.sliding && (wallT < 0 || t > wallT + 0.2) && wj < 16) { edge.jump = true; wallT = t; wj++; if (p.flip) dir = -dir; }   // the key is already down on the frame of the press
-          held.left = dir < 0; held.right = dir > 0;
+          const on = p.win ? (t < p.win[0] || t >= p.win[1]) : t >= (p.lag || 0);
+          held.left = dir < 0 && on; held.right = dir > 0 && on;
           if (f === 0 && p.h > 0) edge.jump = true;
           held.jump = (p.h > 0 && t < p.h) || (p.j != null && t >= p.j && t < p.j + 0.3) || (wallT >= 0 && t < wallT + 0.3);
           if (p.d != null && Math.abs(t - p.d) < DT / 2) edge.dash = true;

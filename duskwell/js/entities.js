@@ -8,7 +8,9 @@ class Level {
     this.t = Uint8Array.from(def.t);
     this.pw = def.w * TILE; this.ph = def.h * TILE;
     this.ice = def.iceCells || new Set();
+    this.winds = (def.winds || []).map(w => ({ x: w.x * TILE, y: w.y * TILE, w: w.w * TILE, h: w.h * TILE, wx: w.wx, wy: w.wy }));
   }
+  windAt(px, py) { for (const w of this.winds) if (px >= w.x && px < w.x + w.w && py >= w.y && py < w.y + w.h) return w; return null; }
   isIce(tx, ty) { return this.ice.size > 0 && tx >= 0 && ty >= 0 && tx < this.w && ty < this.h && this.ice.has(ty * this.w + tx); }
   get(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return T_SOLID;
@@ -229,7 +231,7 @@ class Player {
         this.jumpBuf = 0; this.wallCoyote = 0; this.dashT = 0; this.airDash = true; this.djAvail = true;
         Sound.play('jump'); G.burst(this.cx + this.wallDir * 10, this.cy, 6, { color: '#cfd8e0', speed: 90, life: 0.3, size: 2 });
       } else if (this.ab.double && this.djAvail) {
-        this.vy = -630; this.djAvail = false; this.jumping = true; this.jumpBuf = 0; this.dashT = 0;
+        this.vy = Charms.has('gale') ? -770 : -630; this.djAvail = false; this.jumping = true; this.jumpBuf = 0; this.dashT = 0;
         Sound.play('djump'); G.burst(this.cx, this.y + this.h, 12, { color: '#e8f4ff', speed: 140, life: 0.45, size: 3, vy: 40 });
         G.ring(this.cx, this.y + this.h - 4, '#d8ecff');
       }
@@ -243,12 +245,27 @@ class Player {
       this.atkDir = iy < 0 ? 'up' : (iy > 0 && !this.onGround ? 'down' : 'side');
       this.atkT = 0.16; this.atkCD = Charms.has('swift') ? 0.21 : 0.34; this.atkAlt ^= 1; this.hits = new Set();
       Sound.play('slash');
+      if (Charms.has('echo') && this.atkDir === 'side' && (this.echoN = (this.echoN || 0) + 1) % 3 === 0) {     // Blade Echo: every third strike sends a wave
+        G.projs.push(new Proj({ kind: 'wave', x: this.cx + this.face * 34, y: this.cy - 4, vx: this.face * 560, vy: 0, r: 17, dmg: Math.max(2, Math.round(this.nailDamage() * 0.6)), friendly: true, pierce: true, life: 0.55, color: '#d8c8ff' }));
+        G.burst(this.cx + this.face * 34, this.cy - 4, 8, { color: '#d8c8ff', speed: 140, life: 0.3, size: 3 });
+      }
     }
     if (this.atkT > 0) this.attackHits();
 
+    // ---- wind: updrafts lift to their own speed, crosswinds push the hero sideways while airborne ----
+    let windPush = 0;
+    const wz = this.dashT <= 0 && !this.dead ? L.windAt(this.cx, this.cy) : null;
+    if (wz) {
+      if (wz.wy < 0 && this.vy > wz.wy) this.vy = Math.max(wz.wy, this.vy - 3600 * dt);
+      else if (wz.wy > 0 && this.vy < wz.wy) this.vy = Math.min(wz.wy, this.vy + 3600 * dt);
+      if (wz.wx && !this.onGround) windPush = wz.wx * (Charms.has('gale') ? 0.4 : 1);
+    }
+    this.inWind = !!wz;
     // ---- move ----
     const wasGround = this.onGround, fallV = this.vy, prevBottom = this.y + this.h;
+    this.vx += windPush;
     moveBody(this, dt, L);
+    if (windPush) this.vx = this.hitL || this.hitR ? 0 : this.vx - windPush;
     Mech.land(this, prevBottom);
     if (this.onGround && this.face !== faceBefore && this.atkT <= 0) this.turnT = 0.1;
     if (this.onGround && !wasGround && fallV > 300) { Sound.play('land'); this.landT = 0.12; G.burst(this.cx, this.y + this.h, 6, { color: '#8d9aa8', speed: 80, life: 0.3, size: 2 }); }

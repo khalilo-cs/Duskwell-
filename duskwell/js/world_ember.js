@@ -65,8 +65,9 @@
   const em6 = ember('em6', 56, 26, 19, 24);
   em6.solid(0, 22, 56, 4);
   em6.plat(10, 18, 6).plat(24, 15, 6).plat(36, 18, 6);
+  em6.plat(5, 15, 4).plat(1, 12, 5);                            // up to the north-west door: the way to the Mirror Vault
   em6.solid(42, 14, 12, 8).air(44, 17, 8, 5).breakable(42, 17, 2, 5);         // a vault, opened from the left
-  em6.door('e', 55, 19, 1, 3, 'em5', 'w').door('w', 0, 19, 1, 3, 'em7', 'e');
+  em6.door('e', 55, 19, 1, 3, 'em5', 'w').door('w', 0, 19, 1, 3, 'em7', 'e').door('nw', 0, 9, 1, 3, 'mv1', 'e');
   em6.bench(50, 21);
   em6.enemy('chainman', 18, 21).enemy('chainman', 33, 21).enemy('roller', 8, 21).enemy('lavaworm', 28, 21).enemy('imp', 38, 17).enemy('moth', 20, 9);
   em6.item('seed_em6', 48, 21, 'seed');

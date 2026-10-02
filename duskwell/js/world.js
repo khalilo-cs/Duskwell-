@@ -11,7 +11,7 @@ class RoomBuilder {
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
     this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = []; this.iceCells = new Set();
-    this.signs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
+    this.signs = []; this.winds = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
   fill(x, y, w, h, v) {
@@ -41,6 +41,8 @@ class RoomBuilder {
   item(id, x, y, kind, o) { this.items.push(Object.assign({ id, x, y, kind }, o || {})); return this; }
   npc(type, x, y) { this.npcs.push({ type, x, y }); return this; }
   bench(x, y) { this.benches.push({ x, y }); return this; }
+  // wind zone (tiles): wy < 0 is an updraft (the hero rises at that speed in px/s), wy > 0 a downdraft, wx pushes sideways in the air
+  wind(x, y, w, h, o) { this.winds.push(Object.assign({ x, y, w, h, wx: 0, wy: 0 }, o || {})); return this; }
   station(x, y) { this.stations.push({ x, y }); return this; }          // lantern station: fast travel between lit stations
   sign(x, y, text) { this.signs.push({ x, y, text }); return this; }
   decor(type, x, y, o) { this.deco.push(Object.assign({ type, x, y }, o || {})); return this; }

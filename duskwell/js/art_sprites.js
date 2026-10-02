@@ -503,7 +503,7 @@ function tintedProj(g, p, t) {
     g.save(); g.translate(p.x + (p.t < p.tele ? Math.sin(p.t * 60) * 1.5 : 0), p.y);
     bloom(g, 0, 0, 34, pal.glow, p.t < p.tele ? 0.25 : 0.5);
     if (pal.spike) { poly(g, [-11, -18, 11, -18, 5, 6, 0, 26, -5, 6]); fs(g, pal.fill, INK, 3); poly(g, [-11, -18, -1, -18, 0, 26, -5, 6]); fs(g, pal.fill2, null); }
-    else { g.rotate(p.t * 3); poly(g, [-16, -4, -6, -16, 10, -12, 17, 2, 8, 15, -10, 13]); fs(g, '#2c2228', INK, 3.2); poly(g, [-6, -16, 10, -12, 2, -2]); fs(g, pal.fill, null); poly(g, [-3, 4, 8, 2, 3, 11]); fs(g, pal.fill2, null); }
+    else { g.rotate(p.t * 3); poly(g, [-16, -4, -6, -16, 10, -12, 17, 2, 8, 15, -10, 13]); fs(g, pal.base || '#2c2228', INK, 3.2); poly(g, [-6, -16, 10, -12, 2, -2]); fs(g, pal.fill, null); poly(g, [-3, 4, 8, 2, 3, 11]); fs(g, pal.fill2, null); }
     g.restore(); return true;
   }
   if (k === 'pillar') {

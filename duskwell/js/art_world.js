@@ -12,6 +12,8 @@ const THEMES = {
   webbed:  { sky: ['#020103', '#0b0810', '#1a1424'], far: '#161022', mid: '#0d0a16', near: '#06050b', tile: '#110e18', hi: '#b8a8d8', edge: '#010102', fog: '#6a5a8a', part: '#d8d0ff', glow: '#c8a8ff', name: 'webbed' },
   foundry: { sky: ['#0d0604', '#2a120a', '#5a2a12'], far: '#3a1a0e', mid: '#26120a', near: '#160a06', tile: '#24140e', hi: '#ffb27a', edge: '#060201', fog: '#ff7a3a', part: '#ffc890', glow: '#ff9a50', name: 'foundry' },
   storm:   { sky: ['#05060f', '#1a2042', '#3c4c7e'], far: '#2a3560', mid: '#1b2447', near: '#0e1430', tile: '#1c2336', hi: '#c4d4ff', edge: '#03040a', fog: '#6a80c0', part: '#e4ecff', glow: '#a8c0ff', name: 'storm' },
+  bone:    { sky: ['#07060a', '#1c1612', '#3e3224'], far: '#2c2219', mid: '#1d1610', near: '#0e0a07', tile: '#2a2219', hi: '#f2e8d0', edge: '#050403', fog: '#bfae8c', part: '#efe4c8', glow: '#bfe8d0', name: 'bone' },
+  lunar:   { sky: ['#03040c', '#0e1236', '#2c3270'], far: '#20285a', mid: '#141a40', near: '#0a0e26', tile: '#1a1f3a', hi: '#dfe6ff', edge: '#020309', fog: '#8a96e0', part: '#f4f0ff', glow: '#e8ecff', name: 'lunar' },
   mirror:  { sky: ['#030308', '#0e0a1c', '#261c40'], far: '#1c1636', mid: '#120e24', near: '#08060f', tile: '#16111f', hi: '#ece4ff', edge: '#020106', fog: '#8a78c8', part: '#f2ecff', glow: '#d8c8ff', name: 'mirror' },
   frost:   { sky: ['#0c1a2a', '#2a4a6a', '#8cb8d8'], far: '#5a86a8', mid: '#3a6080', near: '#1e3a54', tile: '#2b4256', hi: '#e6f8ff', edge: '#050b12', fog: '#a8d8f0', part: '#ffffff', glow: '#cfeeff', name: 'frost' },
   ember:   { sky: ['#0a0304', '#2a0a0a', '#6a1a0a'], far: '#4a1410', mid: '#2a0c0a', near: '#150606', tile: '#201316', hi: '#ff7a3a', edge: '#050203', fog: '#ff4a1a', part: '#ffb060', glow: '#ff8a3a', name: 'ember' },
@@ -40,6 +42,25 @@ Art.drawWinds = function (g, L, t, cx, cy) {
       }
       g.stroke();
     }
+    g.restore();
+  }
+};
+
+// low-gravity fields: a faint silver haze, slow motes that rise and twinkle, and a shimmering rim
+Art.drawGravs = function (g, L, t, cx, cy) {
+  for (const z of L.gravs) {
+    if (z.x > cx + VW || z.x + z.w < cx || z.y > cy + VH || z.y + z.h < cy) continue;
+    g.save(); g.beginPath(); g.rect(z.x, z.y, z.w, z.h); g.clip();
+    const gr = g.createLinearGradient(0, z.y, 0, z.y + z.h); gr.addColorStop(0, 'rgba(190,200,255,0.03)'); gr.addColorStop(1, 'rgba(190,200,255,0.12)');
+    g.fillStyle = gr; g.fillRect(z.x, z.y, z.w, z.h);
+    const n = Math.max(6, Math.round(z.w * z.h / 3600));
+    for (let i = 0; i < n; i++) {
+      const h1 = hash2(i, 3, z.x | 0), h2 = hash2(i, 5, z.y | 0), h3 = hash2(i, 9, 31), span = z.h + 20;
+      const d = (h2 * span - t * (10 + h3 * 16)) % span, y = z.y + (d < 0 ? d + span : d), x = z.x + 8 + h1 * (z.w - 16) + Math.sin(t * 0.7 + i) * 6;
+      const a = 0.25 + 0.4 * (0.5 + 0.5 * Math.sin(t * 2 + i * 1.7));
+      bloom(g, x, y, 6 + h3 * 6, '#dfe6ff', a * 0.6); g.fillStyle = 'rgba(255,255,255,' + a + ')'; g.beginPath(); g.arc(x, y, 1 + h3, 0, 7); g.fill();
+    }
+    g.strokeStyle = 'rgba(200,210,255,' + (0.14 + 0.08 * Math.sin(t * 1.4)) + ')'; g.lineWidth = 2; g.setLineDash([10, 8]); g.lineDashOffset = -t * 12; g.strokeRect(z.x + 1, z.y + 1, z.w - 2, z.h - 2); g.setLineDash([]);
     g.restore();
   }
 };
@@ -669,7 +690,7 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
-const DARKNESS = { storm: 0.42, mirror: 0.62, frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+const DARKNESS = { bone: 0.58, lunar: 0.4, storm: 0.42, mirror: 0.62, frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }

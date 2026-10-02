@@ -2,12 +2,12 @@
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
 const SAVE_KEY = 'duskwell_save_v1';
-const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a', stormcrest: '#a8c0ff', mirror: '#e0d4ff' };
+const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a', stormcrest: '#a8c0ff', mirror: '#e0d4ff', ossuary: '#efe4c8', lunar: '#cfd8ff' };
 
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
   level: null, player: new Player(), enemies: [], projs: [], geos: [], items: [], parts: [], fx: [],
-  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0, bolt: 0, boltCD: 4, seen: {}, bestSel: 0, bestT: 0,
+  benches: [], npcs: [], signs: [], gates: [], cam: { x: 0, y: 0 }, camV: { x: 0, y: 0 }, shakeT: 0, shakeA: 0, hitstopT: 0, slowmo: 0, flash: 0, bolt: 0, boltCD: 4, seen: {}, bestSel: 0, bestT: 0, eclipse: 0, eclipseT: 0,
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
@@ -76,7 +76,7 @@ function enterRoom(id, spawn) {
   const def = WORLD.rooms[id];
   const L = new Level(def);
   G.level = L;
-  G.enemies = []; G.projs = []; G.geos = []; G.items = []; G.fx = []; G.parts = [];
+  G.enemies = []; G.projs = []; G.geos = []; G.items = []; G.fx = []; G.parts = []; G.eclipse = G.eclipseT = 0;
   G.benches = def.benches.map(b => ({ x: b.x, y: b.y, px: b.x * TILE + 16, py: (b.y + 1) * TILE, room: id }));
   G.npcs = def.npcs.map(n => ({ type: n.type, shop: n.shop, px: n.x * TILE + 16, py: (n.y + 1) * TILE }));
   G.stations = def.stations.map(t => ({ px: t.x * TILE + 16, py: (t.y + 1) * TILE, room: id }));
@@ -517,6 +517,7 @@ function update(dt) {
   if (G.areaBanner) { G.areaBanner.t += dt; if (G.areaBanner.t > 3.6) G.areaBanner = null; }
   if (G.deathText > 0) G.deathText -= dt;
   G.flash = Math.max(0, G.flash - dt * 1.8);
+  G.eclipse = approach(G.eclipse, G.eclipseT, dt * 1.6);
   G.geoPulse = Math.max(0, G.geoPulse - dt * 3);
   if (G.shakeT > 0) G.shakeT -= dt;
   switch (G.state) {
@@ -670,7 +671,7 @@ function drawMenu(g, items, sel, y0, step) {
 }
 
 // colour of the air, specular shine of the rock and how much the heat shimmers, per area
-const SHINE = { storm: 0.55, mirror: 0.85, frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
+const SHINE = { bone: 0.38, lunar: 0.8, storm: 0.55, mirror: 0.85, frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
   const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
@@ -736,6 +737,7 @@ function drawWorld(g) {
   }
   g.save(); g.translate(-cx, -cy);
   Art.drawWinds(g, L, t, cx, cy);
+  Art.drawGravs(g, L, t, cx, cy);
   if (P.wailT > 0) Art.drawWail(g, P, t);
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
@@ -753,6 +755,15 @@ function drawWorld(g) {
   Art.drawFog(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawForeground(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawAmbient(g, STEP, L.def.theme, G.cam.x, G.cam.y, t);
+  if (G.eclipse > 0.01) {                       // the Eclipse Regent: the hall goes dark around a small light; rays and the boss still show
+    const px = P.cx - cx, py = P.cy - cy, eg = g.createRadialGradient(px, py, 30, px, py, 300);
+    eg.addColorStop(0, 'rgba(2,3,12,' + 0.2 * G.eclipse + ')'); eg.addColorStop(1, 'rgba(2,3,12,' + 0.93 * G.eclipse + ')');
+    g.fillStyle = eg; g.fillRect(0, 0, VW, VH);
+    g.save(); g.translate(-cx, -cy);
+    for (const e of G.enemies) if (e.isBoss && e.state !== 'dying') bloom(g, e.cx, e.cy, 130, '#cfd8ff', 0.3 * G.eclipse);
+    for (const p of G.projs) if (p.kind === 'ray') Art.drawProj(g, p, G.t);
+    g.restore();
+  }
   const vg = g.createRadialGradient(VW / 2, VH / 2, VH * 0.45, VW / 2, VH / 2, VW * 0.62);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = vg; g.fillRect(0, 0, VW, VH);

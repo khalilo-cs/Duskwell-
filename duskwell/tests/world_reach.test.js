@@ -38,6 +38,22 @@ const SPECS = [
   ['mv5', 'e', DWD, ['w'], ['cache_mv5'], null],
   ['mv6', 'e', DWD, ['w'], [], null],
   ['mv7', 'e', DWD, [], [], null],
+  // the Ossuary: entered from the right like the Mirror Vault, left by the west
+  ['os1', 'e', DWD, ['w'], [], [DW_, 'w']],
+  ['os2', 'e', DWD, ['w'], ['cache_os2'], null],
+  ['os3', 'e', DWD, ['w'], ['seed_os3'], null],
+  ['os4', 'e', DWD, [], [], null],
+  ['os5', 'e', DWD, ['w'], ['cache_os5'], null],
+  ['os6', 'e', DWD, ['w'], [], null],
+  ['os7', 'e', DWD, [], [], null],
+  // the Lunar Observatory: entered from the left; weak gravity is part of the physics
+  ['lo1', 'w', DWD, ['e'], [], null],
+  ['lo2', 'w', DWD, ['e'], ['cache_lo2'], null],
+  ['lo3', 'w', DWD, ['e'], ['seed_lo3'], null],
+  ['lo4', 'w', DWD, [], [], null],
+  ['lo5', 'w', DWD, ['e'], ['cache_lo5'], null],
+  ['lo6', 'w', DWD, ['e'], [], null],
+  ['lo7', 'w', DWD, [], [], null],
 ];
 (async () => {
   const { browser, page, errors } = await open();

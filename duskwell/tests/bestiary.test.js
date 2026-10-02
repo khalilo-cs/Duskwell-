@@ -1,7 +1,7 @@
 // The bestiary: every creature and boss has an entry and drawn art, creatures are entered when first seen, the list is
 // saved, and the screen opens from the pause menu and browses.
 const { open, shot } = require('./lib');
-let fails = 0;
+let fails = 0, BESTN = 35 + 6 + 4;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };
 (async () => {
   const { browser, page, errors } = await open();
@@ -15,7 +15,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     const areas = BESTIARY.filter(b => !STR.ar['area_' + b.area] && !['hushvale', 'crossroads', 'mossgrove', 'crystal', 'spore', 'aqueduct', 'webbed', 'throne'].includes(b.area)).map(b => b.k);
     return { n: BESTIARY.length, dup, noArt, missEnemy, missBoss, noText, areas };
   });
-  ok('every creature and boss has an entry, art and text in both languages', r.n === 35 && !r.dup.length && !r.noArt.length && !r.missEnemy.length && !r.missBoss.length && !r.noText.length, r);
+  ok('every creature and boss has an entry, art and text in both languages', r.n === BESTN && !r.dup.length && !r.noArt.length && !r.missEnemy.length && !r.missBoss.length && !r.noText.length, r);
   r = await ev(() => {                                        // a creature that comes into view is entered, once
     const { G, P, enterRoom } = DW; G.seen = {};
     enterRoom('cx1', { pos: { x: 10 * 32 + 16, y: 40 * 32 } }); G.state = 'play'; G.areaBanner = null; G.fadeA = 0; G.trans = null; G.enemies = []; P.invuln = 1e9; DW.step(5);
@@ -40,7 +40,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('Enter opens the bestiary screen', r.state === 'bestiary', r);
   await page.keyboard.press('ArrowLeft'); await ev(() => DW.step(1));
   r = await ev(() => DW.G.bestSel);
-  ok('Left from the first entry wraps to the last', r === 34, r);
+  ok('Left from the first entry wraps to the last', r === BESTN - 1, r);
   await ev(() => { DW.G.seen = {}; for (const b of BESTIARY) DW.G.seen[(b.boss ? 'b:' : 'e:') + b.k] = true; DW.G.bestSel = BESTIARY_INDEX['b:king']; });
   await page.waitForTimeout(200); await page.screenshot({ path: shot('bestiary_king.png') });
   await ev(() => { DW.G.bestSel = BESTIARY_INDEX['e:warden']; }); await page.waitForTimeout(200); await page.screenshot({ path: shot('bestiary_warden.png') });

@@ -11,7 +11,7 @@ class RoomBuilder {
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
     this.t = new Uint8Array(w * h);
     this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = []; this.iceCells = new Set();
-    this.signs = []; this.winds = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
+    this.signs = []; this.winds = []; this.gravs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
   fill(x, y, w, h, v) {
@@ -42,6 +42,8 @@ class RoomBuilder {
   npc(type, x, y, shop) { this.npcs.push({ type, x, y, shop }); return this; }
   bench(x, y) { this.benches.push({ x, y }); return this; }
   // wind zone (tiles): wy < 0 is an updraft (the hero rises at that speed in px/s), wy > 0 a downdraft, wx pushes sideways in the air
+  // a low-gravity field (the Observatory): k is the share of normal gravity inside
+  grav(x, y, w, h, o) { this.gravs.push(Object.assign({ x, y, w, h, k: 0.4 }, o || {})); return this; }
   wind(x, y, w, h, o) { this.winds.push(Object.assign({ x, y, w, h, wx: 0, wy: 0 }, o || {})); return this; }
   station(x, y) { this.stations.push({ x, y }); return this; }          // lantern station: fast travel between lit stations
   sign(x, y, text) { this.signs.push({ x, y, text }); return this; }

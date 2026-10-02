@@ -122,7 +122,7 @@ Art.creatureDummy = function (kind, boss) {
     if (boss) { e = new BOSS_TYPES[kind]({ x: 0, y: 0 }); e.state = 'fight'; e.introT = 0; e.invul = false; }
     else if (ENEMY_TYPES[kind]) { e = new ENEMY_TYPES[kind]({ type: kind, x: 0, y: 0 }); e.kind = kind; }
     else { e = { kind, x: 0, y: 0, w: 30, h: 44, get cx() { return this.x + this.w / 2; }, get cy() { return this.y + this.h / 2; } }; }
-    e.alpha = 1; e.flash = 0; e.tele = 0; e.face = 1; e.vx = 0; e.vy = 0; e.onGround = true; if ('buried' in e) e.buried = false;
+    e.isDummy = true; e.alpha = 1; e.flash = 0; e.tele = 0; e.face = 1; e.vx = 0; e.vy = 0; e.onGround = true; if ('buried' in e) e.buried = false;
   } catch (err) { e = null; }
   Art.DUMMY[key] = e;
   return e;

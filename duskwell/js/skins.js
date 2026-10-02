@@ -18,6 +18,8 @@ const Skins = (() => {
     ['roller', 'المدحرج', 'Roller'], ['slime', 'الهلام', 'Slime'], ['chainman', 'حامل السلسلة', 'Chain Bearer'], ['moth', 'فراشة الليل', 'Night Moth'], ['icicle', 'الجليدة', 'Icicle'],
     ['boss_queen', 'زعيم: ملكة الصقيع', 'Boss: Rime Queen'], ['boss_thunderhoof', 'زعيم: حافر الرعد', 'Boss: Thunderhoof'], ['boss_roc', 'زعيم: طائر العاصفة', 'Boss: Storm Roc'],
     ['boss_duelist', 'زعيم: مبارز الزجاج', 'Boss: Glass Duelist'], ['boss_twin', 'زعيم: توأم الجوّال', 'Boss: Wanderer\'s Twin'], ['boss_colossus', 'زعيم: العملاق الجمري', 'Boss: Cinder Colossus'],
+    ['heap', 'الكومة', 'The Heap'], ['skullbat', 'خفّاش الجمجمة', 'Skull Bat'], ['censer', 'المبخرة', 'The Censer'], ['lensling', 'العدسة الزاحفة', 'Lensling'], ['orrery', 'الفلك المصغّر', 'The Orrery'], ['lunarhare', 'أرنب القمر', 'Lunar Hare'],
+    ['boss_bonewright', 'زعيم: نحّات العظام', 'Boss: Bonewright'], ['boss_marrow', 'زعيم: طاغية النخاع', 'Boss: Marrow Tyrant'], ['boss_stargazer', 'زعيم: الراصد', 'Boss: Stargazer'], ['boss_regent', 'زعيم: وصيّ الكسوف', 'Boss: Eclipse Regent'],
   ];
   const imgs = {};          // slot -> HTMLImageElement
   let data = {};            // slot -> data URL

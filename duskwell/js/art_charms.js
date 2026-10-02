@@ -96,6 +96,15 @@ Art.drawCharm = function (g, id, x, y, r, o) {
       for (const [r, a, w] of [[0.34, 1.2, 0.2], [0.6, 1.1, 0.17], [0.86, 1.0, 0.14]]) { g.lineWidth = w; g.beginPath(); g.arc(-0.5, 0, r + 0.2, -a, a); g.stroke(); }
       shape([-0.62, -0.1, -0.1, -0.1, 0, 0, -0.1, 0.1, -0.62, 0.1]);
       break;
+    case 'grave':      // a skull with a rising wisp
+      ellipse(g, 0, 0.1, 0.62, 0.55); fs(g, fill, ink, lw); shape([-0.34, 0.5, 0.34, 0.5, 0.26, 0.9, -0.26, 0.9]);
+      g.fillStyle = ink; ellipse(g, -0.22, 0.02, 0.15, 0.2); g.fill(); ellipse(g, 0.22, 0.02, 0.15, 0.2); g.fill();
+      g.strokeStyle = fill; g.lineWidth = 0.14; g.beginPath(); g.moveTo(0, -0.55); g.quadraticCurveTo(0.3, -0.75, 0, -1); g.stroke();
+      break;
+    case 'moonstep':   // a crescent with a footprint of light
+      g.beginPath(); g.arc(-0.05, -0.05, 0.85, 0.5, Math.PI * 1.55); g.arc(0.2, -0.05, 0.7, Math.PI * 1.45, 0.6, true); g.closePath(); fs(g, fill, ink, lw);
+      g.fillStyle = 'rgba(255,255,255,0.8)'; ellipse(g, 0.45, 0.62, 0.2, 0.12, -0.3); g.fill(); ellipse(g, 0.7, 0.2, 0.12, 0.1, -0.3); g.fill();
+      break;
     case 'shell':      // a ward shield
       g.beginPath(); g.moveTo(0, -0.98); g.lineTo(0.88, -0.6); g.bezierCurveTo(0.88, 0.4, 0.42, 0.82, 0, 1); g.bezierCurveTo(-0.42, 0.82, -0.88, 0.4, -0.88, -0.6); g.closePath(); fs(g, fill, ink, lw);
       g.strokeStyle = 'rgba(30,24,16,0.6)'; g.lineWidth = 0.1; g.beginPath(); g.moveTo(0, -0.7); g.lineTo(0, 0.75); g.moveTo(-0.6, -0.15); g.lineTo(0.6, -0.15); g.stroke();

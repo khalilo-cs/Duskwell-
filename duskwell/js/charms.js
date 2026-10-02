@@ -25,6 +25,8 @@ const Charms = (() => {
     cinder:     { cost: 2, color: '#ff8a4a', ar: 'نصل الجمر', en: 'Cinder Edge', dAr: 'ضرباتك تترك حرقاً يؤذي العدو بعد لحظة.', dEn: 'Your strikes leave a burn that wounds the enemy a moment later.' },
     gale:       { cost: 2, color: '#a8c0ff', ar: 'عباءة العاصفة', en: 'Storm Cloak', dAr: 'قفزتك الثانية أعلى بنحو الربع، وتدفعك الرياح الجانبية أقل.', dEn: 'Your second jump rises about a quarter higher, and crosswinds shove you less.' },
     echo:       { cost: 2, color: '#d8c8ff', ar: 'صدى النصل', en: 'Blade Echo', dAr: 'كل ضربة ثالثة تُطلق موجة شبحية أمامك.', dEn: 'Every third strike sends a spectral wave ahead of you.' },
+    grave:      { cost: 2, color: '#bfe8d0', ar: 'همس القبور', en: 'Grave Whisper', dAr: 'كل عدو تقتله يترك روحاً تملأ روحك.', dEn: 'Every foe you slay leaves a spirit that fills your soul.' },
+    moonstep:   { cost: 1, color: '#cfd8ff', ar: 'خطوة القمر', en: 'Moonstep', dAr: 'تسقط ببطء أكبر، كأن القمر يسندك من تحت.', dEn: 'You fall more slowly, as if the moon held you up from below.' },
     shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
   };
   const ORDER = Object.keys(DEFS);

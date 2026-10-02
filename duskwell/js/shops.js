@@ -54,8 +54,19 @@ const SHOPS = {
   mirror: {
     title: ['تاجر المرايا', 'The Mirror Trader'], npc: 'trader',
     greet: ['التاجر الجوّال: في كل مرآة نسخة منّي تبيع بسعر أقل... لكنها لا تُعطي شيئاً.', 'Wandering trader: In every mirror there is a copy of me selling cheaper... but it never hands anything over.'],
-    items: [gearItem('cloak', 'duskmantle', 2400, needBoss('boss_twin', 'توأم الباحث', "the Wanderer's Twin"))],
+    items: [gearItem('cloak', 'duskmantle', 2400, needBoss('boss_twin', 'توأم الجوّال', "the Wanderer's Twin"))],
   },
+};
+
+SHOPS.ossuary = {
+  title: ['تاجر المقبرة', 'The Ossuary Trader'], npc: 'trader',
+  greet: ['التاجر الجوّال: بين العظام لا يسأل أحد من أين جاءت البضاعة. اشترِ وارحل قبل أن تنهض الكومة.', 'Wandering trader: Among the bones nobody asks where the goods came from. Buy, and leave before the heap rises.'],
+  items: [gearItem('weapon', 'bonesaw', 1500), gearItem('cloak', 'boneward', 900)],
+};
+SHOPS.lunar = {
+  title: ['تاجر المرصد', 'The Observatory Trader'], npc: 'trader',
+  greet: ['التاجر الجوّال: النجوم تُسعّر ما أبيع. وهذا النصل أغلاها: سيف رصدوه قبل أن يصنعوه.', 'Wandering trader: The stars set my prices. This blade is the dearest: a sword they foresaw before it was forged.'],
+  items: [gearItem('weapon', 'rapier', 2400)],
 };
 
 const shopDef = () => SHOPS[G.shopId] || SHOPS.general;

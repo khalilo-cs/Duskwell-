@@ -166,13 +166,15 @@ const TRADER_PAL = {
   ember:  { cloak: '#7a2a1c', trim: '#ff9a50', eye: '#ffb040', fur: false, lamp: '#ff9a50' },
   storm:  { cloak: '#3a4a78', trim: '#a8c0ff', eye: '#bfd0ff', fur: false, lamp: '#cfe0ff' },
   mirror: { cloak: '#7a8898', trim: '#e8f0ff', eye: '#ffffff', fur: false, lamp: '#e8f0ff' },
+  ossuary: { cloak: '#8a7e66', trim: '#e8dcc0', eye: '#9fe8c0', fur: false, lamp: '#9fe8c0' },
+  lunar:  { cloak: '#2a3070', trim: '#ffe6a8', eye: '#e8ecff', fur: false, lamp: '#e8ecff' },
 };
 NPC_ART.trader = (g, n, t, bob) => {
   const pal = TRADER_PAL[n.shop] || TRADER_PAL.frost;
   groundD(g, 36);
   // the pack: a frame piled with sacks, rolls, a pot and blades sticking out
   g.save(); g.translate(-22, -34 - bob);
-  Art.drawWeapon(g, n.shop === 'ember' ? 'cleaver' : n.shop === 'storm' ? 'scythe' : n.shop === 'mirror' ? 'rapier' : 'fangs', -4, -14, -1.2, 30, t);
+  Art.drawWeapon(g, ({ ember: 'cleaver', storm: 'scythe', mirror: 'rapier', ossuary: 'bonesaw', lunar: 'rapier' })[n.shop] || 'fangs', -4, -14, -1.2, 30, t);
   formD(g, ell(0, 4, 17, 21), [0, 4, 17, 21], '#7a5a38', { spec: 0.25, lw: 3 });
   g.save(); g.beginPath(); g.ellipse(0, 4, 17, 21, 0, 0, 7); g.clip();
   stitchD(g, -16, -8, 16, -8, '#e8d098', 12); stitchD(g, -16, 10, 16, 10, '#e8d098', 12);

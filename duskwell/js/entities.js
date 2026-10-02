@@ -8,8 +8,10 @@ class Level {
     this.t = Uint8Array.from(def.t);
     this.pw = def.w * TILE; this.ph = def.h * TILE;
     this.ice = def.iceCells || new Set();
+    this.gravs = (def.gravs || []).map(z => ({ x: z.x * TILE, y: z.y * TILE, w: z.w * TILE, h: z.h * TILE, k: z.k }));
     this.winds = (def.winds || []).map(w => ({ x: w.x * TILE, y: w.y * TILE, w: w.w * TILE, h: w.h * TILE, wx: w.wx, wy: w.wy }));
   }
+  gravAt(px, py) { for (const z of this.gravs) if (px >= z.x && px < z.x + z.w && py >= z.y && py < z.y + z.h) return z; return null; }
   windAt(px, py) { for (const w of this.winds) if (px >= w.x && px < w.x + w.w && py >= w.y && py < w.y + w.h) return w; return null; }
   isIce(tx, ty) { return this.ice.size > 0 && tx >= 0 && ty >= 0 && tx < this.w && ty < this.h && this.ice.has(ty * this.w + tx); }
   get(tx, ty) {
@@ -215,7 +217,10 @@ class Player {
       }
       // ---- gravity ----
       // heavier gravity while falling removes the floaty feel
-      this.vy = Math.min(this.vy + GRAV * (this.vy > 0 ? FALL_MULT : 1) * dt, MAXFALL);
+      const gz = L.gravAt(this.cx, this.cy);
+      this.moonK = gz ? gz.k : 1;
+      const step = Charms.has('moonstep') && this.vy > 0 ? 0.7 : 1;                  // Moonstep: a slower fall
+      this.vy = Math.min(this.vy + GRAV * this.moonK * step * (this.vy > 0 ? FALL_MULT : 1) * dt, MAXFALL * (gz ? 0.6 : 1) * step);
     }
 
     // ---- wall slide / wall jump ----
@@ -660,6 +665,17 @@ class Proj {
       if (this.active && !G.player.dead && overlap(G.player.hurtbox(), this.rect())) G.player.hurt(this.dmg, this.x);
       return;
     }
+    if (this.kind === 'ray') {                // a thin warning line, then a short window of light that wounds whatever it crosses
+      this.active = this.t >= this.tele && this.t < this.tele + this.dur;
+      if (this.t >= this.tele + this.dur) this.dead = true;
+      if (this.t >= this.tele && !this.fired) { this.fired = true; Sound.play('rend'); G.shake(3, 0.12); }
+      if (this.active && !G.player.dead) {
+        const hb = G.player.hurtbox(), px = hb.x + hb.w / 2, py = hb.y + hb.h / 2, x1 = this.x + Math.cos(this.a) * this.len, y1 = this.y + Math.sin(this.a) * this.len;
+        const dx = x1 - this.x, dy = y1 - this.y, l2 = dx * dx + dy * dy || 1, u = clamp(((px - this.x) * dx + (py - this.y) * dy) / l2, 0, 1);
+        if (Math.hypot(px - (this.x + dx * u), py - (this.y + dy * u)) < this.rw / 2 + Math.min(hb.w, hb.h) / 2) G.player.hurt(this.dmg, this.x);
+      }
+      return;
+    }
     if (this.kind === 'blast') {              // an expanding ring of fire that wounds once
       this.r = this.r0 * (0.45 + 0.8 * clamp(this.t / 0.18, 0, 1));
       const pl = G.player;
@@ -783,6 +799,7 @@ class Enemy {
   onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15);
+    if (Charms.has('grave') && !G.player.dead) { G.player.soul = Math.min(G.player.maxSoul, G.player.soul + 8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
     G.burst(this.cx, this.cy, 8, { color: '#0a0d12', speed: 180, life: 0.6, size: 5 });
     G.dropGeo(this.cx, this.cy, this.geo);

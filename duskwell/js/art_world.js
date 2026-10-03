@@ -81,10 +81,10 @@ Art.renderLevel = function (L, s) {
     for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (!isS(x + i, y + j)) air++;
     const v = hash2(x, y, seed);
     const depth = clamp(air / 10, 0, 1);
-    g.fillStyle = mix(mix(th.tile, '#000000', 0.42 - depth * 0.26), th.hi, v * 0.018);
+    g.fillStyle = mix(mix(th.tile, '#000000', 0.26 - depth * 0.16), th.hi, 0.06 + v * 0.035);
     g.fillRect(x * TILE - 0.5, y * TILE - 0.5, TILE + 1, TILE + 1);
-    if (v > 0.6 && depth > 0.2) {            // rounded pebbles in the rock face
-      g.fillStyle = rgba(th.hi, 0.05); ellipse(g, x * TILE + 8 + v * 16, y * TILE + 10 + v * 10, 6 + v * 5, 4 + v * 3); g.fill();
+    if (v > 0.45) {                           // rounded pebbles in the rock face, also deep inside so a mass of rock is never a flat black
+      g.fillStyle = rgba(th.hi, 0.08 + depth * 0.03); ellipse(g, x * TILE + 8 + v * 16, y * TILE + 10 + v * 10, 6 + v * 5, 4 + v * 3); g.fill();
       g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1.5; g.stroke();
     }
   }
@@ -114,6 +114,20 @@ Art.renderLevel = function (L, s) {
     if (eB) { g.moveTo(px, py + TILE + wob(x, y + 1)); g.lineTo(px + TILE, py + TILE + wob(x + 1, y + 1)); }
     if (eL) { g.moveTo(px + wob(x, y + 3), py); g.lineTo(px + wob(x, y + 4), py + TILE); }
     if (eR) { g.moveTo(px + TILE + wob(x + 1, y + 3), py); g.lineTo(px + TILE + wob(x + 1, y + 4), py + TILE); }
+    g.stroke();
+    // the border read clearly against any background: a light line just inside the ink, and a faint light line just outside it
+    g.lineCap = 'round';
+    g.strokeStyle = rgba(th.hi, 0.5); g.lineWidth = 1.6; g.beginPath();
+    if (!eT) { /* the top rim is drawn above */ } else { g.moveTo(px + 1, py + 4.5); g.lineTo(px + TILE - 1, py + 4.5); }
+    if (eL) { g.moveTo(px + 4.5, py + (eT ? 6 : 0)); g.lineTo(px + 4.5, py + TILE - (eB ? 6 : 0)); }
+    if (eR) { g.moveTo(px + TILE - 4.5, py + (eT ? 6 : 0)); g.lineTo(px + TILE - 4.5, py + TILE - (eB ? 6 : 0)); }
+    if (eB) { g.moveTo(px + 1, py + TILE - 4.5); g.lineTo(px + TILE - 1, py + TILE - 4.5); }
+    g.stroke();
+    g.strokeStyle = rgba(th.hi, 0.3); g.lineWidth = 1.4; g.beginPath();
+    if (eT) { g.moveTo(px, py - 3.4); g.lineTo(px + TILE, py - 3.4); }
+    if (eL) { g.moveTo(px - 3.4, py); g.lineTo(px - 3.4, py + TILE); }
+    if (eR) { g.moveTo(px + TILE + 3.4, py); g.lineTo(px + TILE + 3.4, py + TILE); }
+    if (eB) { g.moveTo(px, py + TILE + 3.4); g.lineTo(px + TILE, py + TILE + 3.4); }
     g.stroke();
     themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS);
     if (L.isIce(x, y)) {                         // slippery ice: a pale glaze with a bright streak
@@ -408,7 +422,7 @@ function drawCritters(g, th, camX, camY, t) {
 const PAINT_P = 1600, PAINT_H = 700, PAINT_TOP = -40, SKY_Z = 160, PAINT_KEEP = 3;
 // The sky layer of these areas is the owner's concept picture (tools/paint/import_concept.py): a whole scene, so the painted
 // silhouette layers over it are thinned (alpha per layer: sky, far, mid, near) to let it show while the play field stays readable.
-const CONCEPT_ALPHA = { default: [1, 0, 0.5, 0.85] };
+const CONCEPT_ALPHA = { default: [1, 0, 0.2, 0.35] };
 for (const k of ['town', 'cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
 const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
 Art.loadPainted = function (theme) {

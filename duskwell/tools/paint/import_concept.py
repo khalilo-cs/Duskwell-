@@ -2,7 +2,7 @@
 """Turns the owner's background concept sheet (art/source/backgrounds_concept/sheet_all15_areas.png: 15 areas, each a wide picture
 plus Sky/Far/Mid/Near strips) into the game's backdrop layers.
 The strips are only ~140x30 px and carry their own opaque sky, so they cannot serve as layers; the big picture of each area (about
-315x129 px) is what is used: cropped, upscaled with a sharpened bicubic, given a fine painted grain, made to tile sideways, darkened
+315x129 px) is what is used: cropped, upscaled with a sharpened bicubic, flattened into clean cel colours with firm edges, made to tile sideways, darkened
 a little so the play field stays readable, and saved as art/bg/<theme>/sky.webp (the opaque back layer, 2000x875 = 1600x700 logical).
 Row 5 of the sheet was squeezed vertically in the original image; it is stretched back.
 usage: import_concept.py [theme ...]   (default: all)"""
@@ -16,7 +16,8 @@ SHEET = os.path.join(ROOT, 'art', 'source', 'backgrounds_concept', 'sheet_all15_
 AREAS = {'town': (0, 0), 'cave': (1, 0), 'moss': (2, 0), 'spore': (0, 1), 'aqueduct': (1, 1), 'crystal': (2, 1), 'webbed': (0, 2), 'foundry': (1, 2), 'throne': (2, 2),
          'frost': (0, 3), 'ember': (1, 3), 'storm': (2, 3), 'mirror': (0, 4), 'bone': (1, 4), 'lunar': (2, 4)}
 ROW_Y = [0, 222, 444, 666, 870]
-DIM = {'town': 0.78, 'cave': 0.8, 'moss': 0.82, 'spore': 0.74, 'aqueduct': 0.8, 'crystal': 0.8, 'webbed': 0.78, 'foundry': 0.72, 'throne': 0.74, 'frost': 0.85, 'ember': 0.72, 'storm': 0.8, 'mirror': 0.8, 'bone': 0.8, 'lunar': 0.8}
+DIM = {k: 0.92 for k in AREAS}
+DIM.update({'frost': 0.88, 'ember': 0.84, 'foundry': 0.86, 'spore': 0.88})
 
 def picture(sheet, col, row):
     x0 = col * 512
@@ -32,15 +33,14 @@ def picture(sheet, col, row):
     return pic
 
 def upscale(pic, W=2000, H=875):
-    """denoise the small picture, enlarge it 3x, smooth it with an edge-preserving filter (a painterly look instead of the blocky
-    mosaic that plain enlargement shows), then to the layer size with a light sharpen"""
+    """enlarge 4x, flatten the colours with a mean-shift (the cel look: clean areas with firm edges instead of the mush that a plain
+    enlargement or a blur-heavy denoise gives), down to the layer size with Lanczos, then sharpen the edges"""
     import cv2
     x = cv2.cvtColor(np.asarray(pic), cv2.COLOR_RGB2BGR)
-    x = cv2.fastNlMeansDenoisingColored(x, None, 6, 6, 5, 15)
-    x = cv2.resize(x, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-    for _ in range(2): x = cv2.bilateralFilter(x, 9, 32, 6)
-    x = cv2.resize(x, (W, H), interpolation=cv2.INTER_CUBIC)
-    x = cv2.addWeighted(x, 1.55, cv2.GaussianBlur(x, (0, 0), 2.2), -0.55, 0)
+    x = cv2.resize(x, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+    x = cv2.pyrMeanShiftFiltering(x, 9, 22)
+    x = cv2.resize(x, (W, H), interpolation=cv2.INTER_LANCZOS4)
+    x = cv2.addWeighted(x, 2.3, cv2.GaussianBlur(x, (0, 0), 2.0), -1.3, 0)
     return Image.fromarray(cv2.cvtColor(x, cv2.COLOR_BGR2RGB))
 
 def seamless(a, frac=0.14):
@@ -65,7 +65,7 @@ def main():
     for th in themes:
         col, row = AREAS[th]
         pic = picture(sheet, col, row); pic.save(os.path.join(src, th + '.png'))
-        a = grain(seamless(upscale(pic)))
+        a = seamless(upscale(pic))
         a = Image.fromarray(np.clip(np.asarray(a).astype(np.float32) * DIM[th], 0, 255).astype(np.uint8))
         out = os.path.join(ROOT, 'art', 'bg', th); os.makedirs(out, exist_ok=True)
         a.save(os.path.join(out, 'sky.webp'), quality=90, method=6)

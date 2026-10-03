@@ -377,7 +377,7 @@ Art.frozenFx = function (g, e, t) {
 // when striking.
 const baseDrawPlayer = Art.drawPlayer;
 Art.drawPlayer = function (g, p, t) {
-  const id = Gear.weapon(), pixel = !Skins.get('player') && HeroStyle.pixel() && !p.dead, other = id !== 'nail';
+  const id = Gear.weapon(), pixel = !Skins.get('player') && HeroStyle.sprite() && !p.dead, other = id !== 'nail';
   const f = p.face, HS = 1.1;
   if (pixel && other && p.atkT <= 0 && !p.sitting) heroSword(g, p.cx - f * 10, p.y + p.h - 27, f > 0 ? 2.02 : Math.PI - 2.02, 28, null);
   baseDrawPlayer(g, p, t);
@@ -398,6 +398,7 @@ Art.drawPlayer = function (g, p, t) {
 
 // the Wanderer standing at rest, for the equipment screen: always the inked figure, since that is the one that shows the gear
 Art.drawHeroPreview = function (g, x, y, scale, t) {
+  if (HeroStyle.puppet()) { Pixel.shadow(g, x, y, 26); Puppet.drawAt(g, x, y, scale * 0.66, t); return; }
   wanderer(g, x, y, 1, { t, vx: 0, vy: 0, scale }, 1, null);
 };
 

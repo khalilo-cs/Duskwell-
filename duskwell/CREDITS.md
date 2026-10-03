@@ -51,3 +51,6 @@ new music pieces (`audio/music/overture.mp3`, `ending.mp3`, `ossuary.mp3`, `luna
 are all original to this project and drawn or written in code; no image, name, text or sound from Hollow Knight or any other game is used. The inked hero drawing (`wanderer()`) is ours;
 the pixel hero (`art/source/hero.ase`) remains the artist's own work and stays the default look. Skeletons, bone pillars, lens-eyed bugs, brass orreries, eclipses and weak gravity are common
 fantasy and Metroidvania motifs; only the ideas are shared.
+
+## البطل الجديد (art/source/hero_parts, art/hero)
+ورقة الأجزاء من أعمال صاحب المشروع (تصميم أصلي: قناع بيضاوي مشقوق بلا قرون وعباءة ممزقة)، وقصصتُها ورتّبتُها وحرّكتُها بكودنا. على صاحب المشروع التأكد من أن حقوق استعمالها تجارياً مضمونة له.

@@ -565,6 +565,7 @@ function drawMaskIcon(g, x, y, full, pulse) {
   g.save(); g.translate(x, y);
   const s = 1 + pulse * 0.25;
   g.scale(s, s);
+  if (IconArt.ready()) { IconArt.draw(g, full ? 'mask_full' : 'mask_empty', 0, 1, full ? 29 : 27, full ? null : { alpha: 0.85 }); g.restore(); return; }
   poly(g, [-11, -12, 11, -12, 13, 2, 0, 15, -13, 2]);
   if (full) { fs(g, '#f3f8fb', INK, 2.5); g.fillStyle = INK; ellipse(g, -4.5, -2, 2, 3.4); g.fill(); ellipse(g, 4.5, -2, 2, 3.4); g.fill(); }
   else { fs(g, 'rgba(10,14,22,0.6)', 'rgba(200,215,235,0.55)', 2); }
@@ -575,27 +576,30 @@ function drawHUD(g) {
   const ox = 52, oy = 54, r = 30, soul = P.soul / 99;
   g.save();
   glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
-  g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill();
+  const orbArt = IconArt.ready();
+  if (orbArt) IconArt.draw(g, 'orb_empty', ox, oy, r * 2.5);
+  else { g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill(); }
   g.save(); g.beginPath(); g.arc(ox, oy, r - 2, 0, 7); g.clip();
   const ly = oy + r - 2 * (r - 2) * soul;
   g.fillStyle = P.soul >= P.spellCost() ? '#e4f4ff' : '#9bb8d6';
   g.beginPath(); g.moveTo(ox - r, oy + r);
   for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
-  g.lineTo(ox + r, oy + r); g.closePath(); g.fill();
+  g.lineTo(ox + r, oy + r); g.closePath();
+  if (orbArt) { g.clip(); IconArt.draw(g, 'orb_full', ox, oy, r * 2.5, P.soul >= P.spellCost() ? null : { filter: 'brightness(0.72) saturate(0.8)' }); } else g.fill();
   if (P.maxSoul < 99) {            // the cracked top third
     const cy = oy + r - 2 * (r - 2) * (P.maxSoul / 99);
     g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
     g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
   }
   g.restore();
-  g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
-  g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke();
+  if (!orbArt) { g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
+  g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke(); }
   g.restore();
   // masks
   for (let i = 0; i < P.maxHp; i++) drawMaskIcon(g, 108 + i * 32, 50, i < P.hp, (P.invuln > 1.1 || (P.focusT === 0 && G.flash > 0.2)) ? 0.2 : 0);
   // geo
   const gx = 100, gy = 88, gp = G.geoPulse;
-  poly(g, [gx, gy - 8 - gp * 2, gx + 8, gy, gx, gy + 8 + gp * 2, gx - 8, gy]); fs(g, '#ffe9a0', INK, 2);
+  if (IconArt.ready()) IconArt.draw(g, 'geo', gx, gy, 24 + gp * 4); else { poly(g, [gx, gy - 8 - gp * 2, gx + 8, gy, gx, gy + 8 + gp * 2, gx - 8, gy]); fs(g, '#ffe9a0', INK, 2); }
   g.font = font(22, '700'); g.textAlign = 'left'; g.textBaseline = 'middle'; g.direction = 'ltr';
   textShadow(g, String(P.geo), gx + 16, gy + 1, gp > 0 ? '#fff6c8' : '#ffe9a0');
   // boss bar

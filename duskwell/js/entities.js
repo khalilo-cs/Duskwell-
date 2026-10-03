@@ -301,6 +301,7 @@ class Player {
     if (this.bounced) {             // mushroom cap
       this.bounced = false; this.onGround = false; this.vy = -1000; this.jumping = false;
       Sound.play('bounce'); G.burst(this.cx, this.y + this.h, 10, { color: '#ffb070', speed: 160, life: 0.5, size: 3, vy: -60 });
+      G.bounceAt = { x: this.cx, y: this.y + this.h, t: G.t };          // the mushroom squashes under the landing
     }
 
     // ---- remember a safe place to come back to after spikes ----

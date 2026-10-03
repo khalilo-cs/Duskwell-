@@ -30,8 +30,10 @@ class Boss extends Enemy {
     this.state = 'intro'; this.introT = 2.4; this.phase = 1; this.phases = cfg.phases || [0.5];
     this.tele = 0; this.grav = true; this.melee = null; this.alpha = 1; this.invul = true; this.co = null;
     this.spd = 1; this.face = -1; this.stunned = false; this.dt = 1 / 60; this.dyingT = 0; this.blood = cfg.blood || '#e8eef5';
-    this.dmg = 1;
+    this.dmg = 1; this.actName = ''; this.actStage = ''; this.actT = 0; this.actDur = 0;
   }
+  // what the boss is doing right now, for its drawing: an attack, its stage (wind / hit / air / land ...), how long the stage runs
+  setAct(name, stage, dur) { this.actName = name; this.actStage = stage || ''; this.actT = 0; this.actDur = dur || 0; }
   get floorY() { return G.floorY; }
   facePlayer() { this.face = G.player.cx > this.cx ? 1 : -1; }
   body() { return this.hb(); }
@@ -66,13 +68,13 @@ class Boss extends Enemy {
     if (th !== undefined && this.hp < this.maxHp * th) { this.phase++; this.spd = Math.max(0.55, this.spd * 0.78); this.co = this.shiftRoutine(); }
   }
   *shiftRoutine() {
-    this.invul = true; this.vx = 0; this.grav = true; this.melee = null; this.alpha = 1; this.ghostly = false; this.stunned = false; this.tele = 1;
+    this.invul = true; this.vx = 0; this.grav = true; this.melee = null; this.alpha = 1; this.ghostly = false; this.stunned = false; this.tele = 1; this.setAct('roar', '', 1.25);
     G.clearHostile();
     Sound.play('roar'); G.shake(10, 1.1);
     yield* this.wait(0.35);
     G.ring(this.cx, this.cy, '#ffffff'); G.ring(this.cx, this.cy, '#ffb0e0');
     yield* this.wait(0.9);
-    this.tele = 0; this.invul = false;
+    this.tele = 0; this.invul = false; this.setAct('', '');
   }
   kill() {
     this.state = 'dying'; this.dyingT = 0; this.melee = null; this.vx = 0; this.grav = true; this.tele = 0; this.alpha = 1; this.ghostly = false;
@@ -80,7 +82,7 @@ class Boss extends Enemy {
     G.onBossDying(this);
   }
   update(dt) {
-    this.t += dt; this.flash -= dt; this.dt = dt;
+    this.t += dt; this.flash -= dt; this.dt = dt; this.actT += dt;
     if (this.state === 'intro') {
       this.introT -= dt; this.physics(dt, this.grav);
       if (this.introT > 1.6 && this.introT - dt <= 1.6) { Sound.play('roar'); G.shake(6, 0.8); }
@@ -115,42 +117,46 @@ class Guardian extends Boss {
     yield* this[this.last]();
   }
   *leap() {
-    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('leap', 'wind', 0.5 * this.spd);
     yield* this.wait(0.5 * this.spd);
-    this.tele = 0;
+    this.tele = 0; this.setAct('leap', 'air');
     const T = 0.71;
     this.vy = -780; this.vx = clamp((G.player.cx - this.cx) / T, -470, 470); this.onGround = false;
     yield; yield;
     yield* this.until(() => this.onGround, 2);
-    this.vx = 0; Sound.play('slam'); G.shake(9, 0.3);
+    this.vx = 0; Sound.play('slam'); G.shake(9, 0.3); this.setAct('leap', 'land', 0.55 * this.spd);
     spawnShock(this.cx - 30, this.y + this.h, -1, 360); spawnShock(this.cx + 30, this.y + this.h, 1, 360);
     G.burst(this.cx, this.y + this.h, 16, { color: '#8a94a0', speed: 200, life: 0.5, size: 4, vy: -60 });
     if (this.phase >= 2) this.dropRocks(2);
     yield* this.wait(0.55 * this.spd);
+    this.setAct('', '');
   }
   dropRocks(n) {
     const L = G.level;
     for (let i = 0; i < n; i++) spawnRock(clamp(G.player.cx + rand(-260, 260), 3 * TILE, L.pw - 3 * TILE), 0.7 + i * 0.12);
   }
   *slam() {
-    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('slam', 'wind', 0.75 * this.spd);
     yield* this.wait(0.75 * this.spd);
-    this.tele = 0; this.doMelee(24, 28, 120, 80, 2, 0.25);
+    this.tele = 0; this.doMelee(24, 28, 120, 80, 2, 0.25); this.setAct('slam', 'hit', 0.9 * this.spd);
     Sound.play('slam'); G.shake(8, 0.3);
     spawnShock(this.cx + this.face * 70, this.y + this.h, this.face, 430);
     this.dropRocks(this.phase >= 2 ? 5 : 3);
     yield* this.wait(0.9 * this.spd);
+    this.setAct('', '');
   }
   *charge() {
-    this.facePlayer(); this.tele = 1; Sound.play('tele');
+    this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('charge', 'wind', 0.55 * this.spd);
     yield* this.wait(0.55 * this.spd);
-    this.tele = 0;
+    this.tele = 0; this.setAct('charge', 'run');
     let t = 1.5;
     while (t > 0) { this.vx = this.face * (this.phase >= 2 ? 560 : 480); t -= this.dt; if (this.hitL || this.hitR) break; yield; }
-    this.vx = 0; Sound.play('slam'); G.shake(8, 0.3); this.stunned = true;
+    this.vx = 0; Sound.play('slam'); G.shake(8, 0.3); this.stunned = true; this.setAct('charge', 'crash', 1.1);
     this.dropRocks(2);
     yield* this.wait(1.1);
-    this.stunned = false;
+    this.stunned = false; this.setAct('charge', 'rise', 0.5);
+    yield* this.wait(0.35);
+    this.setAct('', '');
   }
 }
 

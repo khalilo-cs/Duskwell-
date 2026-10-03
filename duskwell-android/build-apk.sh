@@ -32,6 +32,7 @@ cp ../duskwell/index.html "$B/assets/www/"
 cp -r ../duskwell/js "$B/assets/www/js"
 # painted backgrounds and the recorded score (the composing and painting tools stay out of the app)
 cp -r ../duskwell/art "$B/assets/www/art"
+rm -rf "$B/assets/www/art/source"          # the artist's source sheets and cut pieces stay in the repo, not in the app
 cp -r ../duskwell/audio "$B/assets/www/audio"
 cp -r fonts "$B/assets/www/fonts"
 # web fonts come from the APK instead of Google, so the app works offline

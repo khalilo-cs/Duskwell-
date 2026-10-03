@@ -521,7 +521,7 @@ class Player {
     for (let tx = Math.floor(this.x / TILE); tx <= Math.floor((this.x + this.w) / TILE); tx++) if (L.get(tx, row) === T_CRACK) { G.breakCrack(tx, row); broke = true; }
     if (broke) { this.onGround = false; return; }
     this.diving = false; this.invuln = Math.max(this.invuln, 0.35); this.landT = 0.15;
-    Sound.play('slam'); G.shake(10, 0.35); G.ring(this.cx, this.y + this.h - 6, '#dff3ff', 0.35);
+    Sound.play('slam'); G.shake(10, 0.35); G.ring(this.cx, this.y + this.h - 6, '#dff3ff', 0.35); G.fx.push({ type: 'dive', x: this.cx, y: this.y + this.h, t: 0, life: 0.5 });
     G.burst(this.cx, this.y + this.h, 24, { color: '#dff3ff', speed: 300, life: 0.5, size: 3, vy: -120 });
     const blast = { x: this.cx - 120, y: this.y + this.h - 80, w: 240, h: 90 };
     for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(blast, e.hb())) e.hurt(this.spellDmg(18), e.cx > this.cx ? 1 : -1, 'spell');

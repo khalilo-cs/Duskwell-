@@ -245,8 +245,10 @@ Art.drawFx = function (g, f) {
     g.restore();
     return;
   }
+  if (f.type === 'dive') { FxArt.dive(g, f, k); return; }
   if (f.type === 'nova') {
     const e = 1 - Math.pow(1 - clamp(k * 1.6, 0, 1), 3), R = f.R * e;
+    FxArt.nova(g, f, k);
     g.save();
     const fl = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter';
     const gr = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, R); gr.addColorStop(0, 'rgba(255,255,255,' + 0.9 * a + ')'); gr.addColorStop(0.55, 'rgba(120,225,255,' + 0.35 * a + ')'); gr.addColorStop(1, 'rgba(60,150,255,0)');
@@ -267,6 +269,7 @@ Art.drawFx = function (g, f) {
 const baseProj2 = Art.drawProj;
 Art.drawProj = function (g, p, t) {
   if (p.kind === 'moon') {
+    if (FxArt.moon(g, p)) return;
     const dir = sign(p.vx) || 1, R = p.r * 1.25;
     g.save(); g.translate(p.x, p.y); g.scale(dir, 1);
     bloom(g, 0, 0, R * 2.2, '#cfe0ff', 0.5);
@@ -344,7 +347,7 @@ Art.drawArtsFx = function (g, p, t) {
       g.beginPath(); g.arc(-8, 0, 20, -1.9, 1.9); g.arc(-16, 0, 18, 1.4, -1.4, true); g.closePath(); g.fillStyle = '#ffffff'; g.fill(); g.restore();
     }
   }
-  if (p.rushT > 0) {                                                                            // Dusk Rush: blades and streaks
+  if (p.rushT > 0 && !FxArt.rush(g, p)) {                                                       // Dusk Rush: blades and streaks
     const f = p.face, L = 150;
     const gr = g.createLinearGradient(p.cx - f * L, 0, p.cx + f * 30, 0); gr.addColorStop(0, 'rgba(255,190,110,0)'); gr.addColorStop(1, 'rgba(255,235,190,0.8)');
     g.fillStyle = gr; g.beginPath(); g.moveTo(p.cx - f * L, p.cy - 2); g.lineTo(p.cx + f * 30, p.cy - 20); g.lineTo(p.cx + f * 44, p.cy - 2); g.lineTo(p.cx + f * 30, p.cy + 16); g.closePath(); g.fill();

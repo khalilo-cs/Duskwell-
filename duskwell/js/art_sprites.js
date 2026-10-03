@@ -218,7 +218,7 @@ Art.drawPlayer = function (g, p, t) {
     g.strokeStyle = rgba('#ffe6a8', 0.3 + 0.5 * pulse); g.lineWidth = 2;
     g.beginPath(); g.arc(p.cx, p.cy, 40 - 18 * charge, 0, 7); g.stroke();
   }
-  if (sdGo) {                     // a blazing streak behind the comet
+  if (sdGo && !FxArt.comet(g, p, t)) {                     // a blazing streak behind the comet
     const d = p.sd.dir, x0 = p.cx - d * 150, gr = g.createLinearGradient(x0, 0, p.cx, 0);
     gr.addColorStop(0, 'rgba(255,190,110,0)'); gr.addColorStop(1, 'rgba(255,225,170,0.75)');
     g.fillStyle = gr; g.beginPath(); g.moveTo(x0, p.cy - 4); g.lineTo(p.cx, p.cy - 16); g.lineTo(p.cx, p.cy + 12); g.lineTo(x0, p.cy + 4); g.fill();

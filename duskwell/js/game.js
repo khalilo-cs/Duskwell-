@@ -126,7 +126,7 @@ function enterRoom(id, spawn) {
   Art.loadPainted(def.theme);
   for (const d of def.doors) { const n = WORLD.rooms[d.to]; if (n && n.theme !== def.theme) Art.loadPainted(n.theme); }
   Art.loadPainted(def.theme);
-  if (def.arena && !G.flags[def.arena.flag]) Sound.prefetch(def.arena.boss === 'king');
+  if (def.arena && !G.flags[def.arena.flag]) Sound.prefetch(def.arena.boss);
   Art.ambientInit();
   snapCamera();
   if (def.area !== G.lastArea) { G.areaBanner = { key: 'area_' + def.area, t: 0, color: AREA_COLORS[def.area] }; G.lastArea = def.area; }
@@ -204,7 +204,7 @@ G.onBossDeath = function (b) {
   G.burst(b.cx, b.cy, 50, { color: '#ffffff', speed: 360, life: 1.2, size: 4, grav: -30 });
   openGates();
   for (const r of [a.def.reward, a.def.reward2]) if (r) G.items.push(new Item(r));
-  if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; Sound.setTheme('title'); }, 2.2, 0.4, 1.5); saveGame(); }
+  if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; Sound.setTheme('ending'); }, 2.2, 0.4, 1.5); saveGame(); }
 };
 
 function startGame(useSave) {
@@ -355,7 +355,7 @@ function updatePlay(dt) {
     const B = BOSS_TYPES[a.def.boss];
     const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
     G.enemies.push(boss); G.boss = boss;
-    Sound.boss(true, a.def.boss === 'king');
+    Sound.boss(true, a.def.boss);
   }
 
   // doors

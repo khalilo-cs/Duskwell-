@@ -650,7 +650,286 @@ def mirror():
     return s, len(prog)
 
 
-PIECES = [title, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, storm, mirror, boss, king]
+
+def overture():
+    """The title overture: a full orchestra in D minor. A call of horns over a timpani roll, the theme in the strings
+    with the harp underneath, a second theme that climbs with the choir, a tutti where the brass takes the tune
+    and the timpani and taiko drive, and a quiet coda in the flute that ends on the dominant so that it loops."""
+    s = Song('overture', 72, seed=41)
+    s.track('strings', STRINGS, vol=88, pan=60, reverb=85)
+    s.track('violin', VIOLIN, vol=92, pan=74, reverb=85)
+    s.track('cello', CELLO, vol=96, pan=50, reverb=75)
+    s.track('bass', CONTRABASS, vol=86, pan=58, reverb=55)
+    s.track('harp', HARP, vol=84, pan=44, reverb=90)
+    s.track('horn', HORN, vol=98, pan=40, reverb=85)
+    s.track('brass', BRASS, vol=92, pan=76, reverb=80)
+    s.track('timpani', TIMPANI, vol=104, pan=64, reverb=65)
+    s.track('taiko', TAIKO, vol=84, pan=64, reverb=60)
+    s.track('choir', CHOIR, vol=82, pan=64, reverb=100)
+    s.track('flute', FLUTE, vol=80, pan=82, reverb=90)
+    s.track('glock', GLOCK, vol=60, pan=90, reverb=95)
+    intro = ['Dm', 'Dm', 'Bb', 'A']
+    A = ['Dm', 'Bb', 'F', 'C', 'Dm', 'Gm', 'Bb', 'A']
+    B = ['Gm', 'Dm', 'Bb', 'F', 'Gm', 'Dm', 'Eb', 'A']
+    C = ['Dm', 'Bb', 'F', 'C', 'Dm', 'Gm', 'A7', 'Dm']
+    coda = ['Gm', 'Dm', 'Bb', 'A']
+    prog = intro + A + B + C + coda                       # 32 bars
+    for b, c in enumerate(prog):
+        sec = 'intro' if b < 4 else 'A' if b < 12 else 'B' if b < 20 else 'C' if b < 28 else 'coda'
+        s.bass('bass', b, c, low=26, rhythm=((0, 3.9),), vel=64 if sec != 'C' else 78)
+        if sec == 'intro':
+            s.hits('timpani', b, 38, (0, 1, 2, 3), dur=0.9, vel=46 + 12 * b)
+            s.pad('strings', b, c, low=50, count=3, vel=34 + 8 * b)
+        else:
+            s.pad('strings', b, c, low=50, count=4, vel=56 if sec != 'C' else 74)
+        if sec in ('A', 'B', 'coda'):
+            s.arp('harp', b, c, [0, 2, 1, 3, 2, 4, 3, 2], step=0.5, low=50, vel=52, dur=1.2)
+        if sec == 'A':
+            s.bass('cello', b, c, low=38, rhythm=((0, 2), (2, 2)), vel=70)
+        if sec in ('B', 'C'):
+            s.pad('choir', b, c, low=57, count=3, vel=52 if sec == 'B' else 70)
+            s.bass('cello', b, c, low=38, rhythm=tuple((k, 0.9) for k in range(4)), vel=72)
+        if sec == 'B':
+            s.hits('timpani', b, bass_note(c, 36), (0, 2), dur=0.7, vel=72)
+            s.arp('glock', b, c, [4, 2, 3, 1], step=1, low=79, vel=44, dur=1.3)
+        if sec == 'C':
+            s.arp('strings', b, c, [0, 2, 1, 2, 3, 2, 1, 2], step=0.5, low=55, vel=70, dur=0.35, accent=14)
+            s.hits('timpani', b, bass_note(c, 36), (0, 1.5, 2, 3), dur=0.5, vel=96)
+            s.hits('taiko', b, 50, (1, 3), dur=0.3, vel=80)
+            for p in tones(c, 53, 3):
+                s.note('brass', s.bar(b), 1.8, p, 80)
+    # intro: the horns call across the roll
+    s.melody('horn', 0, 'D4:2 A4:2  D5:4  Bb4:2 F5:2  E5:3 r:1', vel=86)
+    th_a = ('D5:2 F5:1 A5:1  G5:1.5 F5:0.5 D5:2  C5:1 F5:1 A5:2  G5:1.5 E5:0.5 C5:2  '
+            'D5:1 F5:1 A5:1 D6:1  Bb5:2 A5:1 G5:1  F5:1.5 G5:0.5 Bb5:1 D6:1  C#6:2 A5:1 E5:1')
+    th_b = ('G5:1 Bb5:1 D6:2  A5:1 D6:1 F6:2  D6:1.5 C6:0.5 Bb5:2  A5:1 C6:1 F6:2  '
+            'G6:2 F6:1 D6:1  F6:1.5 E6:0.5 D6:2  Eb6:1 G6:1 Bb6:2  A6:2 G6:1 E6:1')
+    th_c = ('D5:2 F5:1 A5:1  G5:1.5 F5:0.5 D5:2  C5:1 F5:1 A5:2  G5:1.5 E5:0.5 C5:2  '
+            'D5:1 F5:1 A5:1 D6:1  Bb5:2 A5:1 G5:1  E5:1 G5:1 A5:1 C#6:1  D6:4')
+    s.melody('violin', 4, th_a, vel=82)
+    s.melody('horn', 4, th_a, vel=58, shift=-12)
+    s.melody('violin', 12, th_b, vel=88)
+    s.melody('flute', 12, th_b, vel=58, shift=12)
+    s.melody('horn', 20, th_c, vel=96, shift=0)
+    s.melody('brass', 20, th_c, vel=84, shift=12)
+    s.melody('violin', 20, th_c, vel=84, shift=12)
+    s.melody('flute', 28, 'D6:2 C6:1 A5:1  F5:3 r:1  G5:2 A5:2  E5:3 r:1', vel=68)
+    return s, len(prog)
+
+
+def ossuary():
+    """The Ossuary: a catacomb in G sharp minor. An organ drone and a choir far back, a low cello line that
+    the bassoon answers, pizzicato like bones tapping, a tolling bell and a slow heartbeat of timpani."""
+    s = Song('ossuary', 58, seed=42)
+    s.track('organ', ORGAN, vol=70, pan=64, reverb=100)
+    s.track('choir', CHOIR, vol=78, pan=64, reverb=100)
+    s.track('cello', CELLO, vol=100, pan=48, reverb=85)
+    s.track('bassoon', BASSOON, vol=84, pan=76, reverb=80)
+    s.track('pizz', PIZZ, vol=80, pan=36, reverb=80)
+    s.track('harp', HARP, vol=70, pan=90, reverb=90)
+    s.track('bell', GLOCK, vol=64, pan=60, reverb=100)
+    s.track('timpani', TIMPANI, vol=76, pan=64, reverb=80)
+    s.track('bass', CONTRABASS, vol=88, pan=58, reverb=50)
+    A = ['G#m', 'E', 'C#m', 'D#', 'G#m', 'F#', 'E', 'D#7']
+    B = ['C#m', 'G#m', 'E', 'B', 'C#m', 'G#m', 'D#', 'D#7']
+    prog = A + B + A                                                  # 24 bars
+    for b, c in enumerate(prog):
+        s.pad('organ', b, c, low=44, count=4, vel=46)
+        s.bass('bass', b, c, low=23, rhythm=((0, 3.9),), vel=64)
+        s.hits('timpani', b, bass_note(c, 35), (0, 2), dur=0.9, vel=52)
+        s.arp('pizz', b, c, [0, 2, 1, 3, 2, 3, 1, 2], step=0.5, low=55, vel=44, dur=0.25, accent=10)
+        if b % 2 == 0:
+            s.note('bell', s.bar(b), 3.5, tones(c, 80, 1)[0], 46)
+        if b >= 8:
+            s.pad('choir', b, c, low=56, count=3, vel=44)
+            s.arp('harp', b, c, [0, 2, 4, 2, 1, 3, 5, 3], step=0.5, low=52, vel=42, dur=1.2)
+    mel_a = ('G#3:2 B3:1 D#4:1  E4:3 D#4:1  C#4:2 E4:1 G#4:1  F#4:3 B3:1  '
+             'G#3:2 F#3:1 D#3:1  E3:2 G#3:1 B3:1  E4:2 B3:1 G#3:1  F#3:2 A#3:1 C#4:1')
+    mel_b = ('C#4:1 E4:1 G#4:2  G#4:2 D#4:2  E4:1 G#4:1 B4:2  D#5:1.5 C#5:0.5 B4:2  '
+             'C#5:2 E5:2  D#5:2 B4:2  A#4:1 D#5:1 F#5:2  F#5:2 D#5:1 A#4:1')
+    s.melody('cello', 0, mel_a, vel=84)
+    s.melody('bassoon', 8, mel_a, vel=62, shift=12)
+    s.melody('cello', 8, mel_b, vel=88, shift=-12)
+    s.melody('bassoon', 8, mel_b, vel=64)
+    s.melody('cello', 16, mel_a, vel=88)
+    s.melody('choir', 16, mel_a, vel=50, shift=12)
+    return s, len(prog)
+
+
+def lunar():
+    """The Lunar Observatory: a stately waltz in E minor. Harp and celesta turn like the rings of an orrery, a flute
+    sings the tune over strings, the horn answers in the second strain and the choir joins for the last."""
+    s = Song('lunar', 78, beats_per_bar=3, seed=43)
+    s.track('harp', HARP, vol=92, pan=44, reverb=92)
+    s.track('celesta', CELESTA, vol=74, pan=84, reverb=100)
+    s.track('strings', SLOW_STRINGS, vol=76, pan=60, reverb=90)
+    s.track('flute', FLUTE, vol=90, pan=72, reverb=90)
+    s.track('horn', HORN, vol=88, pan=44, reverb=85)
+    s.track('violin', VIOLIN, vol=80, pan=76, reverb=88)
+    s.track('cello', CELLO, vol=90, pan=52, reverb=70)
+    s.track('timpani', TIMPANI, vol=76, pan=64, reverb=75)
+    s.track('choir', CHOIR, vol=70, pan=64, reverb=100)
+    s.track('bass', CONTRABASS, vol=80, pan=58, reverb=50)
+    A = ['Em', 'C', 'G', 'D', 'Em', 'Am', 'B7', 'Em']
+    B = ['C', 'G', 'D', 'Bm', 'C', 'Am', 'B7', 'E']
+    C = ['G', 'D', 'Em', 'C', 'Am', 'D', 'B7', 'Em']
+    prog = A + B + A + B + C                                           # 40 bars
+    for b, c in enumerate(prog):
+        sec = 'A' if b < 8 else 'B' if b < 16 else 'A' if b < 24 else 'B' if b < 32 else 'C'
+        s.arp('harp', b, c, [0, 2, 4], step=1, low=48, vel=64, dur=1.8)
+        s.pad('strings', b, c, low=52, count=4, vel=46 if sec != 'C' else 60)
+        s.bass('bass', b, c, low=28, rhythm=((0, 2.8),), vel=60)
+        s.hits('timpani', b, bass_note(c, 36), (0,), dur=0.6, vel=50 if sec != 'C' else 72)
+        if b % 2 == 1 or sec == 'C':
+            s.arp('celesta', b, c, [3, 2, 4], step=0.5, low=72, vel=40, dur=0.7, bars=1)
+        if sec in ('B', 'C'):
+            s.bass('cello', b, c, low=40, rhythm=((0, 1.4), (1.5, 1.4)), vel=66)
+        if b >= 24:
+            s.pad('choir', b, c, low=59, count=3, vel=40 if b < 32 else 56)
+    mel_a = ('E5:1.5 G5:0.5 B5:1  C6:1.5 B5:0.5 G5:1  G5:1 B5:1 D6:1  F#6:2 D6:1  '
+             'E6:1.5 D6:0.5 B5:1  C6:1 E6:1 A5:1  D#6:1 F#6:1 B5:1  E6:3')
+    mel_b = ('G5:1 C6:1 E6:1  D6:1.5 B5:0.5 G5:1  A5:1 D6:1 F#6:1  D6:1.5 B5:0.5 F#5:1  '
+             'E6:1 G6:1 E6:1  C6:1.5 A5:0.5 E5:1  D#5:1 F#5:1 A5:1  B5:3')
+    mel_c = ('G5:1 B5:1 D6:1  F#6:1.5 D6:0.5 A5:1  G6:2 E6:1  E6:1.5 C6:0.5 G5:1  '
+             'A5:1 C6:1 E6:1  F#6:1 A6:1 D6:1  D#6:1 F#6:1 B6:1  E6:3')
+    s.melody('flute', 0, mel_a, vel=84)
+    s.melody('flute', 8, mel_b, vel=86)
+    s.melody('violin', 16, mel_a, vel=76)
+    s.melody('flute', 16, mel_a, vel=60, shift=12)
+    s.melody('horn', 24, mel_b, vel=86, shift=-12)
+    s.melody('violin', 24, mel_b, vel=80)
+    s.melody('flute', 32, mel_c, vel=92, shift=12)
+    s.melody('horn', 32, mel_c, vel=92, shift=-12)
+    s.melody('violin', 32, mel_c, vel=84)
+    return s, len(prog)
+
+
+def boss_bone():
+    """The battle of the Ossuary (the Bonewright and the Marrow Tyrant): C sharp minor at a driving 148. A staccato
+    ostinato in the strings, organ and low brass, timpani and taiko on every drive, trumpets on the tune."""
+    s = Song('boss_bone', 148, seed=44)
+    s.track('organ', ORGAN, vol=84, pan=64, reverb=90)
+    s.track('strings', STRINGS, vol=96, pan=56, reverb=65)
+    s.track('low', CELLO, vol=100, pan=48, reverb=50)
+    s.track('bass', CONTRABASS, vol=92, pan=60, reverb=45)
+    s.track('trombone', TROMBONE, vol=90, pan=40, reverb=70)
+    s.track('trumpet', TRUMPET, vol=92, pan=78, reverb=75)
+    s.track('timpani', TIMPANI, vol=108, pan=64, reverb=55)
+    s.track('taiko', TAIKO, vol=100, pan=64, reverb=55)
+    s.track('choir', CHOIR, vol=86, pan=64, reverb=95)
+    s.track('bell', GLOCK, vol=56, pan=90, reverb=90)
+    A = ['C#m', 'A', 'E', 'B', 'C#m', 'A', 'F#m', 'G#7']
+    B = ['A', 'E', 'F#m', 'C#m', 'A', 'E', 'B', 'B']
+    prog = A + A + B + A
+    for b, c in enumerate(prog):
+        s.pad('organ', b, c, low=48, count=4, vel=56)
+        s.arp('strings', b, c, [0, 2, 1, 2, 0, 2, 3, 2], step=0.5, low=49, vel=70, dur=0.3, accent=14)
+        s.bass('low', b, c, low=25, rhythm=tuple((k * 0.5, 0.4) for k in range(8)), vel=70)
+        s.bass('bass', b, c, low=25, rhythm=((0, 1.9), (2, 1.9)), vel=76)
+        s.hits('timpani', b, bass_note(c, 37), (0, 1.5, 2, 3.5), dur=0.5, vel=100)
+        s.hits('taiko', b, 50, (0, 0.75, 2, 2.75, 3.5), dur=0.3, vel=78)
+        for p in tones(c, 60, 3):
+            s.note('choir', s.bar(b), 3.9, p, 66 if b < 16 else 78)
+        if b % 4 == 0:
+            s.note('bell', s.bar(b), 3, tones(c, 80, 1)[0], 50)
+        if b >= 8:
+            for p in tones(c, 55, 3):
+                s.note('trombone', s.bar(b), 0.9, p, 84)
+                s.note('trombone', s.bar(b) + 2, 0.9, p, 80)
+    mel_a = ('C#5:0.5 E5:0.5 G#5:1 C#6:2  B5:1 A5:1 E5:2  G#5:1 B5:1 E6:2  D#6:1.5 C#6:0.5 B5:2  '
+             'C#6:1 E6:1 G#6:2  F#6:1.5 E6:0.5 C#6:2  A5:1 C#6:1 F#6:2  G#6:2 F#6:1 D#6:1')
+    mel_b = ('A5:2 C#6:1 E6:1  E6:1.5 G#5:0.5 B5:2  F#5:1 A5:1 C#6:2  E6:2 G#6:2  '
+             'A6:1.5 G#6:0.5 E6:2  G#6:1 B6:1 G#6:2  F#6:2 D#6:1 B5:1  B5:1 D#6:1 F#6:2')
+    s.melody('trumpet', 8, mel_a, vel=90)
+    s.melody('trumpet', 16, mel_b, vel=92)
+    s.melody('trumpet', 24, mel_a, vel=96)
+    s.melody('strings', 24, mel_a, vel=76, shift=-12)
+    return s, len(prog)
+
+
+def boss_moon():
+    """The battle of the Observatory (the Stargazer and the Eclipse Regent): B minor at 156. Harp and strings in
+    running sixteenths like a machine of rings, choir and brass above, a trumpet tune that soars."""
+    s = Song('boss_moon', 156, seed=45)
+    s.track('strings', STRINGS, vol=96, pan=58, reverb=70)
+    s.track('violin', VIOLIN, vol=88, pan=76, reverb=70)
+    s.track('low', CELLO, vol=100, pan=48, reverb=50)
+    s.track('bass', CONTRABASS, vol=90, pan=60, reverb=45)
+    s.track('harp', HARP, vol=92, pan=40, reverb=80)
+    s.track('celesta', CELESTA, vol=70, pan=86, reverb=95)
+    s.track('horn', HORN, vol=90, pan=44, reverb=75)
+    s.track('trumpet', TRUMPET, vol=94, pan=76, reverb=78)
+    s.track('timpani', TIMPANI, vol=104, pan=64, reverb=55)
+    s.track('taiko', TAIKO, vol=92, pan=64, reverb=55)
+    s.track('choir', CHOIR, vol=90, pan=64, reverb=98)
+    A = ['Bm', 'G', 'D', 'A', 'Bm', 'G', 'Em', 'F#7']
+    B = ['G', 'D', 'Em', 'Bm', 'G', 'D', 'F#7', 'F#7']
+    prog = A + A + B + A
+    for b, c in enumerate(prog):
+        s.arp('strings', b, c, [0, 1, 2, 3, 2, 1, 2, 3], step=0.25, low=50, vel=60, dur=0.22, accent=12)
+        s.arp('harp', b, c, [0, 2, 4, 5, 4, 2, 4, 5], step=0.5, low=50, vel=62, dur=0.6)
+        s.bass('low', b, c, low=35, rhythm=tuple((k * 0.5, 0.4) for k in range(8)), vel=68)
+        s.bass('bass', b, c, low=23, rhythm=((0, 1.9), (2, 1.9)), vel=74)
+        s.hits('timpani', b, bass_note(c, 35), (0, 1.5, 2), dur=0.5, vel=96)
+        s.hits('taiko', b, 50, (1, 3, 3.5), dur=0.3, vel=76)
+        for p in tones(c, 59, 3):
+            s.note('choir', s.bar(b), 3.9, p, 62 if b < 16 else 78)
+        if b % 2 == 1:
+            s.arp('celesta', b, c, [4, 5, 6, 5], step=0.5, low=72, vel=42, dur=0.5)
+        if b >= 8:
+            for p in tones(c, 52, 3):
+                s.note('horn', s.bar(b), 1.8, p, 78)
+                s.note('horn', s.bar(b) + 2, 1.8, p, 74)
+    mel_a = ('B5:1 D6:1 F#6:2  G6:1.5 F#6:0.5 D6:2  A5:1 D6:1 F#6:2  E6:1.5 C#6:0.5 A5:2  '
+             'D6:1 F#6:1 B6:2  A6:1.5 G6:0.5 D6:2  E6:1 G6:1 B6:2  A#6:1 C#7:1 F#6:2')
+    mel_b = ('G5:2 B5:1 D6:1  F#6:2 A6:2  G6:1.5 F#6:0.5 E6:2  D6:2 B5:2  '
+             'B5:1 D6:1 G6:2  F#6:2 E6:1 D6:1  C#6:1 E6:1 A#5:2  F#5:1 A#5:1 C#6:2')
+    s.melody('trumpet', 8, mel_a, vel=90)
+    s.melody('violin', 8, mel_a, vel=70)
+    s.melody('trumpet', 16, mel_b, vel=94)
+    s.melody('violin', 16, mel_b, vel=72, shift=12)
+    s.melody('trumpet', 24, mel_a, vel=98)
+    s.melody('violin', 24, mel_a, vel=76, shift=12)
+    return s, len(prog)
+
+
+def ending():
+    """The ending: D major, unhurried and warm. The overture's theme comes back in the horn, the strings and the
+    choir, now in the major; the harp and flute close it."""
+    s = Song('ending', 66, seed=46)
+    s.track('strings', STRINGS, vol=86, pan=60, reverb=88)
+    s.track('violin', VIOLIN, vol=86, pan=74, reverb=88)
+    s.track('cello', CELLO, vol=92, pan=50, reverb=75)
+    s.track('bass', CONTRABASS, vol=80, pan=58, reverb=55)
+    s.track('harp', HARP, vol=88, pan=44, reverb=92)
+    s.track('horn', HORN, vol=96, pan=40, reverb=88)
+    s.track('trumpet', TRUMPET, vol=80, pan=76, reverb=85)
+    s.track('flute', FLUTE, vol=82, pan=84, reverb=92)
+    s.track('timpani', TIMPANI, vol=92, pan=64, reverb=70)
+    s.track('choir', CHOIR, vol=88, pan=64, reverb=100)
+    A = ['D', 'A', 'Bm', 'G', 'D', 'A', 'G', 'A']
+    B = ['Bm', 'F#m', 'G', 'D', 'Em', 'A', 'D', 'D']
+    prog = A + B + A
+    for b, c in enumerate(prog):
+        s.pad('strings', b, c, low=50, count=4, vel=54 if b < 16 else 70)
+        s.arp('harp', b, c, [0, 2, 1, 3, 2, 4, 3, 2], step=0.5, low=50, vel=54, dur=1.3)
+        s.bass('cello', b, c, low=38, rhythm=((0, 2), (2, 2)), vel=70)
+        s.bass('bass', b, c, low=26, rhythm=((0, 3.9),), vel=64)
+        if b >= 8:
+            s.pad('choir', b, c, low=57, count=3, vel=50 if b < 16 else 72)
+            s.hits('timpani', b, bass_note(c, 38), (0, 2), dur=0.8, vel=74)
+    th_a = 'D5:2 F#5:1 A5:1  G5:1.5 F#5:0.5 E5:2  D5:1 F#5:1 B5:2  A5:1.5 G5:0.5 D5:2  D5:1 F#5:1 A5:1 D6:1  C#6:2 A5:2  B5:1.5 A5:0.5 G5:2  E5:1 G5:1 C#6:2'
+    th_b = 'D6:2 B5:1 F#5:1  C#6:1.5 A5:0.5 F#5:2  D6:1 B5:1 G5:2  F#5:2 A5:2  G5:1 B5:1 E6:2  E6:2 C#6:1 A5:1  D6:1 F#6:1 A6:2  D6:4'
+    s.melody('horn', 0, th_a, vel=86)
+    s.melody('violin', 8, th_b, vel=84)
+    s.melody('horn', 8, th_b, vel=76, shift=-12)
+    s.melody('violin', 16, th_a, vel=90, shift=12)
+    s.melody('horn', 16, th_a, vel=92)
+    s.melody('flute', 16, th_a, vel=62, shift=12)
+    return s, len(prog)
+
+
+PIECES = [overture, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, storm, mirror, ossuary, lunar, boss, boss_bone, boss_moon, king, ending]
 
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'build'

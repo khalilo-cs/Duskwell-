@@ -9,9 +9,12 @@ const Sound = (() => {
   let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
-  const ROOT = { bone: 65.4, lunar: 82.4, storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { ending: 73.4, bone: 65.4, lunar: 82.4, storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
-  const TRACK = { title: 'title', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
+  const TRACK = { ending: 'ending', title: 'overture', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
+  // which battle theme each boss fights to (a boss key, or true for the last one); anything else gets the common one
+  const BOSS_TRACKS = { king: 'king', bonewright: 'boss_bone', marrow: 'boss_bone', stargazer: 'boss_moon', regent: 'boss_moon' };
+  const bossTrackOf = which => (which === true ? 'king' : (typeof which === 'string' && BOSS_TRACKS[which]) || 'boss');
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
   const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   const MUSIC_VOL = 0.8;
@@ -299,14 +302,14 @@ const Sound = (() => {
     // area theme: 'title', 'town', 'cave', 'moss', ... (see TRACK)
     setTheme(t) { if (t !== theme) { theme = t; Score.update(); Rec.ambience(); } },
     // boss music on/off; the final boss has a theme of its own
-    boss(on, final) {
-      const track = final ? 'king' : 'boss';
+    boss(on, which) {
+      const track = bossTrackOf(which);
       if (bossMode === on && (!on || bossTrack === track)) return;
       bossMode = on; if (on) bossTrack = track;
       if (ctx && Score.mode === 'synth') startMusic();
       Score.update();
     },
-    prefetch(final) { Score.prefetch(final ? 'king' : 'boss'); },
+    prefetch(which) { Score.prefetch(bossTrackOf(which)); },
     toggle() {
       muted = !muted;
       try { localStorage.setItem('duskwell_mute', muted ? '1' : '0'); } catch (e) { /* ignore */ }

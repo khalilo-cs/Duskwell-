@@ -22,6 +22,8 @@ const PAL = {
   ember:    { sky: ['#0a0304', '#2b0c08', '#7a2a0c'], far: '#4a1a0c', mid: '#2c0f08', near: '#170705', hi: '#ffb070', fog: '#ff6a2a', glow: '#ff9a50', light: [0.3, -0.95] },
   storm:    { sky: ['#05060f', '#1a2042', '#3c4c7e'], far: '#2a3560', mid: '#1b2447', near: '#0e1430', hi: '#c4d4ff', fog: '#6a80c0', glow: '#a8c0ff', light: [-0.3, -0.95] },
   mirror:   { sky: ['#030308', '#0e0a1c', '#261c40'], far: '#1c1636', mid: '#120e24', near: '#08060f', hi: '#ece4ff', fog: '#8a78c8', glow: '#d8c8ff', light: [0.15, -0.99] },
+  bone:     { sky: ['#07060a', '#1c1612', '#3e3224'], far: '#2c2219', mid: '#1d1610', near: '#0e0a07', hi: '#f2e8d0', fog: '#bfae8c', glow: '#bfe8d0', light: [0.2, -0.98] },
+  lunar:    { sky: ['#03040c', '#0e1236', '#2c3270'], far: '#20285a', mid: '#141a40', near: '#0a0e26', hi: '#dfe6ff', fog: '#8a96e0', glow: '#e8ecff', light: [-0.5, -0.86] },
   throne:   { sky: ['#020305', '#0a0e19', '#1a2236'], far: '#10172a', mid: '#0a0f1c', near: '#05070e', hi: '#c6d6f4', fog: '#5e72a0', glow: '#ffe2a8', light: [0, -1] },
 };
 
@@ -936,6 +938,101 @@ SCENES.mirror = th => {
     layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.28; blobPath(g, x, y, rx, ry, i * 9 + 7, 0.3); g.fill(); g.globalAlpha = 1; } });
   }
   return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { rim: 0.95, haze: [1.1, 0.8, 0.55][li] })) };
+};
+
+// the Ossuary: ribs for arches, columns of stacked skulls, hanging chains and green lanterns
+SCENES.bone = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (let i = 0; i < 14; i++) { const x = R() * P, y = 120 + R() * 400; for (const dx of [-P, 0, P]) glowAt(g, x + dx, y, 140 + R() * 200, i % 3 ? '#9fd8b8' : '#e8d8b0', 0.07 + R() * 0.06); }
+    for (let i = 0; i < 90; i++) { const x = R() * P, y = R() * H, r = R() * 1.6 + 0.4; g.fillStyle = rgba('#cfeedd', 0.1 + R() * 0.3); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, r, 0, 7); g.fill(); } }
+  });
+  const R = mulberry32(61), layers = [[], [], []];
+  // far: a procession of colossal rib arches
+  for (let i = 0; i < 8; i++) {
+    const x = i / 8 * P + R() * 30, w = 120 + R() * 60, top = 90 + R() * 120, t = 14 + R() * 8;
+    layers[0].push({ x, reach: w + 40,
+      shape(g) { g.beginPath(); g.moveTo(x - w, H + 20); g.bezierCurveTo(x - w, top + 200, x - w * 0.5, top, x, top); g.bezierCurveTo(x + w * 0.5, top, x + w, top + 200, x + w, H + 20); g.lineTo(x + w - t, H + 20); g.bezierCurveTo(x + w - t, top + 220, x + w * 0.5, top + t, x, top + t); g.bezierCurveTo(x - w * 0.5, top + t, x - w + t, top + 220, x - w + t, H + 20); g.closePath(); g.fill(); },
+      detail(g) { g.strokeStyle = rgba(th.hi, 0.16); g.lineWidth = 3; g.beginPath(); g.moveTo(x - w + t * 0.3, H); g.bezierCurveTo(x - w + t * 0.3, top + 200, x - w * 0.5, top + 4, x, top + 4); g.stroke(); },
+      glow(g) { if (i % 3 === 0) glowAt(g, x, top + 8, 90, th.glow, 0.1); } });
+  }
+  // mid: columns built of skulls and vertebrae, chains and lanterns hanging between them
+  for (let i = 0; i < 9; i++) {
+    const x = i / 9 * P + R() * 50, w = 46 + R() * 34, top = 60 + R() * 140, seed = i * 5 + 70;
+    layers[1].push({ x, reach: w + 70,
+      shape(g) { jagPath(g, [[x - w / 2, H + 20], [x - w * 0.46, top + 40], [x - w * 0.3, top], [x, top - 12], [x + w * 0.3, top], [x + w * 0.46, top + 40], [x + w / 2, H + 20]], 4, seed); g.fill(); g.fillRect(x - w * 0.8, top - 8, w * 1.6, 16); },
+      detail(g) { const rr = mulberry32(seed); for (let k = 0; top + 30 + k * (w * 0.62) < H; k++) { const y = top + 30 + k * (w * 0.62), r = w * 0.27; g.fillStyle = rgba(th.hi, 0.17); g.beginPath(); g.arc(x + (rr() - 0.5) * 6, y, r, 0, 7); g.fill(); g.fillStyle = rgba('#000000', 0.5); g.beginPath(); g.arc(x - r * 0.35, y - 2, r * 0.22, 0, 7); g.arc(x + r * 0.35, y - 2, r * 0.22, 0, 7); g.fill(); } },
+      glow(g) { if (i % 2 === 0) { g.strokeStyle = rgba('#8a7a60', 0.6); g.lineWidth = 2; g.beginPath(); g.moveTo(x + w * 0.8, top - 8); g.lineTo(x + w * 0.8, top + 80); g.stroke(); glowAt(g, x + w * 0.8, top + 90, 70, th.glow, 0.32); g.fillStyle = 'rgba(210,255,230,0.85)'; g.beginPath(); g.arc(x + w * 0.8, top + 90, 4, 0, 7); g.fill(); } } });
+  }
+  // near: bone spikes from the ceiling, mounds of skulls on the floor, mist
+  for (let i = 0; i < 7; i++) {
+    const x = i / 7 * P + R() * 80, w = 54 + R() * 54, h = 190 + R() * 250;
+    layers[2].push({ x, reach: w + 40, shape(g) { jagPath(g, spike(x, -40, w, h, -1, i * 4 + 700), 4, i * 4 + 701); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.18); g.beginPath(); g.moveTo(x, h - 60); g.lineTo(x + w * 0.5, -40); g.lineTo(x, -40); g.closePath(); g.fill(); } });
+  }
+  for (let i = 0; i < 6; i++) {
+    const x = R() * P, rx = 110 + R() * 150, ry = 50 + R() * 80, s = i * 7 + 33;
+    layers[2].push({ x, reach: rx + 40, shape(g) { jagPath(g, [[x - rx, H + 30], [x - rx * 0.6, H - ry * 0.6], [x - rx * 0.2, H - ry], [x + rx * 0.3, H - ry * 0.7], [x + rx, H + 30]], 5, s); g.fill(); },
+      detail(g) { const rr = mulberry32(s); for (let k = 0; k < 7; k++) { const px = x + (rr() - 0.5) * rx * 1.2, py = H - ry * (0.2 + rr() * 0.6), r = 9 + rr() * 6; g.fillStyle = rgba(th.hi, 0.2); g.beginPath(); g.arc(px, py, r, 0, 7); g.fill(); g.fillStyle = rgba('#000000', 0.5); g.beginPath(); g.arc(px - r * 0.35, py - 1, r * 0.2, 0, 7); g.arc(px + r * 0.35, py - 1, r * 0.2, 0, 7); g.fill(); } } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, y = 460 + R() * 180, rx = 170 + R() * 230, ry = 20 + R() * 30;
+    layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.3; blobPath(g, x, y, rx, ry, i * 9 + 5, 0.3); g.fill(); g.globalAlpha = 1; } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { rim: 0.7, haze: [1.15, 0.85, 0.55][li] })) };
+};
+
+// the Lunar Observatory: a vast moon, brass domes, armillary rings and slow stars
+SCENES.lunar = th => {
+  const sky = paintSky(th, (g, R) => {
+    for (let i = 0; i < 6; i++) { const x = R() * P, y = 60 + R() * 380; for (const dx of [-P, 0, P]) glowAt(g, x + dx, y, 220 + R() * 240, i % 2 ? '#5a6ad8' : '#a870e0', 0.1); }      // nebulae
+    for (let i = 0; i < 360; i++) { const x = R() * P, y = R() * H, r = R() * 1.5 + 0.3; g.fillStyle = rgba(i % 7 ? '#ffffff' : '#ffe6a8', 0.25 + R() * 0.65); for (const dx of [-P, 0, P]) { g.beginPath(); g.arc(x + dx, y, r, 0, 7); g.fill(); } }
+    for (const dx of [0]) {
+      const mx = P * 0.34 + dx, my = 190;                                                                                                       // the moon, half hidden by a dark disc
+      glowAt(g, mx, my, 560, '#cfd8ff', 0.2); glowAt(g, mx, my, 190, '#ffffff', 0.35);
+      g.fillStyle = 'rgba(240,244,255,0.97)'; g.beginPath(); g.arc(mx, my, 92, 0, 7); g.fill();
+      g.fillStyle = 'rgba(170,184,225,0.35)'; for (const [ox, oy, r] of [[-30, -26, 20], [26, 20, 14], [-8, 40, 9], [38, -34, 8], [-46, 14, 10]]) { g.beginPath(); g.arc(mx + ox, my + oy, r, 0, 7); g.fill(); }
+      g.fillStyle = 'rgba(4,6,18,0.94)'; g.beginPath(); g.arc(mx + 52, my - 10, 88, 0, 7); g.fill();                                              // the shadow that crosses it
+      g.strokeStyle = 'rgba(255,236,190,0.55)'; g.lineWidth = 3; g.beginPath(); g.arc(mx + 52, my - 10, 90, Math.PI * 0.6, Math.PI * 1.45); g.stroke();
+    }
+  });
+  const R = mulberry32(101), layers = [[], [], []];
+  // far: domes and spires of a city of observers
+  for (let i = 0; i < 9; i++) {
+    const x = i / 9 * P + R() * 40, w = 90 + R() * 80, h = 120 + R() * 200, dome = R() < 0.6;
+    layers[0].push({ x, reach: w + 40,
+      shape(g) { g.fillRect(x - w * 0.5, H - h, w, h + 30); if (dome) { g.beginPath(); g.ellipse(x, H - h, w * 0.55, w * 0.42, 0, Math.PI, 0); g.fill(); g.fillRect(x - 3, H - h - w * 0.42 - 26, 6, 26); } else { g.beginPath(); g.moveTo(x - w * 0.5, H - h); g.lineTo(x, H - h - 90); g.lineTo(x + w * 0.5, H - h); g.fill(); } },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.1); g.fillRect(x - w * 0.5, H - h, w * 0.18, h); },
+      glow(g) { for (let k = 0; k < 3; k++) { g.fillStyle = 'rgba(255,224,150,0.7)'; g.fillRect(x - w * 0.3 + k * w * 0.28, H - h + 30 + (k % 2) * 30, 5, 8); } glowAt(g, x, H - h + 40, 40, '#ffe0a0', 0.18); } });
+  }
+  // mid: armillary rings, telescope tubes and brass pipes
+  for (let i = 0; i < 6; i++) {
+    const x = i / 6 * P + R() * 80, y = 150 + R() * 300, r = 70 + R() * 90;
+    layers[1].push({ x, reach: r + 70,
+      shape(g) { g.lineWidth = 8; g.beginPath(); g.ellipse(x, y, r, r * 0.34, 0.5, 0, 7); g.stroke(); g.beginPath(); g.ellipse(x, y, r * 0.34, r, 0.2, 0, 7); g.stroke(); g.beginPath(); g.arc(x, y, r * 0.9, 0, 7); g.lineWidth = 4; g.stroke(); g.beginPath(); g.arc(x, y, 14, 0, 7); g.fill(); },
+      detail(g) { g.strokeStyle = rgba(th.hi, 0.26); g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - 2, r, r * 0.34, 0.5, Math.PI * 1.1, Math.PI * 1.7); g.stroke(); },
+      glow(g) { glowAt(g, x, y, r * 0.5, '#ffe6a8', 0.16); } });
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = i * 400 + 100 + R() * 120, y = 330 + R() * 160, a = -0.7 - R() * 0.4, L = 220 + R() * 120;
+    layers[1].push({ x, reach: L, shape(g) { g.save(); g.translate(x, y); g.rotate(a); g.fillRect(0, -9, L, 18); g.fillRect(L * 0.2, -13, 10, 26); g.fillRect(L * 0.55, -12, 10, 24); g.fillRect(L, -12, 12, 24); g.fillRect(-18, -5, 20, 10); g.restore(); },
+      glow(g) { g.save(); g.translate(x, y); g.rotate(a); glowAt(g, L + 12, 0, 40, '#cfe0ff', 0.4); g.restore(); } });
+  }
+  // near: floating slabs of stone, brass arches, soft mist
+  for (let i = 0; i < 7; i++) {
+    const x = i / 7 * P + R() * 90, y = 80 + R() * 480, w = 50 + R() * 90, h = 14 + R() * 24, s = i * 5 + 90;
+    layers[2].push({ x, reach: w + 30, shape(g) { jagPath(g, [[x - w, y], [x - w * 0.6, y + h * 1.3], [x, y + h * 2], [x + w * 0.5, y + h * 1.2], [x + w, y]], 3, s); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.18); g.beginPath(); g.moveTo(x - w, y); g.lineTo(x + w, y); g.lineTo(x + w * 0.5, y + h * 1.2); g.lineTo(x - w * 0.4, y + h); g.closePath(); g.fill(); } });
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = i / 4 * P + 100 + R() * 120, w = 70 + R() * 40, h = 280 + R() * 200;
+    layers[2].push({ x, reach: w + 40, shape(g) { g.beginPath(); g.moveTo(x - w, H + 30); g.lineTo(x - w, H - h + w); g.quadraticCurveTo(x - w, H - h, x, H - h); g.quadraticCurveTo(x + w, H - h, x + w, H - h + w); g.lineTo(x + w, H + 30); g.lineTo(x + w - 22, H + 30); g.lineTo(x + w - 22, H - h + w); g.quadraticCurveTo(x + w - 22, H - h + 22, x, H - h + 22); g.quadraticCurveTo(x - w + 22, H - h + 22, x - w + 22, H - h + w); g.lineTo(x - w + 22, H + 30); g.closePath(); g.fill(); },
+      detail(g) { g.fillStyle = rgba(th.hi, 0.16); g.fillRect(x - w, H - h + w, 8, h); } });
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = R() * P, y = 470 + R() * 160, rx = 170 + R() * 230, ry = 20 + R() * 30;
+    layers[2].push({ x, reach: rx + 60, shape(g) { g.globalAlpha = 0.28; blobPath(g, x, y, rx, ry, i * 9 + 11, 0.3); g.fill(); g.globalAlpha = 1; } });
+  }
+  return { sky, layers: layers.map((it, li) => paintLayer(th, li, it, { rim: 0.9, haze: [1.1, 0.8, 0.5][li] })) };
 };
 
 SCENES.title = th => {

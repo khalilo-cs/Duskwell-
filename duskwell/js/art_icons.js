@@ -14,7 +14,9 @@ const IconArt = (() => {
     g.drawImage(img, r[0], r[1], r[2], r[3], x - w / 2 + (o.dx || 0), (o.bottom ? y - h : y - h / 2) + (o.dy || 0), w, h);
     g.restore(); return true;
   }
-  return { ready, draw, has: n => !!ICON_RECTS[n] };
+  // draws the rectangle r of the atlas with its top-left corner at (x, y), at its own size
+  const raw = (g, r, x, y) => g.drawImage(img, r[0], r[1], r[2], r[3], x, y, r[2], r[3]);
+  return { ready, draw, raw, has: n => !!ICON_RECTS[n] };
 })();
 
 (function () {
@@ -53,4 +55,21 @@ const IconArt = (() => {
     g.fillStyle = '#2a2833'; g.fillRect(x - 11, y - 8, 22, 8); g.strokeStyle = INK; g.lineWidth = 2.5; g.strokeRect(x - 11, y - 8, 22, 8);
     IconArt.draw(g, lit ? 'lantern_on' : 'lantern_off', x + 22, y - 110, 66, { bottom: false, dy: 33 });
   };
+})();
+
+// The weapons in the hand (and on the back): the owner's drawings, placed so the grip is the origin and the line from grip to tip lies
+// along +x, as the code-drawn weapons were. Grip and tip are points in the icon (icon pixels); the older drawing takes over until the atlas loads.
+(function () {
+  const AX = { scythe: [[70, 215], [380, 45]], lance: [[60, 190], [168, 12]], cleaver: [[45, 215], [160, 40]], rapier: [[80, 215], [90, 15]], bonesaw: [[30, 175], [175, 45]], fangs: [[110, 95], [140, 230]], duskblade: [[20, 35], [150, 230]] };
+  for (const id of Object.keys(AX)) {
+    const old = WEAPON_ART[id], [gp, tp] = AX[id], dx = tp[0] - gp[0], dy = tp[1] - gp[1], dist = Math.hypot(dx, dy), th = Math.atan2(dy, dx);
+    WEAPON_ART[id] = function (g, len, k, plain, t) {
+      const r = ICON_RECTS['weapon_' + id];
+      if (!r || !IconArt.ready()) return old(g, len, k, plain, t);
+      const s = len / dist;
+      g.save(); g.rotate(-th); g.scale(s, s); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+      IconArt.raw(g, r, -gp[0], -gp[1]);
+      g.restore();
+    };
+  }
 })();

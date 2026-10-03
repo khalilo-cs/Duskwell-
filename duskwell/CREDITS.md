@@ -27,7 +27,7 @@ Hollow Knight's own art and music belong to Team Cherry and are not part of this
 pictures from their own device; they stay in that browser and are never shipped.
 
 ## Charms
-The 19 charms (`js/charms.js`), their names, effects and icons (`js/art_charms.js`, drawn in code) are original to this project. Equippable relics limited by a number of slots are a common genre mechanic, so only the idea is shared with other Metroidvanias; no names, art or text from Hollow Knight or any other game are used.
+The 21 charms (`js/charms.js`), their names, effects and icons (`js/art_charms.js`, drawn in code) are original to this project. Equippable relics limited by a number of slots are a common genre mechanic, so only the idea is shared with other Metroidvanias; no names, art or text from Hollow Knight or any other game are used.
 
 ## Rimecrest, Cinderdeep and Lumen
 The sixteen rooms of the two new areas (`js/world_frost.js`, `js/world_ember.js`), the nine creatures (mole, lava worm, bomb imp, veil, roller, slime, chain bearer, night moth, icicle),
@@ -41,3 +41,13 @@ The fourteen rooms (`js/world_storm.js`, `js/world_mirror.js`), the wind zones (
 the Wanderer's Twin) and their art, the two charms (Storm Cloak, Blade Echo), the painted backgrounds (`art/bg/storm`, `art/bg/mirror`) and the two music pieces (`audio/music/storm.mp3`, `mirror.mp3`)
 are original to this project; the music is composed in `tools/music/compose.py` and played with the FluidR3 GM SoundFont as above. The Twin is drawn from the same idea as the hero (a horned mask and a
 nail) but is not the hero's artwork. Nothing from Hollow Knight is used; a dark double of the player is a common genre idea.
+
+## Equipment, the Ossuary, the Lunar Observatory, the bestiary and the orchestral music
+The equipment (eight weapons, eight cloaks, three nail arts: `js/equipment.js`, `js/shops.js`, `js/art_gear.js`), the shops and their people (the smith, the outfitter, the travelling traders, the elder
+and the merchant: `js/art_npcs.js`), the detail toolkit and the art of every creature and boss (`js/art_detail.js`, `js/art_creatures.js`, `js/art_deep.js`), the bestiary (`js/bestiary.js`, `js/screens.js`),
+the two new areas with their fourteen rooms (`js/world_ossuary.js`, `js/world_lunar.js`), the low-gravity fields (`RoomBuilder.grav`), the six creatures (`js/enemies_deep.js`), the four bosses
+(the Bonewright, the Marrow Tyrant, the Stargazer, the Eclipse Regent: `js/bosses_deep.js`), the two charms (Grave Whisper, Moonstep), the painted backgrounds (`art/bg/bone`, `art/bg/lunar`) and the six
+new music pieces (`audio/music/overture.mp3`, `ending.mp3`, `ossuary.mp3`, `lunar.mp3`, `boss_bone.mp3`, `boss_moon.mp3`, composed in `tools/music/compose.py` and played with the FluidR3 GM SoundFont as above)
+are all original to this project and drawn or written in code; no image, name, text or sound from Hollow Knight or any other game is used. The inked hero drawing (`wanderer()`) is ours;
+the pixel hero (`art/source/hero.ase`) remains the artist's own work and stays the default look. Skeletons, bone pillars, lens-eyed bugs, brass orreries, eclipses and weak gravity are common
+fantasy and Metroidvania motifs; only the ideas are shared.

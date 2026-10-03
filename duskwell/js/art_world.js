@@ -406,6 +406,10 @@ function drawCritters(g, th, camX, camY, t) {
 // mid and near layers, each tiling every PAINT_P logical px). Until an area's set has loaded,
 // or if it cannot load, the procedural layers below are drawn instead.
 const PAINT_P = 1600, PAINT_H = 700, PAINT_TOP = -40, SKY_Z = 160, PAINT_KEEP = 3;
+// The sky layer of these areas is the owner's concept picture (tools/paint/import_concept.py): a whole scene, so the painted
+// silhouette layers over it are thinned (alpha per layer: sky, far, mid, near) to let it show while the play field stays readable.
+const CONCEPT_ALPHA = { default: [1, 0, 0.5, 0.85] };
+for (const k of ['town', 'cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
 const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
 Art.loadPainted = function (theme) {
   if (!THEMES[theme]) return;
@@ -426,7 +430,8 @@ function drawPainted(g, th, p, camX, camY, t) {
     const f = depthFactor(li ? LAYER_Z[li - 1] : SKY_Z);
     const off = -(((camX * f) % PAINT_P) + PAINT_P) % PAINT_P;
     const y = PAINT_TOP - camY * f * VERTICAL_PARALLAX + (li ? 14 * (li - 2) : 0);
-    for (let x = off; x < VW; x += PAINT_P) g.drawImage(p.imgs[li], x, y, PAINT_P, PAINT_H);
+    const ca = CONCEPT_ALPHA[th.name], la = ca ? ca[li] : 1;
+    if (la > 0.01) { g.save(); g.globalAlpha *= la; for (let x = off; x < VW; x += PAINT_P) g.drawImage(p.imgs[li], x, y, PAINT_P, PAINT_H); g.restore(); }
     if (li === 0) drawRays(g, th, camX);
     if (li === 2) drawCritters(g, th, camX, camY, t);
     if (li > 0) {

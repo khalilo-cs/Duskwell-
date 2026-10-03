@@ -1,0 +1,11 @@
+{
+ "note": "rows: [y0, y1, frame count]; the three rows of each creature are idle+walk, attack, hurt+death",
+ "sheets": {
+  "art/source/creatures_hd/sheet_husk_crawler.png": {"husk": [[8,246,6],[247,482,4],[488,715,5]], "crawler": [[741,881,6],[897,1050,4],[1059,1228,5]]},
+  "art/source/creatures_hd/sheet_flyer_hopper.png": {"flyer": [[6,224,6],[225,408,4],[412,582,5]], "hopper": [[607,811,6],[811,1004,5],[1004,1225,5]]},
+  "art/source/creatures_hd/sheet_spider_warden.png": {"spider": [[2,158,6],[159,329,5],[329,480,5]], "warden": [[493,670,6],[672,840,5],[840,1006,5]]}
+ },
+ "cuts": {
+  "flyer:1": [287, 668, 1025]
+ }
+}

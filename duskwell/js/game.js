@@ -311,6 +311,7 @@ function updatePlay(dt) {
   for (const p of G.projs) p.update(dt);
   for (const c of G.geos) c.update(dt);
   for (const it of G.items) it.update(dt);
+  for (const e of G.enemies) if (e.dead && typeof AnimArt !== 'undefined') AnimArt.onDead(e);      // creatures drawn with a death leave it behind
   G.enemies = G.enemies.filter(e => !e.dead); G.projs = G.projs.filter(p => !p.dead);
   G.geos = G.geos.filter(c => !c.dead); G.items = G.items.filter(i => !i.dead);
 

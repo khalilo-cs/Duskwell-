@@ -9,7 +9,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   const { browser, page, errors } = await open();
   await install(page);
   const rooms = await page.evaluate(() => DW.WORLD.order.filter(id => DW.WORLD.rooms[id].need).map(id => { const r = DW.WORLD.rooms[id]; return { id, need: r.need, w: r.w, doors: r.doors.map(d => d.id), to: r.doors.map(d => d.to), items: r.items.map(i => i.id), enemies: r.enemies.length }; }));
-  ok('28 extra rooms widen the areas', rooms.length === 28, rooms.length);
+  ok('40 extra rooms widen the areas', rooms.length === 40, rooms.length);
   const only = process.argv[2];
   for (const r of rooms) {
     if (only && only !== r.id) continue;

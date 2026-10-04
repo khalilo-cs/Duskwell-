@@ -20,6 +20,8 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:none}
 html,body{margin:0;height:100%;background:var(--ink);color:var(--text);overflow:hidden;font-family:"Cairo","Segoe UI",Tahoma,sans-serif}
+/* the picture of the title, dim and blurred, fills the page around the game */
+body::before{content:"";position:fixed;inset:-12px;z-index:-1;background:linear-gradient(rgba(5,7,13,.7),rgba(5,7,13,.88)),url(art/title/banner.webp) center/cover no-repeat;filter:blur(7px) saturate(.85)}
 #app{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;padding-inline:8px}
 #wrap{position:relative;line-height:0}
 canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40px rgba(0,0,0,.6);

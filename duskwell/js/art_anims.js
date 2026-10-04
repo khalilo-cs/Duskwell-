@@ -80,11 +80,11 @@ const AnimArt = (() => {
     const c = CFG[kind], d = e._ad || (e._ad = { dist: 0, x: e.cx, t: t, hurtT: 0, lastAtk: null, leapT: null, bite: null });
     const dt = Math.max(0, Math.min(0.1, t - d.t)); d.t = t;
     d.dist += Math.abs(e.cx - d.x); d.x = e.cx;
-    if (e.flash > 0.05 && !e.isDummy) { d.hurtT = 0.18; d.leapT = null; } else d.hurtT -= dt;
     if (e.currentState !== d.st) {                                    // a change of state: leaving the wind-up means the blow (or the leap) has come
-      if (d.st === 'anticipation' && e.currentState !== 'recoil') { d.fired = t; if (c.leap) d.leapT = t; }
+      if (d.st === 'anticipation') { if (c.leap) d.leapT = t; if (e.currentState !== 'recoil') d.fired = t; }
       d.prevSt = d.st; d.st = e.currentState; d.stAt = t;
     }
+    if (e.flash > 0.05 && !e.isDummy) { d.hurtT = 0.18; d.leapT = null; } else d.hurtT -= dt;
     const f = d.f = c.brain ? c.brain(e, t, d, CREATURE_ANIMS[kind]) : pick(kind, e, t), sc = scaleOf(kind, e), idle = CREATURE_ANIMS[kind].idle[0];
     const gy = c.fly ? e.cy + (idle[5] - idle[3] * 0.5) * sc : e.y + e.h + 1;
     if (!c.fly && !e.isDummy && !e.hanging) Pixel.shadow(g, e.cx, e.y + e.h, Math.min(e.w * 1.1, idle[2] * sc * 0.4));

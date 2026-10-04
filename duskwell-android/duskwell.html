@@ -244,7 +244,7 @@ const STR = {
     mapHint: 'Z: تكبير / كل العالم     الأسهم: تحريك     Esc: إغلاق', guardWake: 'الحارس يستيقظ! اهزمه لتنال التميمة.', charm_found_d: 'اجلس على مقعد وافتح التمائم من قائمة الإيقاف لترتديها.',
     itemNotch: 'فتحة تميمة', itemNotchD: 'تتسع لتمائم أكثر',
     itemVial: 'قارورة الشفاء', itemVialD: 'تشفي قناعاً واحداً. تُشترى مرة بعد مرة',
-    itemFlask: 'قارورة الروح', itemFlaskD: 'تملأ ثلث كرة الروح. تُشترى مرة بعد مرة',
+    itemFlask: 'قارورة الروح', itemFlaskD: 'تملأ ثلث كرة الروح (99). تُشترى مرة بعد مرة',
     itemInk: 'حبر الساحر', itemInkD: 'كل تعاويذك تؤذي أكثر بربعها',
     itemRune: 'رقيّة التوفير', itemRuneD: 'التعويذة والتركيز يكلّفان خمس نقاط روح أقل',
     wizardHi: 'الساحر: الروح تُكتب بالحبر لا بالنصل. إن حملتَ جيواً فعندي ما يزيد تعاويذك قوة.',
@@ -331,7 +331,7 @@ const STR = {
     mapHint: 'Z: zoom / whole world     Arrows: move     Esc: close', guardWake: 'The guardian wakes! Defeat it to take the charm.', charm_found_d: 'Rest on a bench and open Charms from the pause menu to wear it.',
     itemNotch: 'Charm Notch', itemNotchD: 'Room for more charms',
     itemVial: 'Healing Vial', itemVialD: 'Mends one mask. Can be bought again and again',
-    itemFlask: 'Soul Flask', itemFlaskD: 'Fills a third of the soul vessel. Can be bought again and again',
+    itemFlask: 'Soul Flask', itemFlaskD: 'Fills a third of the soul vessel (99). Can be bought again and again',
     itemInk: 'Sorcerer\'s Ink', itemInkD: 'All your spells hit a quarter harder',
     itemRune: 'Thrift Rune', itemRuneD: 'Spells and focusing cost five soul less',
     wizardHi: 'Sorcerer: Soul is written in ink, not with the nail. If you carry geo, I have things that make your spells stronger.',
@@ -359,7 +359,8 @@ function font(px, weight) { return (weight || '700') + ' ' + px + 'px ' + (LANG.
 <script>
 'use strict';
 // How hard the game plays. The areas have a fixed order of depth (ORDER); enemies and bosses get
-// tougher, quicker and sharper-eyed the deeper the area is, and the hero stays untouchable a little shorter after a wound.
+// tougher, quicker, sharper-eyed and born cleverer the deeper the area is, the hero stays untouchable a little shorter after a wound,
+// and the soul vessel is large but slow to fill.
 // What the creatures learn from the player on top of this is in mind.js.
 const Diff = (() => {
   // the areas from the first to the last
@@ -370,13 +371,20 @@ const Diff = (() => {
   return {
     ORDER, tier,
     // multiplier on the health of the enemies and bosses of an area
-    enemyHp: area => 1.3 + 0.03 * tier(area),
-    bossHp: area => 1.3 + 0.025 * tier(area),
+    enemyHp: area => 1.6 + 0.05 * tier(area),
+    bossHp: area => 1.5 + 0.04 * tier(area),
     // how fast the creatures of an area act (their clocks run this much faster) and how far they notice the hero
-    tempo: area => 1 + 0.012 * tier(area),
-    sight: area => 1.05 + 0.01 * tier(area),
+    tempo: area => 1.06 + 0.015 * tier(area),
+    sight: area => 1.1 + 0.015 * tier(area),
+    // the cleverness a creature is born with, by depth: level 0 in the first four areas up to 3 in the last ones (see mind.js)
+    innate: area => Math.min(3, Math.floor(tier(area) / 4)),
+    // how much it hurts a creature to be pushed: the deeper, the less they flinch (a share of the normal knockback)
+    flinch: area => Math.max(0.5, 1 - 0.04 * tier(area)),
     // seconds the hero cannot be hurt again after a wound (before the cloak's factor)
-    grace: 1.05,
+    grace: 0.9,
+    // the soul vessel holds three times what it did, and a blow gathers only half of what it was worth: it takes long to fill
+    soulMax: 297,
+    soulFill: 0.5,
   };
 })();
 </script>
@@ -6108,7 +6116,7 @@ class Player {
   constructor() {
     this.w = 22; this.h = 38;
     this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false, wail: false };
-    this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = 99; this.geo = 0;
+    this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = Diff.soulMax; this.geo = 0;
     this.nail = 5; this.soulGain = 11;
     this.place(0, 0, 1);
   }
@@ -6132,6 +6140,8 @@ class Player {
   // standing on ice
   onIce() { const L = G.level, ty = Math.floor((this.y + this.h + 2) / TILE); return L.isIce(Math.floor((this.x + 4) / TILE), ty) || L.isIce(Math.floor((this.x + this.w - 4) / TILE), ty); }
   // ---- numbers the charms change (see charms.js) ----
+  // every gain of soul comes through here: the vessel is large, and each blow fills only part of what it used to
+  gainSoul(n) { this.soul = Math.min(this.maxSoul, this.soul + n * Diff.soulFill); }
   spellCost() { return (Charms.has('thrift') ? 24 : 33) - (G.flags.buy_rune ? 5 : 0); }          // the wizard's rune takes five off
   // numbers that charms and gear change: heal time, damage, spell power, strike gap, reach
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1) * Gear.focusK(); }
@@ -6389,7 +6399,7 @@ class Player {
         const landed = e.hurt(this.nailDamage(), dir, this.atkDir);      // false: a shield turned it aside
         e.kb = kb0;
         if (landed !== false) {
-          this.soul = Math.min(this.maxSoul, this.soul + Math.round((this.soulGain + (Charms.has('siphon') ? 6 : 0) + Gear.soulBonus()) * Gear.soulK()));
+          this.gainSoul(Math.round((this.soulGain + (Charms.has('siphon') ? 6 : 0) + Gear.soulBonus()) * Gear.soulK()));
           if (Charms.has('cinder') && !e.dead) e.burnT = 0.6;        // Cinder Edge: a burn lands a moment after the blow
           if (Gear.bleeds() && !e.dead) e.bleedT = 1.1;              // Bone Saw: the wound keeps bleeding
         }
@@ -6450,7 +6460,7 @@ class Player {
       if (this.rushTick > 0) continue;
       e.hurt(Math.max(2, Math.round(this.nailDamage() * 0.75)), f, 'spell');
       G.fx.push({ type: 'cut', x: e.cx + rand(-10, 10), y: e.cy + rand(-14, 14), a: rand(-0.9, 0.9) + (f > 0 ? 0 : Math.PI), t: 0, life: 0.2, color: '#ffe0a8' });
-      this.soul = Math.min(this.maxSoul, this.soul + 2);
+      this.gainSoul(2);
     }
     if (this.rushTick <= 0) this.rushTick = 0.06;
     // the Wanderer slows among the foes and cuts them again and again, then bursts out the far side
@@ -6538,7 +6548,7 @@ class Player {
     if (this.wailTick <= 0) {
       this.wailTick = 0.13;
       const col = { x: this.cx - 38, y: this.wailTop, w: 76, h: this.y + this.h - this.wailTop };
-      for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(col, e.hb())) { e.hurt(this.spellDmg(6), e.cx > this.cx ? 1 : -1, 'wail'); this.soul = Math.min(this.maxSoul, this.soul + 1); }
+      for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(col, e.hb())) { e.hurt(this.spellDmg(6), e.cx > this.cx ? 1 : -1, 'wail'); this.gainSoul(1); }
       G.burst(this.cx + rand(-30, 30), rand(this.wailTop, this.y), 5, { color: '#dff3ff', speed: 60, life: 0.4, size: 3, grav: -260 });
     }
     if (this.wailT <= 0) { this.wailT = 0; this.invuln = Math.max(this.invuln, 0.2); }
@@ -6587,7 +6597,7 @@ class Player {
     G.burst(this.cx, this.cy, 16, { color: '#e9f3ff', speed: 240, life: 0.5, size: 3 });
     G.burst(this.cx, this.cy, 10, { color: '#1a2230', speed: 200, life: 0.5, size: 4 });
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }
-    if (Charms.has('spirit')) this.soul = Math.min(this.maxSoul, this.soul + 18);
+    if (Charms.has('spirit')) this.gainSoul(18);
     if (Charms.has('thorn')) this.thornBurst();
     if (Gear.frost()) this.frostBurst();
     return true;
@@ -6665,7 +6675,7 @@ class Player {
     for (const e of G.enemies) {
       if (e.dead || e.ghostly || s.hits.has(e) || !overlap(hb, e.hb())) continue;
       s.hits.add(e); e.hurt(SD_DMG, s.dir, 'spell'); G.hitstop(0.05);
-      this.soul = Math.min(this.maxSoul, this.soul + 6);
+      this.gainSoul(6);
     }
     if (this.hitL || this.hitR) {
       this.sd = null; this.vx = -s.dir * 170; this.vy = -240; this.recoil = 0.15;
@@ -6885,7 +6895,7 @@ class Enemy {
   // die: drop geo, burst, count the kill
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15); Mind.killed(this, this.lastHow);
-    if (Charms.has('grave') && !G.player.dead) { G.player.soul = Math.min(G.player.maxSoul, G.player.soul + 8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
+    if (Charms.has('grave') && !G.player.dead) { G.player.gainSoul(8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
     G.burst(this.cx, this.cy, 8, { color: '#0a0d12', speed: 180, life: 0.6, size: 5 });
     G.dropGeo(this.cx, this.cy, this.geo);
@@ -11335,8 +11345,9 @@ Object.assign(BOSS_TYPES, { bonewright: Bonewright, marrow: Marrow, stargazer: S
 'use strict';
 // What the creatures learn from you. Every kind keeps a record (G.mind, saved with the game): how many of it you killed,
 // how many times it wounded you, how many times it killed you. From those three numbers it gets a level, 0 to 5, and the level
-// changes how every creature of that kind behaves, in this room and in every later one:
-//   1  it is quicker and notices you from farther away
+// changes how every creature of that kind behaves, in this room and in every later one. The deeper areas are born with a level
+// of their own (Diff.innate), so a player who has never met the kind still meets a clever one:
+//   1  it is quicker, notices you from farther away and leads its shots a little
 //   2  it sidesteps now and then when it sees your nail swing
 //   3  it hops over your spell bolts, if spells are how you mostly killed it
 //   4  when one of them has seen you the others of its kind in the room are on the alert too
@@ -11344,7 +11355,7 @@ Object.assign(BOSS_TYPES, { bonewright: Bonewright, marrow: Marrow, stargazer: S
 // Bosses do not sidestep: a boss that has beaten you before only shortens its pauses.
 // Nothing here is in the creatures' own code: update() and seesPlayer() of every class are wrapped once, below.
 const Mind = (() => {
-  const LEVELS = [3, 8, 16, 28, 45];                                        // score needed for levels 1 to 5
+  const LEVELS = [2, 5, 10, 18, 30];                                        // score needed for levels 1 to 5
   const NAMES = [['غِرّ', 'Green'], ['متنبّه', 'Wary'], ['متمرّس', 'Seasoned'], ['ماكر', 'Cunning'], ['خبير', 'Veteran'], ['داهية', 'Mastermind']];
   const ROOTED = new Set(['shard', 'spitter', 'icicle', 'censer', 'heap', 'mole', 'lavaworm', 'shroom', 'orrery']);       // these never move out of the way
   const SPELL_HOW = new Set(['spell', 'wail', 'dive', 'nova']);
@@ -11361,10 +11372,11 @@ const Mind = (() => {
   // score -> level
   const score = r => r.k + 1.5 * r.w + 4 * r.d;
   const levelOf = r => { const s = score(r); let l = 0; while (l < MAX && s >= LEVELS[l]) l++; return l; };
-  // the level of a creature (0 when it has no record)
+  // the level of a creature: what it has learned from you, or what its depth gives it, whichever is more
   function level(e) {
-    const k = keyOf(e); if (!k || !G.mind || !G.mind[k]) return 0;
-    return levelOf(G.mind[k]);
+    const k = keyOf(e); if (!k) return 0;
+    const learned = G.mind && G.mind[k] ? levelOf(G.mind[k]) : 0;
+    return Math.max(learned, e.area ? Diff.innate(e.area) : 0);
   }
   // share of this kind's deaths that spells dealt
   const spellShare = r => (r.k ? r.sp / r.k : 0);
@@ -11392,10 +11404,11 @@ const Mind = (() => {
   // set a creature up when it appears: the depth of its area (Diff) and, for a boss, the shorter pauses its memory gives it
   function prepare(e, area) {
     e.area = area; e.tempo = Diff.tempo(area); e.sightK = Diff.sight(area);
+    if (e.kb) e.kb *= Diff.flinch(area);                              // the deep ones are hard to push around
     if (e.isBoss) { const l = level(e); if (l) e.spd = Math.max(0.55, e.spd * (1 - 0.045 * l)); }
   }
   // how much faster than normal a creature acts: the area's tempo times what it has learned
-  const tempo = e => Math.min(1.4, (e.tempo || 1) * (1 + 0.03 * level(e)));
+  const tempo = e => Math.min(1.5, (e.tempo || 1) * (1 + 0.04 * level(e)));
   // how much farther it notices you
   const sight = e => (e.sightK || 1) * (1 + 0.12 * level(e)) * (e.alertT > 0 ? 1.8 : 1);
 
@@ -11407,8 +11420,8 @@ const Mind = (() => {
     const busy = e.currentState === ST.ANTICIPATION || e.currentState === ST.ATTACK || e.stun > 0 || e.isBoss || ROOTED.has(e.kind);
     if (l >= 2 && !busy && e.dodgeCD <= 0 && swing) {
       const dx = e.cx - p.cx;
-      if (Math.abs(dx) < 120 && Math.abs(e.cy - p.cy) < 70 && Math.sign(dx) === p.face && Math.random() < Math.min(0.5, 0.09 * l)) {
-        e.dodgeT = 0.22; e.dodgeVx = Math.sign(dx) * 340; e.dodgeCD = 1.6 - 0.1 * l;
+      if (Math.abs(dx) < 120 && Math.abs(e.cy - p.cy) < 70 && Math.sign(dx) === p.face && Math.random() < Math.min(0.65, 0.13 * l)) {
+        e.dodgeT = 0.22; e.dodgeVx = Math.sign(dx) * 340; e.dodgeCD = 1.4 - 0.1 * l;
         if (e.onGround) e.vy = -200;
       }
     }
@@ -11427,6 +11440,17 @@ const Mind = (() => {
   // the dodge goes on for its short time after the creature's own update has set its velocity
   function after(e, dt) { if (e.dodgeT > 0) { e.dodgeT -= dt; e.vx = e.dodgeVx; } }
 
+  // a straight, fast shot is turned toward where the hero will be, not where he is: the stronger the creature's level, the more so
+  function lead(e, q) {
+    const l = level(e), p = G.player; if (!l || !p || q.kind !== 'shard') return;
+    const sp = Math.hypot(q.vx, q.vy); if (sp < 100) return;
+    const dx = p.cx - q.x, dy = p.cy - q.y, t = Math.hypot(dx, dy) / sp;
+    const a0 = Math.atan2(dy, dx), a1 = Math.atan2(dy + p.vy * t, dx + p.vx * t);
+    let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+    const k = Math.min(1, 0.3 * l), c = Math.cos(d * k), sn = Math.sin(d * k);
+    const vx = q.vx * c - q.vy * sn, vy = q.vx * sn + q.vy * c; q.vx = vx; q.vy = vy;
+  }
+
   // wrap one class once: its update runs faster, then acts on what was learned. A subclass that calls super.update() is not wrapped twice.
   function wrap(cls) {
     if (!cls || !Object.prototype.hasOwnProperty.call(cls.prototype, 'update') || cls.prototype.update._mind) return;
@@ -11438,7 +11462,11 @@ const Mind = (() => {
         act(this, dt);
         const n = G.projs.length;
         orig.call(this, dt * tempo(this));
-        for (let i = n; i < G.projs.length; i++) if (!G.projs[i].friendly && !G.projs[i].owner) G.projs[i].owner = this;      // whoever fired it gets the credit
+        for (let i = n; i < G.projs.length; i++) {
+          const q = G.projs[i]; if (q.friendly || q.owner) continue;
+          q.owner = this;                                                      // whoever fired it gets the credit
+          lead(this, q);
+        }
         after(this, dt);
       } finally { this._inMind = false; }
     };
@@ -11465,8 +11493,8 @@ const Mind = (() => {
   Enemy.prototype.seesPlayer = function (range) { return seen.call(this, range * sight(this)); };
 
   // the record as text, for the bestiary: level name and what it has learned
-  function describe(key) {
-    const r = G.mind && G.mind[key], l = r ? levelOf(r) : 0, ar = LANG.cur === 'ar';
+  function describe(key, area) {
+    const r = G.mind && G.mind[key], l = Math.max(r ? levelOf(r) : 0, area ? Diff.innate(area) : 0), ar = LANG.cur === 'ar';
     const learned = [];
     if (l >= 1) learned.push(ar ? 'أسرع ويرى أبعد' : 'quicker, sees farther');
     if (l >= 2 && !key.startsWith('b:')) learned.push(ar ? 'يتفادى ضربة النصل' : 'sidesteps the nail');
@@ -14539,7 +14567,7 @@ function drawBestiary(g) {
     g.font = font(19, '500'); g.fillStyle = '#e1ecf8';
     wrapText(g, bestiaryDesc(b), 300).forEach((l, k) => g.fillText(l, 750, 244 + k * 27));
     // what it has learned from you (Mind): its level and what that changed in it
-    const mi = Mind.describe((b.boss ? 'b:' : '') + b.k);
+    const mi = Mind.describe((b.boss ? 'b:' : '') + b.k, b.area);
     g.font = font(16, '700'); g.fillStyle = mi.level ? '#ffd9a0' : '#7d8aa0'; g.fillText(tr('mindTitle') + ': ' + mi.name + '  ' + '◆'.repeat(mi.level) + '◇'.repeat(Mind.MAX - mi.level), 750, 412);
     g.font = font(14, '500'); g.fillStyle = '#c8d6ec';
     (mi.learned.length ? mi.learned : [tr('mindNone')]).slice(0, 4).forEach((l, k) => g.fillText(l, 750, 436 + k * 20));
@@ -14577,7 +14605,7 @@ const SHOP_ITEMS = [
   { id: 'buy_magnet', charm: 'magnet', price: 400, ...needSeals(2), apply() { Charms.give('magnet'); } },
   // things that can be bought again and again: they do nothing, and are refused, when there is nothing to mend
   { id: 'vial', name: 'itemVial', desc: 'itemVialD', price: 120, icon: 'vial', repeat: true, useless: () => P.hp >= P.maxHp, apply() { P.hp = Math.min(P.maxHp, P.hp + 1); } },
-  { id: 'flask', name: 'itemFlask', desc: 'itemFlaskD', price: 70, icon: 'soul', repeat: true, useless: () => P.soul >= P.maxSoul, apply() { P.soul = Math.min(P.maxSoul, P.soul + 33); } },
+  { id: 'flask', name: 'itemFlask', desc: 'itemFlaskD', price: 90, icon: 'soul', repeat: true, useless: () => P.soul >= P.maxSoul, apply() { P.soul = Math.min(P.maxSoul, P.soul + Diff.soulMax / 3); } },
 ];
 const shopItem = id => SHOP_ITEMS.find(it => it.id === id);
 // the wizard's upgrades: the effect is read from the flag (Player.spellDmg, Player.spellCost), so a saved game keeps it
@@ -15170,7 +15198,7 @@ function updatePlay(dt) {
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
   // a cracked soul vessel: while the shade still holds your Geo, only two thirds of the soul can be kept
-  P.maxSoul = G.shade ? 66 : 99; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
+  P.maxSoul = G.shade ? Diff.soulMax * 2 / 3 : Diff.soulMax; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
   // looking up or down: hold the key while standing still and the camera drifts that way
   const still = P.onGround && !P.sitting && Input.axisX() === 0 && P.atkT <= 0 && P.hurtT <= 0 && !P.diving && !P.sd && !P.wailT;
   const iy = still ? Input.axisY() : 0;
@@ -15512,7 +15540,7 @@ function drawGearCard(g) {
 // masks, soul orb, geo, boss bar, banners and messages
 function drawHUD(g) {
   // soul orb
-  const ox = 52, oy = 54, r = 30, soul = P.soul / 99;
+  const ox = 52, oy = 54, r = 30, soul = P.soul / Diff.soulMax;
   g.save();
   glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
   const orbArt = IconArt.ready();
@@ -15525,8 +15553,8 @@ function drawHUD(g) {
   for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
   g.lineTo(ox + r, oy + r); g.closePath();
   if (orbArt) { g.clip(); IconArt.draw(g, 'orb_full', ox, oy, r * 2.5, P.soul >= P.spellCost() ? null : { filter: 'brightness(0.72) saturate(0.8)' }); } else g.fill();
-  if (P.maxSoul < 99) {            // the cracked top third
-    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / 99);
+  if (P.maxSoul < Diff.soulMax) {            // the cracked top third
+    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / Diff.soulMax);
     g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
     g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
   }
@@ -15534,6 +15562,9 @@ function drawHUD(g) {
   if (!orbArt) { g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
   g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke(); }
   g.restore();
+  // how much soul there is, under the orb (the vessel holds Diff.soulMax)
+  g.font = font(12, '700'); g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
+  textShadow(g, Math.floor(P.soul) + '', ox, oy + r + 10, P.soul >= P.spellCost() ? '#dff0ff' : '#8fa6c4');
   // masks
   for (let i = 0; i < P.maxHp; i++) drawMaskIcon(g, 108 + i * 32, 50, i < P.hp, (P.invuln > 1.1 || (P.focusT === 0 && G.flash > 0.2)) ? 0.2 : 0);
   // geo

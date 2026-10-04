@@ -4124,6 +4124,7 @@ void main() {
 precision highp float;
 uniform sampler2D uScene, uEnt, uHeight, uNorm;
 uniform vec2 uLog, uCam, uRoom, uTexel;
+uniform float uZoom;
 uniform int uNL, uNS;
 uniform vec4 uL[${MAXL}];
 uniform vec3 uLC[${MAXL}];
@@ -4145,8 +4146,8 @@ float lightReach(vec2 p, vec2 lp) {
   for (int s = 1; s <= 12; s++) {
     float t = (float(s) + jit - 0.5) / 13.0;
     vec2 q = mix(p, lp, t);
-    if (distance(q, lp) < 26.0) continue;
-    occ += solidAt(q + uCam);
+    if (distance(q, lp) < 26.0 * uZoom) continue;
+    occ += solidAt(q / uZoom + uCam);
   }
   return 1.0 - clamp(occ * 0.5, 0.0, 1.0);
 }
@@ -4175,7 +4176,7 @@ vec3 shade(vec3 albedo, vec3 N, vec2 p, float nStr, float specK, bool shadowed) 
 void main() {
   vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uLog;                // logical screen pixels, y down
   vec4 sc = texture(uScene, vUv), en = texture(uEnt, vUv);
-  vec2 wp = p + uCam;
+  vec2 wp = p / uZoom + uCam;
   // ---- the scene: rock has a baked relief, everything else is flat
   vec4 nm = normAt(wp);
   float rock = smoothstep(0.3, 0.9, nm.a);
@@ -4283,7 +4284,7 @@ void main() {
       if (!gl) return false;
       canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); ok = false; });
       P.height = program(FRAG_HEIGHT, ['uTex', 'uDir', 'uMode']);
-      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint', 'uCaustic']);
+      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uZoom', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint', 'uCaustic']);
       P.bright = program(FRAG_BRIGHT, ['uTex', 'uThr']);
       P.blur = program(FRAG_BLUR, ['uTex', 'uDir']);
       P.final = program(FRAG_FINAL, ['uLit', 'uBloom', 'uLog', 'uBloomK', 'uAberr', 'uHaze', 'uTime', 'uShaft']);
@@ -4381,7 +4382,7 @@ void main() {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
   }
 
-  // o: { lights: [{x,y,r,a,c}] (screen space), cx, cy, dark, tint:[r,g,b], spec, time, aberr, haze, shaft:{x,y,k} }
+  // o: { lights: [{x,y,r,a,c}] (screen space), cx, cy, zoom (the picture's magnification), dark, tint:[r,g,b], spec, time, aberr, haze, shaft:{x,y,k} }
   function render(o) {
     try { return renderNow(o); } catch (e) { console.error('Lumen: ' + e.message); ok = false; return null; }      // fall back to the 2D lighting for good
   }
@@ -4401,7 +4402,7 @@ void main() {
     u = pass(P.light, F.lit, W, H);
     bindTex(0, T.scene); gl.uniform1i(u.uScene, 0); bindTex(1, T.ent); gl.uniform1i(u.uEnt, 1);
     bindTex(2, F.hB.t); gl.uniform1i(u.uHeight, 2); bindTex(3, T.norm); gl.uniform1i(u.uNorm, 3);
-    gl.uniform2f(u.uLog, VW, VH); gl.uniform2f(u.uCam, o.cx, o.cy); gl.uniform2f(u.uRoom, room.pw, room.ph); gl.uniform2f(u.uTexel, 1 / hw, 1 / hh);
+    gl.uniform2f(u.uLog, VW, VH); gl.uniform2f(u.uCam, o.cx, o.cy); gl.uniform1f(u.uZoom, o.zoom || 1); gl.uniform2f(u.uRoom, room.pw, room.ph); gl.uniform2f(u.uTexel, 1 / hw, 1 / hh);
     gl.uniform1i(u.uNL, lights.length); gl.uniform1i(u.uNS, SHADOWED); gl.uniform4fv(u.uL, Lu); gl.uniform3fv(u.uLC, Lc);
     gl.uniform1f(u.uDark, o.dark); gl.uniform1f(u.uSpec, o.spec); gl.uniform1f(u.uShadow, quality >= 2 ? 1 : 0); gl.uniform1f(u.uTime, o.time); gl.uniform1f(u.uCaustic, o.caustic || 0);
     gl.uniform3f(u.uTint, o.tint[0], o.tint[1], o.tint[2]);
@@ -14880,7 +14881,7 @@ const G = {
   flags: {}, visited: {}, shade: null, bench: null, arena: null, boss: null, bossBarShow: false, floorY: 0,
   fadeA: 0, trans: null, afterTrans: 'play', doorLock: false, dialog: null, shop: null, banner: null, toast: null,
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
-  geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, shopId: 'general', gearTab: 0, gearSel: 0, gearT: 0, stations: [], look: 0, lookT: 0, lookDir: 0,
+  zoom: 1.25, zoomNow: 1.25, geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, shopId: 'general', gearTab: 0, gearSel: 0, gearT: 0, stations: [], look: 0, lookT: 0, lookDir: 0,
 };
 // shortcut to the player
 const P = G.player;
@@ -15005,7 +15006,7 @@ function enterRoom(id, spawn) {
   Art.loadPainted(def.bg);
   if (def.arena && !G.flags[def.arena.flag]) Sound.prefetch(def.arena.boss);
   Art.ambientInit();
-  snapCamera();
+  G.zoomNow = G.arena ? 1 : G.zoom; snapCamera();
   if (def.area !== G.lastArea) { G.areaBanner = { key: 'area_' + def.area, t: 0, color: AREA_COLORS[def.area] }; G.lastArea = def.area; }
   G.tileCanvas = null;
 }
@@ -15026,15 +15027,17 @@ function snapCamera() {
   const c = cameraTarget(); G.cam.x = c.x; G.cam.y = c.y; G.camV = { x: 0, y: 0 };
 }
 // Camera bounds of the current room; a room smaller than the view is centred.
+// The view is a little closer than the whole screen: the picture is magnified by G.zoomNow, so the camera sees VW / zoom by VH / zoom of the room.
+const viewW = () => VW / G.zoomNow, viewH = () => VH / G.zoomNow;
 function cameraBounds() {
-  const L = G.level;
-  const cxw = L.pw <= VW ? -(VW - L.pw) / 2 : null, cyh = L.ph <= VH ? -(VH - L.ph) / 2 : null;
-  return { x0: cxw ?? 0, x1: cxw ?? L.pw - VW, y0: cyh ?? 0, y1: cyh ?? L.ph - VH };
+  const L = G.level, vw = viewW(), vh = viewH();
+  const cxw = L.pw <= vw ? -(vw - L.pw) / 2 : null, cyh = L.ph <= vh ? -(vh - L.ph) / 2 : null;
+  return { x0: cxw ?? 0, x1: cxw ?? L.pw - vw, y0: cyh ?? 0, y1: cyh ?? L.ph - vh };
 }
 // where the camera wants to be, kept inside the room
 function cameraTarget() {
   const b = cameraBounds();
-  return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24 + G.look, b.y0, b.y1) };
+  return { x: clamp(P.cx - viewW() / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - viewH() / 2 - 24 + G.look, b.y0, b.y1) };
 }
 
 // fade out, run fn, fade back in
@@ -15281,6 +15284,8 @@ function updatePlay(dt) {
   if (P.x + P.w > L.pw) { P.x = L.pw - P.w; P.vx = Math.min(0, P.vx); }
   if (P.y > L.ph + 200) { P.spikeHurt(); }
 
+  // the zoom eases toward the player's setting, or out to 1 in a boss hall where the whole room must be seen
+  const zt = G.arena ? 1 : G.zoom; G.zoomNow += (zt - G.zoomNow) * Math.min(1, dt * 3); if (Math.abs(zt - G.zoomNow) < 0.002) G.zoomNow = zt;
   // camera: SmoothDamp toward the target, then clamp to the room bounds
   const c = cameraTarget();
   [G.cam.x, G.camV.x] = smoothDamp(G.cam.x, c.x, G.camV.x, 0.16, dt);
@@ -15359,11 +15364,15 @@ function gfxLabel() {
   if (!Lumen.ready()) return ar ? 'قديمة (WebGL غير متاح)' : 'Classic (no WebGL)';
   return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
 }
+// the zoom the player chose: how close the picture is during play (kept in this browser)
+const ZOOMS = [1, 1.25, 1.5];
+function zoomLabel() { return G.zoom === 1 ? sx('بدون', 'Off') : G.zoom === 1.5 ? sx('قريب', 'Close') : sx('متوسط', 'Medium'); }
+function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
-    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 // pause menu input
 function updatePause() {
@@ -15382,6 +15391,7 @@ function updatePause() {
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
+    else if (id === 'zoom') setZoom({ 1: 1.25, 1.25: 1.5, 1.5: 1 }[G.zoom] || 1.25);
     else if (id === 'gfx' && Lumen.ready()) Lumen.setMode({ auto: 2, 2: 1, 1: 0, 0: 'auto' }[Lumen.mode()]);
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
@@ -15627,7 +15637,7 @@ function drawHUD(g) {
     const ns = nearest(G.stations, P.cx, 54);
     const t = nearest(G.benches, P.cx, 54) ? 'rest' : ns ? (stationLit(ns.room) ? 'travel' : 'light') : nearest(G.npcs, P.cx, 70) ? 'talk' : nearest(G.signs, P.cx, 54) ? 'read' : null;
     if (t) {
-      const sx = P.cx - G.cam.x, sy = P.y - G.cam.y - 30;
+      const sx = (P.cx - G.cam.x) * G.zoomNow, sy = (P.y - G.cam.y - 30) * G.zoomNow;
       g.save(); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(18, '700');
       g.fillStyle = 'rgba(6,9,16,0.75)'; const tw = g.measureText('↑  ' + tr(t)).width + 22; g.fillRect(sx - tw / 2, sy - 14 + Math.sin(G.t * 4) * 2, tw, 28);
       g.fillStyle = '#eef5ff'; g.fillText('↑  ' + tr(t), sx, sy + Math.sin(G.t * 4) * 2); g.restore();
@@ -15661,7 +15671,7 @@ const MENU_ICONS = {
   no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
 };
 // which drawing each menu entry uses
-const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
 // a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
 function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
@@ -15734,12 +15744,16 @@ function drawWorld(g) {
   let lumFailed = false;
   const lay = lum ? lum.begin(G.k) : null;
   const gs = lay ? lay.sg : g, ge = lay ? lay.eg : g;         // scene layer, creature layer
-  Art.drawBackground(gs, L, G.cam.x, G.cam.y, t);
+  const Z = G.zoomNow;                                          // how much the picture is magnified (1 = the whole 960 x 540 view)
+  gs.save();                                                    // the backdrop is magnified about the middle of the screen, and keeps the same room point there
+  if (Z !== 1) { gs.translate(VW / 2, VH / 2); gs.scale(Z, Z); gs.translate(-VW / 2, -VH / 2); }
+  Art.drawBackground(gs, L, G.cam.x + VW / (2 * Z) - VW / 2, G.cam.y + VH / (2 * Z) - VH / 2, t);
+  gs.restore();
   let sx = 0, sy = 0;
   if (G.shakeT > 0) { const a = G.shakeA * Math.min(1, G.shakeT * 3); sx = rand(-a, a); sy = rand(-a, a); }
   const cx = Math.round(G.cam.x + sx), cy = Math.round(G.cam.y + sy);
-  gs.save(); gs.translate(-cx, -cy);
-  if (ge !== gs) { ge.save(); ge.translate(-cx, -cy); }
+  gs.save(); gs.scale(Z, Z); gs.translate(-cx, -cy);
+  if (ge !== gs) { ge.save(); ge.scale(Z, Z); ge.translate(-cx, -cy); }
   for (const d of L.def.deco) {
     if (d.type === 'pillar' || d.type === 'house') Art.drawDecor(gs, d, t, th);
     else if (d.type === 'gear') Art.drawGear(gs, d, t, th);
@@ -15747,14 +15761,14 @@ function drawWorld(g) {
   }
   // tile layer
   Art.mechBack(gs, t);
-  const s = Math.min(G.k, 1.5);
+  const s = Math.min(G.k * Math.max(1, G.zoom), 1.8);           // the room's tiles are painted once, as sharp as the zoom the player chose needs
   if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.renderLevel(L, s); G.tileScale = s; G.tileRoom = L.id; }
-  const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW, L.pw - vx), vh = Math.min(VH, L.ph - vy);
+  const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW / Z + 1, L.pw - vx), vh = Math.min(VH / Z + 1, L.ph - vy);
   if (vw > 0 && vh > 0) gs.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
   for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(gs, d, t, th);
     else if (d.type === 'seals') Art.drawSeals(gs, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
   // breakable walls and gates
-  const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE)), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
+  const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW / Z) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE)), y1 = Math.min(L.h - 1, Math.floor((cy + VH / Z) / TILE));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const v = L.get(x, y);
     if (v === T_BREAK) Art.drawBreak(gs, x, y, th, t); else if (v === T_GATE) Art.drawGate(gs, x, y, th, t);
@@ -15768,7 +15782,7 @@ function drawWorld(g) {
   for (const s2 of G.signs) Art.drawSign(gs, s2, t);
   for (const it of G.items) { Art.drawItem(gs, it, t); if (it.locked) { gs.strokeStyle = 'rgba(255,110,110,0.7)'; gs.lineWidth = 2; gs.beginPath(); gs.arc(it.x, it.y, 22 + 2 * Math.sin(t * 5), 0, 7); gs.stroke(); } }
   for (const c of G.geos) Art.drawGeo(gs, c, t);
-  if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
+  if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true, 1), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
   for (const e of G.enemies) {
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
     if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
@@ -15784,14 +15798,14 @@ function drawWorld(g) {
     const fogc = hexToRgb(th.fog).map(v => v / 255);
     const sun = L.def.theme === 'town' ? { x: VW * 0.72 - G.cam.x * 0.02, y: 200, k: 0.28 } : L.def.theme === 'throne' ? { x: VW * 0.5 - G.cam.x * 0.04, y: 190, k: 0.3 } : null;
     const img = lum.render({
-      lights: collectLights(cx, cy), cx, cy, time: t,
+      lights: collectLights(cx, cy), cx, cy, zoom: Z, time: t,
       dark: Math.max(0.05, (DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme]) - G.bolt * 0.32), tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
       aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
     });
     if (img) g.drawImage(img, 0, 0, VW, VH);
     else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
   }
-  g.save(); g.translate(-cx, -cy);
+  g.save(); g.scale(Z, Z); g.translate(-cx, -cy);
   Art.drawWinds(g, L, t, cx, cy);
   Art.drawGravs(g, L, t, cx, cy);
   if (P.wailT > 0) Art.drawWail(g, P, t);
@@ -15817,10 +15831,10 @@ function drawWorld(g) {
   Art.drawForeground(g, L.def.theme, G.cam.x, G.cam.y, t);
   Art.drawAmbient(g, STEP, L.def.theme, G.cam.x, G.cam.y, t);
   if (G.eclipse > 0.01) {                       // the Eclipse Regent: the hall goes dark around a small light; rays and the boss still show
-    const px = P.cx - cx, py = P.cy - cy, eg = g.createRadialGradient(px, py, 30, px, py, 300);
+    const px = (P.cx - cx) * Z, py = (P.cy - cy) * Z, eg = g.createRadialGradient(px, py, 30 * Z, px, py, 300 * Z);
     eg.addColorStop(0, 'rgba(2,3,12,' + 0.2 * G.eclipse + ')'); eg.addColorStop(1, 'rgba(2,3,12,' + 0.93 * G.eclipse + ')');
     g.fillStyle = eg; g.fillRect(0, 0, VW, VH);
-    g.save(); g.translate(-cx, -cy);
+    g.save(); g.scale(Z, Z); g.translate(-cx, -cy);
     for (const e of G.enemies) if (e.isBoss && e.state !== 'dying') bloom(g, e.cx, e.cy, 130, '#cfd8ff', 0.3 * G.eclipse);
     for (const p of G.projs) if (p.kind === 'ray') Art.drawProj(g, p, G.t);
     g.restore();
@@ -15834,9 +15848,9 @@ function drawWorld(g) {
 }
 
 // light sources in screen space for the darkness map
-function collectLights(cx, cy, skipPlayer) {
-  const L = G.level, th = THEMES[L.def.theme], out = [];
-  const add = (x, y, r, a, c) => out.push({ x: x - cx, y: y - cy, r, a, c });
+function collectLights(cx, cy, skipPlayer, zoom) {
+  const L = G.level, th = THEMES[L.def.theme], out = [], Z = zoom || G.zoomNow || 1;        // positions and radii are magnified like the picture
+  const add = (x, y, r, a, c) => out.push({ x: (x - cx) * Z, y: (y - cy) * Z, r: r * Z, a, c });
   if (!P.dead && !skipPlayer) add(P.cx, P.cy - 6, (P.focusT > 0 ? 300 : 250) * (Charms.has('wick') ? 1.4 : 1), 1, '#cfe8ff');
   if (P.wailT > 0) add(P.cx, (P.wailTop + P.y) / 2, 320, 1, '#dff3ff');
   for (const d of L.def.deco) {
@@ -15849,7 +15863,7 @@ function collectLights(cx, cy, skipPlayer) {
   for (const it of G.items) add(it.x, it.y, 190, 0.9, '#e6f3ff');
   for (const c of G.geos) add(c.x, c.y, 50, 0.5, null);
   for (const p of G.projs) {
-    if (p.kind === 'beam' || p.kind === 'pillar') { if (p.t >= p.tele) add(p.x, p.kind === 'beam' ? cy + VH / 2 : p.y - 100, 260, 0.9, p.color); }
+    if (p.kind === 'beam' || p.kind === 'pillar') { if (p.t >= p.tele) add(p.x, p.kind === 'beam' ? cy + VH / (2 * Z) : p.y - 100, 260, 0.9, p.color); }
     else add(p.x, p.y, p.friendly ? 190 : 110, p.friendly ? 1 : 0.75, p.color);
   }
   for (const e of G.enemies) {
@@ -15858,7 +15872,7 @@ function collectLights(cx, cy, skipPlayer) {
   }
   for (const d of L.def.doors) add((d.x + d.w / 2) * TILE, (d.y + d.h / 2) * TILE, 170, 0.55, th.fog);
   if (th.name === 'ember') {                    // lava glows: a light along every few surface tiles that are on screen
-    const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE) - 1), y1 = Math.min(L.h - 1, Math.floor((cy + VH) / TILE));
+    const x0 = Math.max(0, Math.floor(cx / TILE)), x1 = Math.min(L.w - 1, Math.floor((cx + VW / Z) / TILE)), y0 = Math.max(0, Math.floor(cy / TILE) - 1), y1 = Math.min(L.h - 1, Math.floor((cy + VH / Z) / TILE));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (L.get(x, y) === T_ACID && L.get(x, y - 1) !== T_ACID && (x + y) % 4 === 0) add(x * TILE + 16, y * TILE, 120, 0.7, '#ff7a30');
   }
   Mech.lights(add, th);
@@ -16119,6 +16133,8 @@ function resize() {
 // start: input, sound, fixed-step loop
 function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
+  try { const z = parseFloat(localStorage.getItem('duskwell_zoom')); if (ZOOMS.includes(z)) G.zoom = z; } catch (e) { /* ignore */ }
+  G.zoomNow = G.zoom;
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
   AreaArt.applyColors(AREA_COLORS); AreaArt.preload();
   const wake = () => Sound.init();

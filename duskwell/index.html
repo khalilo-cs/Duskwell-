@@ -26,7 +26,8 @@ canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40
   width:min(100vw - 16px,(100dvh - 16px - var(--reserve))*16/9);aspect-ratio:16/9;height:auto;outline:none}
 #touch{display:none;width:100%;max-width:760px;justify-content:space-between;align-items:flex-end;direction:ltr;padding-bottom:4px}
 .cluster{display:grid;gap:8px;align-items:center;justify-items:center}
-.dpad{grid-template-columns:repeat(3,auto);grid-template-areas:". up ." "left down right"}
+/* a cross with an empty centre: the thumb slides over it to change direction (see bindTouch in input.js) */
+.dpad{grid-template-columns:auto 26px auto;grid-template-rows:auto 26px auto;grid-template-areas:". up ." "left . right" ". down .";gap:6px;padding:10px;margin:-10px}
 .face{grid-template-columns:repeat(3,auto);grid-template-areas:". cast superdash" "dash attack jump"}
 .b{
   --acc:#a9bdd6;--glow:rgba(150,185,215,.5);

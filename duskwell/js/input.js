@@ -60,7 +60,7 @@ const Input = (() => {
 
   // on-screen buttons: each pointer remembers which button it pressed
   function bindTouch() {
-    const buttons = document.querySelectorAll('[data-act]');
+    const buttons = Array.from(document.querySelectorAll('[data-act]')).filter(b => !b.closest('.dpad'));
     const owner = new Map();
     buttons.forEach(b => {
       const act = b.dataset.act;
@@ -84,6 +84,36 @@ const Input = (() => {
       b.addEventListener('lostpointercapture', up);
       b.addEventListener('contextmenu', e => e.preventDefault());
     });
+    bindDpad();
+  }
+  // the direction cross works like a stick: where the thumb is, relative to the centre, picks the directions,
+  // so sliding the thumb across changes direction at once (a diagonal gives two)
+  function bindDpad() {
+    const pad = document.querySelector('.dpad');
+    if (!pad) return;
+    const on = { up: false, down: false, left: false, right: false }, ptr = new Map();
+    const read = e => {
+      const r = pad.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), dz = 14;
+      return { left: dx < -dz && -dx > Math.abs(dy) * 0.5, right: dx > dz && dx > Math.abs(dy) * 0.5, up: dy < -dz && -dy > Math.abs(dx) * 0.5, down: dy > dz && dy > Math.abs(dx) * 0.5 };
+    };
+    // a direction is held while any finger asks for it
+    const apply = () => {
+      for (const a of Object.keys(on)) {
+        const now = Array.from(ptr.values()).some(v => v[a]);
+        if (now === on[a]) continue;
+        on[a] = now; setHeld(touch, a, now);
+        const b = pad.querySelector('[data-act=' + a + ']'); if (b) b.classList.toggle('on', now);
+      }
+    };
+    pad.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      try { pad.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      ptr.set(e.pointerId, read(e)); apply();
+    });
+    pad.addEventListener('pointermove', e => { if (ptr.has(e.pointerId)) { ptr.set(e.pointerId, read(e)); apply(); } });
+    const end = e => { if (ptr.delete(e.pointerId)) apply(); };
+    pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end); pad.addEventListener('lostpointercapture', end);
+    pad.addEventListener('contextmenu', e => e.preventDefault());
   }
 
   // read the first connected gamepad (buttons and left stick)

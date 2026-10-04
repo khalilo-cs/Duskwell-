@@ -38,7 +38,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     r = await runAttack(name, phase);
     ok('Duelist ' + name + '(' + phase + '): runs to its end' + (kind ? ' and spawns ' + kind : ' with a blow'), r.done && r.frames < 880 && (kind ? r.kinds.includes(kind) : r.melee), r);
   }
-  r = await ev(() => {                                           // guard: a blow is turned aside, gives no soul, and is answered by a riposte of two masks
+  r = await ev(() => {                                           // guard: a blow is turned aside, gives no soul, and is answered by a riposte
     const { G, P } = DW; const b = G.boss, L = G.level;
     b.phase = 1; b.hp = b.maxHp; b.invul = false; b.state = 'fight'; G.projs = []; b.x = (L.pw / 2 + 60) - b.w / 2; b.y = G.floorY - b.h - 2; b.vx = 0; b.stunned = false;
     P.x = L.pw / 2 - 20; P.y = G.floorY - P.h - 2; P.soul = 0; b.face = -1;
@@ -48,7 +48,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     for (let i = 0; i < 120 && !ended; i++) { P.x = L.pw / 2 - 20; DW.step(1); }
     return { guarding, ret, hp0, hp1, parried, maxDmg, ended, guardAfter: b.guarding };
   });
-  ok('Duelist guard: the blow is turned aside (no damage, returns false), the riposte hits for two', r.guarding && r.ret === false && r.hp0 === r.hp1 && r.parried && r.maxDmg === 2 && r.ended && !r.guardAfter, r);
+  ok('Duelist guard: the blow is turned aside (no damage, returns false), the riposte hits', r.guarding && r.ret === false && r.hp0 === r.hp1 && r.parried && r.maxDmg === 1 && r.ended && !r.guardAfter, r);
   r = await ev(() => {                                           // nobody strikes: it ends with a slow overhead and a long opening
     const { G, P } = DW; const b = G.boss, L = G.level;
     b.hp = b.maxHp; b.state = 'fight'; G.projs = []; b.x = (L.pw / 2 + 200) - b.w / 2; b.y = G.floorY - b.h - 2; b.vx = 0; b.stunned = false; b.parried = false; b.face = -1;
@@ -74,7 +74,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     ok('Twin ' + name + '(' + phase + '): runs to its end' + (kind ? ' and spawns ' + kind : ' with a blow'), r.done && r.frames < 880 && (kind ? r.kinds.includes(kind) : r.melee), r);
     if (extra === 'dashed') ok('Twin dashSlash: dashes through', r.dashed && r.moved > 150, r);
     if (extra === 'fade') ok('Twin mirrorStep: fades out and returns', r.minAlpha < 0.2, r.minAlpha);
-    if (name === 'leap') ok('Twin leap: the dive wounds for two', r.maxDmg === 2, r.maxDmg);
+    if (name === 'leap') ok('Twin leap: the dive wounds', r.maxDmg === 1, r.maxDmg);
   }
   r = await ev(() => {
     const { G } = DW; const b = G.boss; G.projs = []; b.co = null; b.phase = 1; b.hp = b.maxHp; b.invul = false; b.state = 'fight'; b.co = b.brain();

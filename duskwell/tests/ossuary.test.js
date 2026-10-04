@@ -150,7 +150,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   for (const [name, phase, kind, minProjs] of [['stomp', 1, 'shock', 0], ['ribs', 1, 'rock:pal', 6], ['crush', 1, 'shock', 0], ['spit', 2, 'bomb', 3], ['hands', 2, 'pillar:pal', 6], ['rattle', 3, 'orb:pal', 24]]) {
     r = await runAttack(name, phase);
     ok('Marrow ' + name + '(' + phase + '): runs to its end and spawns ' + kind + (minProjs ? ' (at least ' + minProjs + ' at once)' : ''), r.done && r.frames < 880 && r.kinds.includes(kind) && r.maxProjs >= minProjs, r);
-    if (name === 'crush') ok('Marrow crush: the fist wounds for two', r.maxDmg === 2, r.maxDmg);
+    if (name === 'crush') ok('Marrow crush: the fist wounds', r.maxDmg === 1, r.maxDmg);
   }
   r = await ev(() => {
     const { G } = DW; const b = G.boss; G.projs = []; b.co = null; b.phase = 1; b.hp = b.maxHp; b.invul = false; b.state = 'fight'; b.co = b.brain();

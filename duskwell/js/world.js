@@ -562,7 +562,8 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   st('town', 35, 17); st('cx2', 70, 19); st('mg2', 33, 3); st('cs2', 64, 22); st('sp1', 6, 22);
   st('aq3', 52, 19); st('wd2', 55, 22); st('ht1', 7, 26); st('fd1', 67, 20);
   // charms (see charms.js): each lies next to a spot the route already reaches; three more drop from guardians
-  const charm = (r, id, x, y) => WORLD.rooms[r].item('charm_' + id, x, y, 'charm', { charm: id });
+  // a charm pickup on the floor: a warden wakes when the hero comes near and must be beaten first (n guards)
+  const charm = (r, id, x, y, n) => WORLD.rooms[r].item('charm_' + id, x, y, 'charm', { charm: id, guard: { type: 'warden', n: n || 1 } });
   charm('cx2', 'thorn', 4, 14);       // the high ledge, beside the mask seed
   charm('cx5', 'spirit', 5, 16);      // inside the secret pocket
   charm('mg1', 'swift', 48, 4);       // on the island with the mask seed
@@ -570,5 +571,5 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   charm('sp1', 'shell', 44, 13);      // on the ledge above the stash
   charm('aq3', 'dashmaster', 7, 19);  // inside the secret pocket
   charm('cs4', 'mage', 10, 13);       // on the ledge above the stash
-  charm('fd3', 'fury', 68, 11);       // the raised reward ledge of the Rustworks
+  charm('fd3', 'fury', 68, 11, 2);       // the raised reward ledge of the Rustworks
 })();

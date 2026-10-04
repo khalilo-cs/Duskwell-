@@ -560,7 +560,8 @@ class Player {
       G.burst(this.cx, this.cy, 14, { color: '#e8dcb8', speed: 220, life: 0.4, size: 3 });
       return true;
     }
-    this.hp -= 1;                              // one wound is always one mask this.invuln = 1.4 * Gear.hurtK(); this.hurtT = 0.28; this.rendT = 0; this.rendHold = false; this.rushT = 0; this.novaT = 0; this.focusT = 0; this.wailT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
+    // one wound is always one mask
+    this.hp -= 1; this.invuln = Diff.grace * Gear.hurtK(); this.hurtT = 0.28; this.rendT = 0; this.rendHold = false; this.rushT = 0; this.novaT = 0; this.focusT = 0; this.wailT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300 * Gear.takenKbK(); this.vy = -320 * Gear.takenKbK(); this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
@@ -779,16 +780,43 @@ class Geo {
 
 // an item lying in the world: ability, mask seed, charm or cache
 class Item {
-  // kind: ability | seed | cache
+  // kind: ability | seed | cache | charm; def.guard = { type, n } puts guards on the thing
   constructor(def) {
     this.def = def; this.x = def.x * TILE + TILE / 2; this.y = def.y * TILE + TILE / 2; this.t = 0; this.id = def.id; this.kind = def.kind;
+    this.guards = null; this.locked = false;
   }
   // pick up when the player touches it
   update(dt) {
     this.t += dt;
     const p = G.player;
     if (p.dead || G.state !== 'play') return;
+    if (this.def.guard) {
+      // a guarded charm: the guards wake when the hero stands near it, and it can be taken once they are gone
+      if (!this.guards && p.onGround && Math.hypot(p.cx - this.x, p.cy - this.y) < 200) this.wakeGuards();
+      this.locked = !!this.guards && this.guards.some(e => !e.dead);
+      if (this.locked) return;
+    }
     if (Math.abs(p.cx - this.x) < 30 && Math.abs(p.cy - this.y) < 40) { this.dead = true; G.collectItem(this); }
+  }
+  // put the guards on the floor the hero stands on, a few tiles to each side, so they can always be reached
+  wakeGuards() {
+    const L = G.level, p = G.player, g = this.def.guard, want = g.n || 1, spots = [];
+    const col = Math.floor(p.cx / TILE), row = Math.floor((p.y + p.h - 1) / TILE);
+    const floor = c => L.solid(c, row + 1) && !L.solid(c, row) && !L.solid(c, row - 1) && !L.solid(c, row - 2);
+    for (const s of [1, -1]) {
+      let last = null;
+      for (let d = 1; d <= 9 && floor(col + s * d); d++) if (d >= 4) last = col + s * d;
+      if (last !== null) spots.push(last);
+    }
+    this.guards = [];
+    const add = (type, c, r) => {
+      const en = new ENEMY_TYPES[type]({ x: c, y: r }); en.kind = type;
+      en.hp = Math.round(en.hp * Diff.enemyHp(L.def.area)); G.enemies.push(en); this.guards.push(en);
+    };
+    for (const c of spots.slice(0, want)) add(g.type || 'warden', c, row);
+    // a ledge too small for a walker: two flyers come instead
+    if (!this.guards.length) for (const s of [-3, 3]) if (!L.solid(col + s, row - 3)) add('flyer', col + s, row - 3);
+    if (this.guards.length) { G.toastMsg(tr('guardWake'), 3); Sound.play('clank'); G.ring(this.x, this.y, '#ff8a8a', 0.6); }
   }
 }
 

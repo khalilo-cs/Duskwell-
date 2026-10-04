@@ -95,7 +95,7 @@ function enterRoom(id, spawn) {
   G.gates = []; G.arena = null; G.boss = null; G.bossBarShow = false; G.doorLock = true;
   // persistent changes
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.get(x, y); if ((v === T_BREAK || v === T_CRACK) && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR); }
-  for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; G.enemies.push(en); }
+  for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; en.hp = Math.max(1, Math.round(en.hp * Diff.enemyHp(def.area))); G.enemies.push(en); }
   for (const it of def.items) if (!G.flags[it.id]) G.items.push(new Item(it));
   Mech.init(def);
   if (G.shade && G.shade.room === id) {
@@ -384,6 +384,7 @@ function updatePlay(dt) {
     for (const gt of a.def.gates) if (gt.close === 'start') closeGate(gt);
     const B = BOSS_TYPES[a.def.boss];
     const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
+    boss.hp = boss.maxHp = Math.round(boss.hp * Diff.bossHp(G.level.def.area));
     G.enemies.push(boss); G.boss = boss;
     Sound.boss(true, a.def.boss);
   }
@@ -462,6 +463,8 @@ function updateTitle() {
     if (Input.pressed('pause')) { G.confirmNew = false; G.menuSel = 0; }
     return;
   }
+  if (Input.pressed('left')) { G.menuSel = (G.menuSel + items.length - 1) % items.length; Sound.play('select'); }
+  if (Input.pressed('right')) { G.menuSel = (G.menuSel + 1) % items.length; Sound.play('select'); }
   if (menuNav(items.length)) {
     Sound.play('confirm');
     const it = items[G.menuSel].id;
@@ -756,18 +759,86 @@ function drawPanel(g, x, y, w, h) {
   g.strokeStyle = 'rgba(220,232,250,0.25)'; g.strokeRect(x + 6.5, y + 6.5, w - 13, h - 13);
 }
 // vertical menu with the selection arrows
-function drawMenu(g, items, sel, y0, step) {
-  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(28, '600');
+// small drawings for the menu entries, centred on (0, 0) in a box about 24 px wide; the colour is the current fill / stroke
+const MENU_ICONS = {
+  play(g) { g.beginPath(); g.moveTo(-5, -8); g.lineTo(8, 0); g.lineTo(-5, 8); g.closePath(); g.fill(); },
+  sword(g) { g.rotate(Math.PI / 4); g.beginPath(); g.moveTo(0, -12); g.lineTo(3, -7); g.lineTo(3, 5); g.lineTo(-3, 5); g.lineTo(-3, -7); g.closePath(); g.fill(); g.fillRect(-7, 5, 14, 3); g.fillRect(-1.5, 8, 3, 5); },
+  globe(g) { g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 9, 0, 7); g.stroke(); g.beginPath(); g.ellipse(0, 0, 4, 9, 0, 0, 7); g.stroke(); g.beginPath(); g.moveTo(-9, 0); g.lineTo(9, 0); g.stroke(); },
+  map(g) { g.beginPath(); g.moveTo(-10, -7); g.lineTo(-4, -9); g.lineTo(4, -7); g.lineTo(10, -9); g.lineTo(10, 7); g.lineTo(4, 9); g.lineTo(-4, 7); g.lineTo(-10, 9); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-4, -9); g.lineTo(-4, 7); g.moveTo(4, -7); g.lineTo(4, 9); g.stroke(); },
+  charm(g) { g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 9, 0, 7); g.stroke(); g.beginPath(); g.moveTo(0, -5); g.lineTo(4, 0); g.lineTo(0, 5); g.lineTo(-4, 0); g.closePath(); g.fill(); },
+  shield(g) { g.beginPath(); g.moveTo(-8, -9); g.lineTo(8, -9); g.lineTo(8, 1); g.quadraticCurveTo(8, 8, 0, 11); g.quadraticCurveTo(-8, 8, -8, 1); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(0, -7); g.lineTo(0, 8); g.moveTo(-6, -2); g.lineTo(6, -2); g.stroke(); },
+  book(g) { g.beginPath(); g.moveTo(-10, -7); g.lineTo(0, -5); g.lineTo(10, -7); g.lineTo(10, 8); g.lineTo(0, 6); g.lineTo(-10, 8); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(0, -5); g.lineTo(0, 6); g.stroke(); },
+  speaker(g) { g.beginPath(); g.moveTo(-9, -3); g.lineTo(-4, -3); g.lineTo(2, -8); g.lineTo(2, 8); g.lineTo(-4, 3); g.lineTo(-9, 3); g.closePath(); g.fill(); g.lineWidth = 2; g.beginPath(); g.arc(3, 0, 5, -1, 1); g.stroke(); g.beginPath(); g.arc(3, 0, 9, -1, 1); g.stroke(); },
+  mask(g) { g.beginPath(); g.moveTo(-8, -9); g.lineTo(8, -9); g.lineTo(9, 1); g.lineTo(0, 11); g.lineTo(-9, 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,0.6)'; g.beginPath(); g.ellipse(-3.5, -1, 1.8, 3, 0, 0, 7); g.ellipse(3.5, -1, 1.8, 3, 0, 0, 7); g.fill(); },
+  sun(g) { g.beginPath(); g.arc(0, 0, 5, 0, 7); g.fill(); g.lineWidth = 2; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.beginPath(); g.moveTo(Math.cos(a) * 8, Math.sin(a) * 8); g.lineTo(Math.cos(a) * 11, Math.sin(a) * 11); g.stroke(); } },
+  frame(g) { g.lineWidth = 2; g.strokeRect(-9, -7, 18, 14); g.beginPath(); g.moveTo(-7, 5); g.lineTo(-2, -1); g.lineTo(2, 3); g.lineTo(5, 0); g.lineTo(8, 5); g.stroke(); g.beginPath(); g.arc(4, -3, 1.6, 0, 7); g.fill(); },
+  door(g) { g.lineWidth = 2; g.beginPath(); g.moveTo(-3, -9); g.lineTo(-9, -9); g.lineTo(-9, 9); g.lineTo(-3, 9); g.stroke(); g.beginPath(); g.moveTo(-2, 0); g.lineTo(9, 0); g.moveTo(5, -4); g.lineTo(9, 0); g.lineTo(5, 4); g.stroke(); },
+  yes(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-8, 0); g.lineTo(-2, 6); g.lineTo(8, -6); g.stroke(); },
+  no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
+};
+// which drawing each menu entry uses
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', bestiary: 'book', sound: 'speaker', look: 'mask', gfx: 'sun', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+// a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
+function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
+  const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
+  const shape = d => {
+    g.beginPath(); g.moveTo(x0 + tip + d * 0.6, cy - h / 2 + d); g.lineTo(x1 - tip - d * 0.6, cy - h / 2 + d); g.lineTo(x1 - d, cy);
+    g.lineTo(x1 - tip - d * 0.6, cy + h / 2 - d); g.lineTo(x0 + tip + d * 0.6, cy + h / 2 - d); g.lineTo(x0 + d, cy); g.closePath();
+  };
+  g.save();
+  // body
+  if (on) { g.shadowColor = 'rgba(255,205,120,0.8)'; g.shadowBlur = 16 + 4 * Math.sin(t * 4); }
+  const body = g.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+  if (on) { body.addColorStop(0, '#3b4d70'); body.addColorStop(1, '#17233d'); } else { body.addColorStop(0, '#1d2942'); body.addColorStop(1, '#0a101c'); }
+  shape(0); g.fillStyle = body; g.globalAlpha = on ? 0.97 : 0.88; g.fill(); g.globalAlpha = 1; g.shadowBlur = 0;
+  // rim: silver, or gold when chosen
+  const rim = g.createLinearGradient(x0, 0, x1, 0);
+  const stops = on ? ['#fff0c8', '#c98f45', '#7a4f22', '#e8b565', '#fff0c8'] : ['#dfe8f2', '#7d90a5', '#2f3b49', '#a8b9cc', '#dfe8f2'];
+  stops.forEach((c, i) => rim.addColorStop(i / (stops.length - 1), c));
+  shape(1.5); g.lineWidth = 3; g.strokeStyle = rim; g.stroke();
+  shape(5); g.lineWidth = 1; g.strokeStyle = on ? 'rgba(255,225,160,0.55)' : 'rgba(190,210,235,0.28)'; g.stroke();
+  // a band of light crossing the chosen plaque
+  if (on) {
+    g.save(); shape(2); g.clip();
+    const sx = x0 - 60 + ((t * 110) % (w + 140)), sh = g.createLinearGradient(sx, 0, sx + 50, 0);
+    sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,245,215,0.22)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = sh; g.fillRect(sx, cy - h / 2, 50, h); g.restore();
+  }
+  // diamonds at the tips and studs inside them
+  g.fillStyle = on ? '#ffe2a8' : '#aebfd3';
+  for (const sgn of [-1, 1]) {
+    const tx = sgn < 0 ? x0 + 6 : x1 - 6;
+    g.beginPath(); g.moveTo(tx, cy - 4); g.lineTo(tx + 4, cy); g.lineTo(tx, cy + 4); g.lineTo(tx - 4, cy); g.closePath(); g.fill();
+  }
+  // the picture of the entry and its text
+  const icon = MENU_ICONS[MENU_ICON_OF[id]], space = icon ? h * 0.95 : 0;
+  const ax0 = x0 + tip + 8 + (!ar ? space : 0), ax1 = x1 - tip - 8 - (ar ? space : 0);
+  if (icon) {
+    const ix = ar ? x1 - tip - 6 - h * 0.34 : x0 + tip + 6 + h * 0.34, k = Math.min(1, h / 36);
+    g.save(); g.translate(ix, cy); g.scale(k, k); g.fillStyle = g.strokeStyle = on ? '#ffe2a8' : '#9fb4cf';
+    if (on) { g.shadowColor = 'rgba(255,200,110,0.9)'; g.shadowBlur = 8; }
+    icon(g); g.restore();
+  }
+  let px = Math.min(26, Math.round(h * 0.56));
+  g.font = font(px, '700'); while (g.measureText(label).width > ax1 - ax0 && px > 11) { px--; g.font = font(px, '700'); }
+  g.textAlign = 'center'; g.textBaseline = 'middle'; setDir(g);
+  textShadow(g, label, (ax0 + ax1) / 2, cy + 1, on ? '#fff6dc' : '#c6d3e6', on ? 10 : 4);
+  g.restore();
+}
+// a menu of plaque buttons: a column from y0 (step apart), or a row when o.row is set. o.base is added to the index
+// when a tap picks an entry; the rectangles are kept in G.menuHits for taps and clicks
+function drawMenu(g, items, sel, y0, step, o) {
+  o = o || {}; const base = o.base || 0, t = G.t, hits = G.menuHits || (G.menuHits = []);
+  g.save(); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
+  const w = o.w || (o.row ? 210 : 360), h = o.h || Math.max(26, (step || 50) - 6);
   items.forEach((it, i) => {
-    const y = y0 + i * (step || 50), on = i === sel;
-    if (on) {
-      const w = g.measureText(it.label).width;
-      g.fillStyle = 'rgba(230,240,255,0.9)';
-      g.beginPath(); g.moveTo(VW / 2 - w / 2 - 40, y); g.lineTo(VW / 2 - w / 2 - 26, y - 6); g.lineTo(VW / 2 - w / 2 - 26, y + 6); g.fill();
-      g.beginPath(); g.moveTo(VW / 2 + w / 2 + 40, y); g.lineTo(VW / 2 + w / 2 + 26, y - 6); g.lineTo(VW / 2 + w / 2 + 26, y + 6); g.fill();
-    }
-    textShadow(g, it.label, VW / 2, y, on ? '#ffffff' : 'rgba(190,205,225,0.7)', on ? 14 : 4);
+    const on = i === sel;
+    const cx = o.row ? (VW - (items.length * w + (items.length - 1) * (o.gap || 16))) / 2 + w / 2 + i * (w + (o.gap || 16)) : VW / 2;
+    const cy = o.row ? y0 : y0 + i * (step || 50);
+    drawMenuButton(g, cx, cy, w, h, it.label, on, it.id, t);
+    hits.push({ x: cx - w / 2, y: cy - h / 2, w, h, i: i + base });
   });
+  g.restore();
 }
 
 // colour of the air, specular shine of the rock and how much the heat shimmers, per area
@@ -811,7 +882,7 @@ function drawWorld(g) {
   for (const n of G.npcs) Art.drawNPC(gs, n, t);
   for (const s2 of G.stations) Art.drawStation(gs, s2, t, stationLit(s2.room));
   for (const s2 of G.signs) Art.drawSign(gs, s2, t);
-  for (const it of G.items) Art.drawItem(gs, it, t);
+  for (const it of G.items) { Art.drawItem(gs, it, t); if (it.locked) { gs.strokeStyle = 'rgba(255,110,110,0.7)'; gs.lineWidth = 2; gs.beginPath(); gs.arc(it.x, it.y, 22 + 2 * Math.sin(t * 5), 0, 7); gs.stroke(); } }
   for (const c of G.geos) Art.drawGeo(gs, c, t);
   if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
   for (const e of G.enemies) {
@@ -945,8 +1016,8 @@ function drawTitleBanner(g, t) {
   if (G.confirmNew) {
     drawPanel(g, VW / 2 - 250, 190, 500, 170);
     g.font = font(24, '600'); g.fillStyle = '#eef5ff'; g.fillText(tr('confirmNew'), VW / 2, 232);
-    drawMenu(g, [{ label: tr('yes') }, { label: tr('no') }], G.menuSel, 290, 46);
-  } else drawMenu(g, titleItems(), G.menuSel, y + (ar ? 36 : 38), ar ? 32 : 36);
+    drawMenu(g, [{ id: 'yes', label: tr('yes') }, { id: 'no', label: tr('no') }], G.menuSel, 300, 0, { row: true, w: 170, h: 46 });
+  } else drawMenu(g, titleItems(), G.menuSel, y + 46, 0, { row: true, w: 200, h: 46 });
   g.font = font(13, '500'); g.fillStyle = 'rgba(200,215,240,0.5)'; g.fillText(tr('ctl'), VW / 2, VH - 11);
 }
 
@@ -1002,8 +1073,8 @@ function drawTitle(g) {
   if (G.confirmNew) {
     drawPanel(g, VW / 2 - 250, 240, 500, 170);
     g.font = font(24, '600'); g.fillStyle = '#eef5ff'; g.fillText(tr('confirmNew'), VW / 2, 282);
-    drawMenu(g, [{ label: tr('yes') }, { label: tr('no') }], G.menuSel, 340, 46);
-  } else drawMenu(g, titleItems(), G.menuSel, 272, 52);
+    drawMenu(g, [{ id: 'yes', label: tr('yes') }, { id: 'no', label: tr('no') }], G.menuSel, 350, 0, { row: true, w: 170, h: 46 });
+  } else drawMenu(g, titleItems(), G.menuSel, 300, 0, { row: true, w: 200, h: 46 });
   g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.55)'; g.fillText(tr('ctl'), VW / 2, VH - 22);
 }
 
@@ -1068,7 +1139,7 @@ function drawTravel(g) {
     poly(g, [262, y - 8, 270, y, 262, y + 8, 254, y]); fs(g, it.color, INK, 2);
     setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(210,222,240,0.85)'; g.fillText(it.name, VW / 2, y);
   });
-  drawMenu(g, [{ label: tr('leave') }], G.menuSel - list.length, 196 + list.length * 48 + 18, 48);
+  drawMenu(g, [{ id: 'leave', label: tr('leave') }], G.menuSel - list.length, 196 + list.length * 48 + 28, 48, { base: list.length, w: 260, h: 40 });
 }
 // banner shown after an item is found
 function drawBanner(g) {
@@ -1106,6 +1177,7 @@ function drawEnding(g) {
 // draw the current state
 function draw() {
   const g = G.g;
+  G.menuHits = [];                                        // the buttons drawn this frame, for taps
   g.setTransform(G.k, 0, 0, G.k, 0, 0);
   g.fillStyle = '#000'; g.fillRect(0, 0, VW, VH);
   g.lineJoin = 'round';
@@ -1116,7 +1188,7 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 112, 36); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 118, 36, { w: 340, h: 31 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
@@ -1140,10 +1212,14 @@ function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
   const wake = () => Sound.init();
-  // tapping the picture focuses it for the keyboard and works as "confirm" on menus
-  G.canvas.addEventListener('pointerdown', () => {
-    try { G.canvas.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
-    if (G.state === 'title' || G.state === 'ending' || G.state === 'dialog' || G.state === 'banner') window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' })), window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' }));
+  // tapping the picture focuses it for the keyboard; a tap on a menu button picks it, a tap on a banner or dialog confirms it
+  const pressEnter = () => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' })); };
+  G.canvas.addEventListener('pointerdown', e => {
+    try { G.canvas.focus({ preventScroll: true }); } catch (err) { /* ignore */ }
+    const r = G.canvas.getBoundingClientRect(), px = (e.clientX - r.left) * VW / r.width, py = (e.clientY - r.top) * VH / r.height;
+    const hit = (G.menuHits || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+    if (hit) { G.menuSel = hit.i; pressEnter(); return; }
+    if (G.state === 'ending' || G.state === 'dialog' || G.state === 'banner') pressEnter();
   });
   window.addEventListener('keydown', wake); window.addEventListener('pointerdown', wake);
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; } });

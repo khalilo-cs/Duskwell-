@@ -95,7 +95,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     P.invuln = 0; P.hurt(1, P.cx + 10); out.invuln = P.invuln; out.vx = Math.abs(P.vx);
     return out;
   });
-  ok('Ironhide: longer grace (1.4 x 1.5) and half the recoil', Math.abs(r.invuln - 2.1) < 0.01 && Math.abs(r.vx - 165) < 1, r);
+  ok('Ironhide: longer grace (the base grace x 1.5) and half the recoil', Math.abs(r.invuln - 1.25 * 1.5) < 0.01 && Math.abs(r.vx - 165) < 1, r);
   await setup();
   await ev(() => { const { Gear } = DW; Gear.give('cloak', 'windweave'); Gear.equip('cloak', 'windweave'); });
   await page.keyboard.down('ArrowRight'); await ev(() => DW.step(40)); await page.keyboard.up('ArrowRight');

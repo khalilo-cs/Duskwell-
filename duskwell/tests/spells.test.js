@@ -47,7 +47,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   r = await ev(() => { const { G, P } = DW; P.geo = 2000; G.state = 'shop'; G.shopTop = 0; G.menuSel = shopList().findIndex(i => i.id === 'buy_wail'); return G.menuSel; });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ wail: DW.P.ab.wail, geo: DW.P.geo, state: DW.G.state }));
-  ok('the merchant sells the Cry Scroll for 500', r.wail === true && r.geo === 1500 && r.state === 'banner', r);
+  ok('the merchant sells the Cry Scroll for 900', r.wail === true && r.geo === 1100 && r.state === 'banner', r);
 
   // ---------- the cracked soul vessel
   await setup(['cx2', 12, 20]);

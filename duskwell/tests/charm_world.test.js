@@ -19,9 +19,14 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       const it = G.items.find(i => i.id === sp.id);
       P.invuln = 1e9;
       P.place(sp.x * 32 + 16, (sp.y + 1) * 32, 1); DW.step(3);
-      return { has: !!it, here, below, state: G.state, owned: Charms.ownedList(), banner: G.banner && G.banner.title, flag: !!G.flags[sp.id] };
+      // coming near wakes the guards, and the charm cannot be taken while they live
+      const guards = it && it.guards ? it.guards.length : 0, locked = !!(it && it.locked), ownedWhileGuarded = Charms.ownedList().length, hpBefore = it && it.guards ? it.guards[0].hp : 0;
+      const types = it && it.guards ? it.guards.map(e => e.kind).join() : '';
+      for (const e of (it && it.guards) || []) e.dead = true;
+      DW.step(3);
+      return { has: !!it, here, below, state: G.state, owned: Charms.ownedList(), banner: G.banner && G.banner.title, flag: !!G.flags[sp.id], guards, locked, ownedWhileGuarded, types, hpBefore };
     }, sp);
-    ok(sp.room + ' ' + sp.charm + ': placed in air, collected on touch', r.has && r.here === 0 && (r.below === 1 || r.below === 2) && r.owned.join() === sp.charm && r.state === 'banner' && r.flag, r);
+    ok(sp.room + ' ' + sp.charm + ': placed in air, guarded, and collected once the guards are down', r.has && r.here === 0 && (r.below === 1 || r.below === 2) && r.guards >= 1 && r.locked && r.ownedWhileGuarded === 0 && r.owned.join() === sp.charm && r.state === 'banner' && r.flag, r);
   }
   // guardians drop a charm after the reward
   for (const [room, charm, flag, x, y] of [['mg3', 'siphon', 'boss_weaver', 23, 17], ['aq4', 'thrift', 'boss_drowned', 25, 19], ['wd4', 'deep', 'boss_brood', 25, 19], ['fr8', 'wick', 'boss_queen', 23, 19], ['em8', 'cinder', 'boss_colossus', 28, 21], ['sc7', 'gale', 'boss_roc', 28, 21], ['mv7', 'echo', 'boss_twin', 28, 21]]) {

@@ -5,27 +5,27 @@
 // a condition holds (req), and the lock text says what it is.
 const sx = (ar, en) => (LANG.cur === 'ar' ? ar : en);
 
-// items of the general merchant: upgrades and a few charms
-const SHOP_ITEMS = [
-  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
-  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail += 4; } },
-  { id: 'buy_nail2', name: 'itemNail2', desc: 'itemNailD', price: 700, icon: 'nail', needs: 'buy_nail', apply() { P.nail += 4; } },
-  { id: 'buy_nail3', name: 'itemNail3', desc: 'itemNailD', price: 1400, icon: 'nail', needs: 'buy_nail2', apply() { P.nail += 4; } },
-  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 180, icon: 'soul', apply() { P.soulGain = 17; } },
-  { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 300, icon: 'notch', apply() { /* the notch count reads this flag */ } },
-  { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 550, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
-  { id: 'buy_wail', name: 'itemWail', desc: 'itemWailD', price: 500, icon: 'soul', apply() { P.ab.wail = true; G.banner = { title: tr('abil_wail'), desc: tr('abil_wail_d'), t: 0 }; G.state = 'banner'; } },
-  { id: 'buy_reach', charm: 'reach', price: 120, apply() { Charms.give('reach'); } },
-  { id: 'buy_boots', charm: 'boots', price: 100, apply() { Charms.give('boots'); } },
-  { id: 'buy_magnet', charm: 'magnet', price: 90, apply() { Charms.give('magnet'); } },
-];
-// shop entry for a weapon, cloak or art
-const gearItem = (kind, id, price, extra) => Object.assign({ id: kind + '_' + id, gear: [kind, id], price }, extra || {});
 // conditions that keep an item locked, with the text that says why
 const needDash = { req: () => !!P.ab.dash, lock: ['يحتاج اندفاع الظل', 'Needs the Shadow Dash'] };
 const needSeals = n => ({ req: () => sealCount() >= n, lock: ['يحتاج ' + n + ' أختام من الحرّاس', 'Needs ' + n + ' guardian seals'] });
 const needBoss = (flag, ar, en) => ({ req: () => !!G.flags[flag], lock: ['يحتاج هزيمة ' + ar, 'Defeat ' + en + ' first'] });
 
+// items of the general merchant: upgrades and a few charms
+const SHOP_ITEMS = [
+  { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 350, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
+  { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 300, icon: 'nail', apply() { P.nail += 4; } },
+  { id: 'buy_nail2', name: 'itemNail2', desc: 'itemNailD', price: 800, icon: 'nail', needs: 'buy_nail', apply() { P.nail += 4; } },
+  { id: 'buy_nail3', name: 'itemNail3', desc: 'itemNailD', price: 1600, icon: 'nail', needs: 'buy_nail2', apply() { P.nail += 4; } },
+  { id: 'buy_soul', name: 'itemSoul', desc: 'itemSoulD', price: 320, icon: 'soul', apply() { P.soulGain = 17; } },
+  { id: 'buy_notch1', name: 'itemNotch', desc: 'itemNotchD', price: 600, icon: 'notch', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_notch2', name: 'itemNotch', desc: 'itemNotchD', price: 1100, icon: 'notch', needs: 'buy_notch1', apply() { /* the notch count reads this flag */ } },
+  { id: 'buy_wail', name: 'itemWail', desc: 'itemWailD', price: 900, icon: 'soul', apply() { P.ab.wail = true; G.banner = { title: tr('abil_wail'), desc: tr('abil_wail_d'), t: 0 }; G.state = 'banner'; } },
+  { id: 'buy_reach', charm: 'reach', price: 500, ...needSeals(1), apply() { Charms.give('reach'); } },
+  { id: 'buy_boots', charm: 'boots', price: 450, ...needSeals(1), apply() { Charms.give('boots'); } },
+  { id: 'buy_magnet', charm: 'magnet', price: 400, ...needSeals(2), apply() { Charms.give('magnet'); } },
+];
+// shop entry for a weapon, cloak or art
+const gearItem = (kind, id, price, extra) => Object.assign({ id: kind + '_' + id, gear: [kind, id], price }, extra || {});
 // shop id -> title, greeting, npc and items
 const SHOPS = {
   general: { title: ['التاجر الغريب', 'The Strange Merchant'], greet: 'merchant', npc: 'merchant', items: SHOP_ITEMS },

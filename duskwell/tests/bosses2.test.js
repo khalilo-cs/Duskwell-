@@ -79,7 +79,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     for (let i = 0; i < 120 && P.hp === 9; i++) { P.x = b.cx - 80; P.vx = 0; DW.step(1); }
     const hp = P.hp; P.invuln = 1e9; return hp;
   });
-  ok('Colossus: the smash wounds a hero in front of it (two masks)', r <= 7, r);
+  ok('Colossus: the smash wounds a hero in front of it, for one mask', r === 8, r);
   r = await ev(() => {
     const { G, P } = DW; const b = G.boss; b.invul = false; b.state = 'fight'; b.hp = 1; G.projs = []; b.co = b.brain(); b.hurt(5, 1, 'side');
     for (let i = 0; i < 500 && !b.dead; i++) DW.step(1); for (let i = 0; i < 60; i++) DW.step(1);

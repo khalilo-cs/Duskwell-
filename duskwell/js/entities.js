@@ -114,11 +114,11 @@ class Player {
   // standing on ice
   onIce() { const L = G.level, ty = Math.floor((this.y + this.h + 2) / TILE); return L.isIce(Math.floor((this.x + 4) / TILE), ty) || L.isIce(Math.floor((this.x + this.w - 4) / TILE), ty); }
   // ---- numbers the charms change (see charms.js) ----
-  spellCost() { return Charms.has('thrift') ? 24 : 33; }
+  spellCost() { return (Charms.has('thrift') ? 24 : 33) - (G.flags.buy_rune ? 5 : 0); }          // the wizard's rune takes five off
   // numbers that charms and gear change: heal time, damage, spell power, strike gap, reach
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1) * Gear.focusK(); }
   nailDamage() { return Math.max(1, Math.round(this.nail * Gear.dmgK() * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1))); }
-  spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1)); }
+  spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1) * (G.flags.buy_ink ? 1.25 : 1)); }          // the wizard's ink adds a quarter
   strikeGap() { const c = Gear.atkCD(); return Charms.has('swift') ? Math.min(0.21, c * 0.62) : c; }
   reachK() { return (Charms.has('reach') ? 1.35 : 1) * Gear.reachK(); }
 

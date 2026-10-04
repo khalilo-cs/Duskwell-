@@ -271,7 +271,12 @@ function interact() {
   const n = nearest(G.npcs, P.cx, 70);
   if (n) {
     if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3'), tr('elder4')], i: 0, t: 0 };
-    else { G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : 'general'); G.dialog = { lines: [shopGreet(shopDef())], i: 0, t: 0, shop: true }; }
+    else {
+      G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : n.type === 'wizard' ? 'wizard' : 'general');
+      // the wizard greets differently as the player's seals grow (and he is the one to say that the beasts learn)
+      const hi = n.type === 'wizard' ? tr(['wizardHi', 'wizardHi2', 'wizardHi3'][Math.min(2, Math.floor(sealCount() / 4))]) : shopGreet(shopDef());
+      G.dialog = { lines: [hi], i: 0, t: 0, shop: true };
+    }
     G.state = 'dialog'; Sound.play('select'); return true;
   }
   const s = nearest(G.signs, P.cx, 54);

@@ -23,12 +23,26 @@ const SHOP_ITEMS = [
   { id: 'buy_reach', charm: 'reach', price: 500, ...needSeals(1), apply() { Charms.give('reach'); } },
   { id: 'buy_boots', charm: 'boots', price: 450, ...needSeals(1), apply() { Charms.give('boots'); } },
   { id: 'buy_magnet', charm: 'magnet', price: 400, ...needSeals(2), apply() { Charms.give('magnet'); } },
+  // things that can be bought again and again: they do nothing, and are refused, when there is nothing to mend
+  { id: 'vial', name: 'itemVial', desc: 'itemVialD', price: 120, icon: 'vial', repeat: true, useless: () => P.hp >= P.maxHp, apply() { P.hp = Math.min(P.maxHp, P.hp + 1); } },
+  { id: 'flask', name: 'itemFlask', desc: 'itemFlaskD', price: 70, icon: 'soul', repeat: true, useless: () => P.soul >= P.maxSoul, apply() { P.soul = Math.min(P.maxSoul, P.soul + 33); } },
+];
+const shopItem = id => SHOP_ITEMS.find(it => it.id === id);
+// the wizard's upgrades: the effect is read from the flag (Player.spellDmg, Player.spellCost), so a saved game keeps it
+const WIZARD_ITEMS = [
+  shopItem('buy_wail'), shopItem('buy_soul'),
+  { id: 'buy_ink', name: 'itemInk', desc: 'itemInkD', price: 700, icon: 'soul', ...needSeals(2), apply() { /* Player.spellDmg reads this flag */ } },
+  { id: 'buy_rune', name: 'itemRune', desc: 'itemRuneD', price: 950, icon: 'soul', ...needSeals(4), apply() { /* Player.spellCost reads this flag */ } },
+  shopItem('flask'), shopItem('vial'),
 ];
 // shop entry for a weapon, cloak or art
 const gearItem = (kind, id, price, extra) => Object.assign({ id: kind + '_' + id, gear: [kind, id], price }, extra || {});
 // shop id -> title, greeting, npc and items
 const SHOPS = {
   general: { title: ['التاجر الغريب', 'The Strange Merchant'], greet: 'merchant', npc: 'merchant', items: SHOP_ITEMS },
+  wizard: {
+    title: ['الساحر', 'The Sorcerer'], npc: 'wizard', greet: 'wizardHi', items: WIZARD_ITEMS,
+  },
   smith: {
     title: ['الحدّاد', 'The Smith'], npc: 'smith',
     greet: ['الحدّاد: النصل الجيد يغني عن ألف تعويذة. وإن أردتَ فنون النصل فأنا أعلّمها.', 'Smith: A good blade is worth a thousand spells. And if you want the arts of the nail, I teach them.'],
@@ -80,7 +94,7 @@ const shopTitle = () => sx(...shopDef().title);
 const shopGreet = def => (typeof def.greet === 'string' ? tr(def.greet) : sx(...def.greet));
 const shopName = it => (it.charm ? Charms.name(it.charm) : it.gear ? Gear.name(...it.gear) : tr(it.name));
 const shopDesc = it => (it.charm ? Charms.desc(it.charm) : it.gear ? Gear.desc(...it.gear) : tr(it.desc));
-const shopSold = it => (it.gear ? Gear.owns(...it.gear) : !!G.flags[it.id]);
+const shopSold = it => (it.repeat ? false : it.gear ? Gear.owns(...it.gear) : !!G.flags[it.id]);
 const shopLocked = it => !!(it.req && !it.req());
 const lockText = it => sx(...it.lock);
 
@@ -92,7 +106,7 @@ function buyItem(it) {
     if (kind === 'art') { G.banner = { title: Gear.name(kind, id), desc: Gear.desc(kind, id), t: 0 }; G.state = 'banner'; }
     else { Gear.equip(kind, id); G.toastMsg(sx('جُهّز: ', 'Equipped: ') + Gear.name(kind, id), 2); }
     Sound.play('equip');
-  } else { G.flags[it.id] = true; it.apply(); G.toastMsg(shopName(it), 1.8); }
+  } else { if (!it.repeat) G.flags[it.id] = true; it.apply(); G.toastMsg(shopName(it), 1.8); }
 }
 // shop input: move, scroll, buy, leave
 function updateShop() {
@@ -103,6 +117,7 @@ function updateShop() {
     const it = list[G.menuSel];
     if (shopSold(it)) { Sound.play('hit'); return; }
     if (shopLocked(it)) { Sound.play('hurt'); G.toastMsg(lockText(it), 2.2); return; }
+    if (it.useless && it.useless()) { Sound.play('hit'); G.toastMsg(tr('noNeed'), 1.6); return; }          // nothing to mend: keep the geo
     if (P.geo < it.price) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
     P.geo -= it.price; buyItem(it); Sound.play(it.gear ? 'buy' : 'ability');
   }
@@ -117,6 +132,7 @@ function shopIcon(g, kind, x, y) {
   if (kind === 'mask') drawMaskIcon(g, 0, 0, true, 0);
   else if (kind === 'nail') { poly(g, [0, -16, 5, 8, -5, 8]); fs(g, '#e6eef7', INK, 2.5); poly(g, [-10, 8, 10, 8, 10, 12, -10, 12]); fs(g, '#8a96a8', INK, 2); }
   else if (kind === 'soul') { g.beginPath(); g.moveTo(0, -15); g.bezierCurveTo(4, -7, 12, -2, 12, 4); g.arc(0, 4, 12, 0, Math.PI); g.bezierCurveTo(-12, -2, -4, -7, 0, -15); g.closePath(); fs(g, '#cfe8ff', INK, 2.5); }
+  else if (kind === 'vial') { g.beginPath(); g.moveTo(-4, -16); g.lineTo(4, -16); g.lineTo(4, -8); g.bezierCurveTo(12, -2, 12, 10, 0, 13); g.bezierCurveTo(-12, 10, -12, -2, -4, -8); g.closePath(); fs(g, '#7fe3d9', INK, 2.5); g.fillStyle = '#d9ecf0'; g.fillRect(-5, -19, 10, 4); g.fillStyle = 'rgba(255,255,255,0.55)'; ellipse(g, -3.5, 2, 2, 5); g.fill(); }
   else if (kind === 'notch') { ellipse(g, 0, 0, 13, 13); fs(g, '#0d1322', INK, 3); g.strokeStyle = '#7fe3d9'; g.lineWidth = 2.5; ellipse(g, 0, 0, 9, 9); g.stroke(); g.fillStyle = '#7fe3d9'; ellipse(g, 0, 0, 3.5, 3.5); g.fill(); }
   g.restore();
 }

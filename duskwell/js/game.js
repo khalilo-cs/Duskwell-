@@ -837,8 +837,26 @@ function drawMap(g) {
   g.fillText(tr('area_' + G.level.def.area), VW / 2, VH - 26);
 }
 
+// the title screen with the owner's banner (js/art_title.js): the logo is in the picture, so the words are the Arabic name (in Arabic),
+// the tagline and the menu, below it
+function drawTitleBanner(g, t) {
+  Art.drawAmbient(g, STEP, 'town', 0, 0, t);
+  const ar = LANG.cur === 'ar';
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
+  let y = TitleArt.LAYOUT.logoBottom + 22;
+  if (ar) { g.font = font(38, '700'); g.save(); g.shadowColor = 'rgba(255,214,150,0.55)'; g.shadowBlur = 22; g.fillStyle = '#f6e3bd'; g.fillText(tr('title'), VW / 2, y); g.restore(); y += 32; }
+  g.font = font(ar ? 18 : 21, '600'); g.fillStyle = 'rgba(214,224,242,0.85)'; g.fillText(tr('subtitle'), VW / 2, y);
+  if (G.confirmNew) {
+    drawPanel(g, VW / 2 - 250, 190, 500, 170);
+    g.font = font(24, '600'); g.fillStyle = '#eef5ff'; g.fillText(tr('confirmNew'), VW / 2, 232);
+    drawMenu(g, [{ label: tr('yes') }, { label: tr('no') }], G.menuSel, 290, 46);
+  } else drawMenu(g, titleItems(), G.menuSel, y + (ar ? 36 : 38), ar ? 32 : 36);
+  g.font = font(13, '500'); g.fillStyle = 'rgba(200,215,240,0.5)'; g.fillText(tr('ctl'), VW / 2, VH - 11);
+}
+
 function drawTitle(g) {
   const t = G.t;
+  if (typeof TitleArt !== 'undefined' && TitleArt.draw(g, t)) return drawTitleBanner(g, t);
   Art.loadPainted('title');
   // painted moonlit kingdom drifting slowly past; the procedural version stands in until it loads
   const painted = Art.drawTitleBackdrop(g, 260 + t * 14, t);

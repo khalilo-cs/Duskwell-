@@ -243,9 +243,1194 @@
     1048,
     1040
    ]
+  ],
+  "ball_0": [
+   "art/source/creatures_hd/sheet_sentinel_chainman.png",
+   [
+    1005,
+    1040,
+    1122,
+    1232
+   ]
+  ],
+  "ball_1": [
+   "art/source/creatures_hd/sheet_sentinel_chainman.png",
+   [
+    1133,
+    1040,
+    1242,
+    1232
+   ]
+  ],
+  "bomb_0": [
+   "art/source/creatures_hd/sheet_imp_lunarhare.png",
+   [
+    1058,
+    420,
+    1153,
+    612
+   ]
+  ],
+  "bomb_1": [
+   "art/source/creatures_hd/sheet_imp_lunarhare.png",
+   [
+    1154,
+    420,
+    1250,
+    612
+   ]
+  ],
+  "orb_0": [
+   "art/source/creatures_hd/sheet_lensling_orrery.png",
+   [
+    946,
+    1003,
+    1038,
+    1250
+   ]
+  ],
+  "orb_1": [
+   "art/source/creatures_hd/sheet_lensling_orrery.png",
+   [
+    1039,
+    1003,
+    1138,
+    1250
+   ]
+  ],
+  "orb_2": [
+   "art/source/creatures_hd/sheet_lensling_orrery.png",
+   [
+    1139,
+    1003,
+    1245,
+    1250
+   ]
+  ],
+  "shard_fly": [
+   "art/source/creatures_hd/sheet_shard_icicle.png",
+   [
+    880,
+    230,
+    1032,
+    300
+   ]
+  ],
+  "shard_0": [
+   "art/source/creatures_hd/sheet_shard_icicle.png",
+   [
+    1030,
+    440,
+    1130,
+    525
+   ]
+  ],
+  "shard_1": [
+   "art/source/creatures_hd/sheet_shard_icicle.png",
+   [
+    1132,
+    440,
+    1245,
+    525
+   ]
+  ],
+  "tooth": [
+   "art/source/creatures_hd/sheet_veil_skullbat.png",
+   [
+    872,
+    945,
+    935,
+    995
+   ]
   ]
  },
  "anchor_base": [
   "spitter"
- ]
+ ],
+ "kinds": {
+  "sentinel": {
+   "sheet": "art/source/creatures_hd/sheet_sentinel_chainman.png",
+   "rows": [
+    [
+     0,
+     223,
+     6
+    ],
+    [
+     223,
+     438,
+     6,
+     [
+      226,
+      424,
+      630,
+      840,
+      1060
+     ]
+    ],
+    [
+     438,
+     627,
+     6,
+     [
+      195,
+      380,
+      548,
+      732,
+      995
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:2-5",
+    "atk": "1:0-5",
+    "hurt": "2:0",
+    "death": "2:1-5"
+   },
+   "parts": [
+    2,
+    3,
+    1
+   ]
+  },
+  "chainman": {
+   "sheet": "art/source/creatures_hd/sheet_sentinel_chainman.png",
+   "rows": [
+    [
+     627,
+     839,
+     6
+    ],
+    [
+     839,
+     1040,
+     6,
+     [
+      213,
+      400,
+      592,
+      830,
+      1032
+     ]
+    ],
+    [
+     1040,
+     1254,
+     4,
+     [
+      216,
+      412,
+      690
+     ],
+     [
+      [
+       1000,
+       1040,
+       1254,
+       1254
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:2-5",
+    "atk": "1:0-5",
+    "hurt": "2:0",
+    "death": "2:1-3"
+   },
+   "parts": [
+    2,
+    3,
+    1
+   ]
+  },
+  "diver": {
+   "sheet": "art/source/creatures_hd/sheet_diver_moth.png",
+   "rows": [
+    [
+     0,
+     197,
+     6
+    ],
+    [
+     197,
+     397,
+     6,
+     [
+      223,
+      452,
+      634,
+      843,
+      1048
+     ]
+    ],
+    [
+     397,
+     606,
+     6,
+     [
+      203,
+      412,
+      590,
+      822,
+      1048
+     ],
+     [
+      [
+       790,
+       397,
+       880,
+       432
+      ],
+      [
+       1020,
+       397,
+       1090,
+       432
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-5",
+    "hurt": "2:0-1",
+    "death": "2:2-5"
+   },
+   "parts": [
+    2,
+    3,
+    1
+   ],
+   "ground": false
+  },
+  "moth": {
+   "sheet": "art/source/creatures_hd/sheet_diver_moth.png",
+   "rows": [
+    [
+     606,
+     825,
+     6,
+     [
+      223,
+      418,
+      631,
+      803,
+      979
+     ]
+    ],
+    [
+     825,
+     1027,
+     6,
+     [
+      228,
+      449,
+      624,
+      841,
+      1056
+     ]
+    ],
+    [
+     1027,
+     1254,
+     5,
+     [
+      211,
+      418,
+      640,
+      922
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-5",
+    "hurt": "2:0-1",
+    "death": "2:2-4"
+   },
+   "parts": [
+    2,
+    3,
+    1
+   ],
+   "ground": false
+  },
+  "jelly": {
+   "sheet": "art/source/creatures_hd/sheet_jelly_slime.png",
+   "rows": [
+    [
+     0,
+     222,
+     6
+    ],
+    [
+     222,
+     445,
+     5,
+     [
+      235,
+      428,
+      649,
+      1041
+     ]
+    ],
+    [
+     445,
+     672,
+     5,
+     [
+      238,
+      454,
+      715,
+      985
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-4",
+    "hurt": "2:0-1",
+    "death": "2:2-4"
+   },
+   "parts": [
+    2,
+    2,
+    1
+   ],
+   "ground": false
+  },
+  "slime": {
+   "sheet": "art/source/creatures_hd/sheet_jelly_slime.png",
+   "rows": [
+    [
+     672,
+     826,
+     6
+    ],
+    [
+     826,
+     1004,
+     5,
+     [
+      226,
+      470,
+      721,
+      1010
+     ]
+    ],
+    [
+     1004,
+     1254,
+     6,
+     [
+      228,
+      433,
+      642,
+      857,
+      1044
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:2-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-5"
+   },
+   "parts": [
+    1,
+    3,
+    1
+   ]
+  },
+  "ram": {
+   "sheet": "art/source/creatures_hd/sheet_ram_roller.png",
+   "rows": [
+    [
+     0,
+     200,
+     5
+    ],
+    [
+     200,
+     422,
+     5,
+     [
+      241,
+      527,
+      803,
+      1029
+     ]
+    ],
+    [
+     422,
+     640,
+     5,
+     [
+      235,
+      477,
+      718,
+      997
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0",
+    "walk": "0:1-4",
+    "atk": "1:0-3",
+    "dazed": "1:4",
+    "hurt": "2:0",
+    "death": "2:1-4"
+   },
+   "parts": [
+    2,
+    2,
+    0
+   ]
+  },
+  "roller": {
+   "sheet": "art/source/creatures_hd/sheet_ram_roller.png",
+   "rows": [
+    [
+     640,
+     821,
+     5
+    ],
+    [
+     821,
+     1017,
+     7,
+     [
+      228,
+      389,
+      540,
+      755,
+      891,
+      1029
+     ]
+    ],
+    [
+     1017,
+     1254,
+     5,
+     [
+      228,
+      452,
+      696,
+      1004
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0",
+    "walk": "0:1-4",
+    "atk": "1:0-6",
+    "roll": "1:2-5",
+    "hurt": "2:0",
+    "death": "2:1-4"
+   },
+   "parts": [
+    2,
+    4,
+    1
+   ]
+  },
+  "mole": {
+   "sheet": "art/source/creatures_hd/sheet_mole_lavaworm.png",
+   "rows": [
+    [
+     0,
+     173,
+     6,
+     [
+      232,
+      464,
+      681,
+      857,
+      1039
+     ]
+    ],
+    [
+     173,
+     377,
+     5,
+     [
+      247,
+      492,
+      731,
+      1026
+     ]
+    ],
+    [
+     377,
+     567,
+     5,
+     [
+      247,
+      479,
+      731,
+      1007
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:0-1",
+    "dig": "0:2-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-4"
+   },
+   "parts": [
+    1,
+    3,
+    1
+   ]
+  },
+  "lavaworm": {
+   "sheet": "art/source/creatures_hd/sheet_mole_lavaworm.png",
+   "rows": [
+    [
+     567,
+     746,
+     6,
+     [
+      238,
+      439,
+      617,
+      822,
+      1031
+     ]
+    ],
+    [
+     746,
+     938,
+     5,
+     [
+      216,
+      423,
+      677,
+      1019
+     ]
+    ],
+    [
+     938,
+     1254,
+     4,
+     [
+      253,
+      542,
+      809
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:4-5",
+    "walk": "0:4-5",
+    "rise": "0:0-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-3"
+   },
+   "parts": [
+    2,
+    2,
+    1
+   ],
+   "base": true
+  },
+  "imp": {
+   "sheet": "art/source/creatures_hd/sheet_imp_lunarhare.png",
+   "rows": [
+    [
+     0,
+     201,
+     6
+    ],
+    [
+     201,
+     415,
+     6,
+     [
+      216,
+      437,
+      640,
+      900,
+      1079
+     ],
+     [
+      [
+       700,
+       201,
+       1050,
+       282
+      ],
+      [
+       950,
+       201,
+       1060,
+       294
+      ]
+     ]
+    ],
+    [
+     415,
+     617,
+     5,
+     [
+      188,
+      336,
+      527,
+      709
+     ],
+     [
+      [
+       1050,
+       415,
+       1254,
+       617
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:2-5",
+    "atk": "1:0-5",
+    "hurt": "2:0",
+    "death": "2:1-4"
+   },
+   "parts": [
+    3,
+    1,
+    2
+   ]
+  },
+  "lunarhare": {
+   "sheet": "art/source/creatures_hd/sheet_imp_lunarhare.png",
+   "rows": [
+    [
+     617,
+     821,
+     6
+    ],
+    [
+     821,
+     1022,
+     5,
+     [
+      241,
+      508,
+      866,
+      1056
+     ]
+    ],
+    [
+     1022,
+     1254,
+     4,
+     [
+      228,
+      480,
+      731
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:2-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-3"
+   },
+   "parts": [
+    1,
+    3,
+    1
+   ]
+  },
+  "veil": {
+   "sheet": "art/source/creatures_hd/sheet_veil_skullbat.png",
+   "rows": [
+    [
+     0,
+     197,
+     6
+    ],
+    [
+     197,
+     398,
+     6,
+     [
+      216,
+      424,
+      624,
+      822,
+      1060
+     ]
+    ],
+    [
+     378,
+     599,
+     6,
+     [
+      228,
+      404,
+      627,
+      868,
+      1069
+     ],
+     [
+      [
+       0,
+       378,
+       240,
+       400
+      ],
+      [
+       627,
+       378,
+       868,
+       425
+      ],
+      [
+       868,
+       378,
+       1254,
+       440
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-5",
+    "hurt": "2:0-1",
+    "death": "2:2-5"
+   },
+   "parts": [
+    2,
+    2,
+    2
+   ],
+   "ground": false
+  },
+  "skullbat": {
+   "sheet": "art/source/creatures_hd/sheet_veil_skullbat.png",
+   "rows": [
+    [
+     599,
+     784,
+     5,
+     [
+      222,
+      448,
+      661,
+      910
+     ]
+    ],
+    [
+     784,
+     989,
+     5,
+     [
+      229,
+      470,
+      681,
+      900
+     ],
+     [
+      [
+       560,
+       945,
+       1254,
+       989
+      ]
+     ]
+    ],
+    [
+     989,
+     1254,
+     5,
+     [
+      232,
+      445,
+      694,
+      954
+     ],
+     [
+      [
+       640,
+       985,
+       712,
+       1032
+      ],
+      [
+       1072,
+       985,
+       1214,
+       1040
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-4",
+    "walk": "0:0-4",
+    "atk": "1:0-4",
+    "hurt": "2:0-1",
+    "death": "2:2-4"
+   },
+   "parts": [
+    2,
+    2,
+    1
+   ],
+   "ground": false
+  },
+  "heap": {
+   "sheet": "art/source/creatures_hd/sheet_heap_censer.png",
+   "rows": [
+    [
+     0,
+     196,
+     6,
+     [
+      229,
+      464,
+      680,
+      868,
+      1063
+     ]
+    ],
+    [
+     196,
+     412,
+     5,
+     [
+      251,
+      439,
+      700,
+      1056
+     ]
+    ],
+    [
+     412,
+     599,
+     6,
+     [
+      207,
+      411,
+      687,
+      953,
+      1144
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:3",
+    "walk": "0:3-5",
+    "pile": "0:0-1",
+    "rise": "0:1-3",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-4",
+    "fall": "2:1-4",
+    "skull": "2:5"
+   },
+   "parts": [
+    2,
+    2,
+    1
+   ]
+  },
+  "censer": {
+   "sheet": "art/source/creatures_hd/sheet_heap_censer.png",
+   "rows": [
+    [
+     599,
+     805,
+     6
+    ],
+    [
+     805,
+     1020,
+     6,
+     [
+      186,
+      382,
+      571,
+      740,
+      959
+     ]
+    ],
+    [
+     1020,
+     1254,
+     6,
+     [
+      216,
+      404,
+      614,
+      872,
+      1085
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-5",
+    "hurt": "2:0",
+    "death": "2:1-5"
+   },
+   "parts": [
+    2,
+    4,
+    0
+   ],
+   "ground": false
+  },
+  "lensling": {
+   "sheet": "art/source/creatures_hd/sheet_lensling_orrery.png",
+   "rows": [
+    [
+     0,
+     195,
+     6,
+     [
+      221,
+      441,
+      667,
+      878,
+      1048
+     ]
+    ],
+    [
+     195,
+     395,
+     5,
+     [
+      226,
+      459,
+      721,
+      997
+     ]
+    ],
+    [
+     395,
+     585,
+     5,
+     [
+      188,
+      404,
+      631,
+      878
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-1",
+    "walk": "0:2-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-4"
+   },
+   "parts": [
+    2,
+    2,
+    1
+   ]
+  },
+  "orrery": {
+   "sheet": "art/source/creatures_hd/sheet_lensling_orrery.png",
+   "rows": [
+    [
+     585,
+     799,
+     6
+    ],
+    [
+     799,
+     1003,
+     5,
+     [
+      253,
+      483,
+      717,
+      981
+     ]
+    ],
+    [
+     1003,
+     1254,
+     4,
+     [
+      194,
+      382,
+      602
+     ],
+     [
+      [
+       940,
+       1003,
+       1254,
+       1254
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-3"
+   },
+   "parts": [
+    1,
+    3,
+    1
+   ],
+   "ground": false
+  },
+  "shard": {
+   "sheet": "art/source/creatures_hd/sheet_shard_icicle.png",
+   "rows": [
+    [
+     0,
+     192,
+     6
+    ],
+    [
+     192,
+     380,
+     5,
+     [
+      228,
+      451,
+      677,
+      1031
+     ],
+     [
+      [
+       880,
+       230,
+       1032,
+       300
+      ]
+     ]
+    ],
+    [
+     380,
+     569,
+     5,
+     [
+      198,
+      408,
+      612,
+      828
+     ],
+     [
+      [
+       1030,
+       380,
+       1254,
+       569
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-5",
+    "walk": "0:0-5",
+    "atk": "1:0-4",
+    "hurt": "2:0",
+    "death": "2:1-4"
+   },
+   "parts": [
+    3,
+    1,
+    1
+   ],
+   "base": true
+  },
+  "icicle": {
+   "sheet": "art/source/creatures_hd/sheet_shard_icicle.png",
+   "rows": [
+    [
+     569,
+     776,
+     9
+    ],
+    [
+     776,
+     1056,
+     9,
+     [
+      140,
+      278,
+      424,
+      559,
+      705,
+      844,
+      982,
+      1106
+     ],
+     [
+      [
+       0,
+       1018,
+       975,
+       1056
+      ]
+     ]
+    ],
+    [
+     1018,
+     1254,
+     6,
+     [
+      172,
+      349,
+      527,
+      727,
+      1003
+     ],
+     [
+      [
+       975,
+       1018,
+       1254,
+       1056
+      ]
+     ]
+    ]
+   ],
+   "roles": {
+    "idle": "0:0-8",
+    "walk": "0:0-8",
+    "atk": "1:0-6",
+    "crash": "1:7-8",
+    "hurt": "1:0",
+    "death": "2:0-5",
+    "shatter": "2:0-5"
+   },
+   "parts": [
+    6,
+    1,
+    0
+   ],
+   "ground": false
+  }
+ },
+ "note2": "kinds: creatures cut by rows and roles. rows: [y0, y1, frames, cuts between frames (sheet x) or null, rectangles left out of that row or null]; roles: animation name -> 'row:first-last' (a list joined with ','); parts: how many frames of 'atk' are wind-up, strike, recovery; ground: false for creatures that fly or hang (no ground line to remove, the frame's bottom is its anchor); base: anchored under its base"
 }

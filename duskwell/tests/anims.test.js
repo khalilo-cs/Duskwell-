@@ -91,6 +91,31 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   r = await ev(() => { const s = new ENEMY_TYPES.spider({ type: 'spider', x: 20, y: 39, ground: true }); s.kind = 'brood_child'; DW.G.enemies.push(s); DW.step(1); DW.draw(); return s._ad && AnimArt.nameOf('brood_child', s._ad.f); });
   ok('the Brood Mother\'s spiderlings use the spider\'s frames', !!r, r);
 
+  // the other twenty: each, in a real fight, is drawn from its own frames, shows its attack frames, and (but the icicle, which
+  // shatters and grows back) dies on its death frames
+  const MORE = { spitter: [22, 39], shroom: [19, 39], sentinel: [22, 39], chainman: [20, 39], lensling: [21, 39], imp: [24, 39], slime: [20, 39], lunarhare: [22, 39], ram: [24, 39], roller: [24, 39],
+    mole: [20, 39, { type: 'mole' }], lavaworm: [20, 39, { type: 'lavaworm' }], heap: [17, 39], shard: [24, 39], diver: [20, 35], moth: [20, 35], jelly: [16, 37], skullbat: [20, 35], veil: [20, 36], orrery: [18, 36], censer: [17, 33, { len: 4 }], icicle: [14, 30] };
+  const bad = {};
+  for (const [k, [x, y, extra]] of Object.entries(MORE)) {
+    await arena(14);
+    const q = await ev(([k, x, y, extra]) => {
+      const { G, P } = DW;
+      const e = new ENEMY_TYPES[k](Object.assign({ type: k, x, y, ground: true }, extra || {})); e.kind = k; G.enemies.push(e);
+      const seen = {};
+      for (let i = 0; i < 420; i++) {
+        P.x = k === 'icicle' ? x * 32 + 8 - P.w / 2 : 14 * 32; P.vx = 0;
+        DW.step(1); DW.draw();
+        if (e._ad && e._ad.f) { const n = AnimArt.nameOf(k, e._ad.f); if (n) seen[n.split(':')[0]] = 1; }
+      }
+      e.hp = 0; e.kill(); DW.step(1); DW.draw();
+      if (k === 'heap') { if (e._ad && e._ad.f) { const n = AnimArt.nameOf(k, e._ad.f); if (n) seen[n.split(':')[0]] = 1; } e.kill(); DW.step(1); }   // its first death leaves the skull
+      return { drawn: Object.keys(seen).length > 0, seen: Object.keys(seen), corpse: G.fx.some(f => f.type === 'corpse' && f.kind === k) };
+    }, [k, x, y, extra]);
+    const attacks = !['jelly', 'orrery'].includes(k) || q.seen.includes('atk');
+    if (!q.drawn || !q.seen.includes('atk') && !['jelly', 'orrery', 'mole', 'lavaworm'].includes(k) || (k !== 'icicle' && !q.corpse) || !attacks) bad[k] = q;
+  }
+  ok('the other twenty creatures: drawn from their frames, attacking on them, dying on them', Object.keys(bad).length === 0, bad);
+
   // a look at all six side by side
   await arena(6);
   await ev(() => {

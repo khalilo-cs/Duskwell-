@@ -17,8 +17,9 @@ from cutsheet import segment
 cfg = json.load(open(os.path.join(HERE, 'creature_anims.json')))
 SPLIT = {1: lambda n: (n // 2, n - n // 2)}
 
-def frames_of_row(im, fg, y0, y1, N, cuts=None, base=False):
+def frames_of_row(im, fg, y0, y1, N, cuts=None, base=False, ground=True, off=None):
     band = fg[y0:y1].copy(); sub = im[y0:y1]
+    for (a, b, c, d) in (off or []): band[max(0, b - y0):max(0, d - y0), a:c] = False
     H, W = band.shape
     hsv = cv2.cvtColor(sub, cv2.COLOR_BGR2HSV)
     cover = band.sum(axis=1)
@@ -29,9 +30,11 @@ def frames_of_row(im, fg, y0, y1, N, cuts=None, base=False):
     else:
         gl = int(np.argmax(cover[H // 2:])) + H // 2
     grey = (hsv[..., 1] < 42) & (hsv[..., 2] > 40) & (hsv[..., 2] < 185)
-    band[gl + 5:] = False
-    near = np.zeros_like(band); near[max(0, gl - 8):gl + 5] = True
-    band &= ~(near & grey)                                                    # the line and the shadows under the feet
+    if not ground: gl = int(np.where(band.any(axis=1))[0].max())             # flying or hanging: no floor, the frame's bottom is its anchor
+    else:
+        band[gl + 5:] = False
+        near = np.zeros_like(band); near[max(0, gl - 8):gl + 5] = True
+        band &= ~(near & grey)                                                # the line and the shadows under the feet
     band = ndi.binary_opening(band, iterations=1)
     body = band.copy(); body[max(0, gl - 14):] = False
     col = gaussian_filter1d(body.sum(axis=0).astype(float), 3)
@@ -99,6 +102,30 @@ for path, mons in cfg['sheets'].items():
         d = os.path.join(ROOT, 'art', 'source', 'creatures_hd', kind); os.makedirs(d, exist_ok=True)
         for nm, fr in anim.items():
             for j, (rgba, ax, ay) in enumerate(fr): cv2.imwrite(os.path.join(d, '%s_%d.png' % (nm, j)), rgba)
+def roles_of(spec):
+    out = []
+    for part in spec.split(','):
+        r, ij = part.split(':'); a, b = (ij.split('-') + [ij])[:2]
+        out += [(int(r), i) for i in range(int(a), int(b) + 1)]
+    return out
+parts = {}
+by_sheet = {}
+for kind, k in cfg.get('kinds', {}).items(): by_sheet.setdefault(k['sheet'], []).append(kind)
+for path, kinds in by_sheet.items():
+    im = cv2.imread(os.path.join(ROOT, path)); fg = segment(im, 20)
+    for (a, b, c, d) in cfg.get('off', {}).get(path, []): fg[b:d, a:c] = False
+    for kind in kinds:
+        k = cfg['kinds'][kind]
+        rows = []
+        for r in k['rows']:
+            y0, y1, n = r[:3]; cuts = r[3] if len(r) > 3 else None; off = r[4] if len(r) > 4 else None
+            rows.append(frames_of_row(im, fg, y0, y1, n, cuts, k.get('base', False), k.get('ground', True), off))
+        anim = {name: [rows[r][i] for r, i in roles_of(spec)] for name, spec in k['roles'].items()}
+        frames[kind] = anim; parts[kind] = k.get('parts')
+        d = os.path.join(ROOT, 'art', 'source', 'creatures_hd', kind); os.makedirs(d, exist_ok=True)
+        for r, row in enumerate(rows):
+            for j, (rgba, ax, ay) in enumerate(row): cv2.imwrite(os.path.join(d, 'r%d_%d.png' % (r, j)), rgba)
+        print(kind, {n: len(v) for n, v in anim.items()})
 PACK = 0.5                                                                    # frames are stored at half size: still about twice what the game shows
 flat = []
 from cut_world import background, cut as cut_soft
@@ -110,10 +137,14 @@ for name, (path, box) in cfg.get('extras', {}).items():
     cv2.imwrite(os.path.join(ROOT, 'art', 'source', 'creatures_hd', name + '.png'), rgba)
     h, w = rgba.shape[:2]; extras[name] = cv2.resize(rgba, (max(1, round(w * PACK)), max(1, round(h * PACK))), interpolation=cv2.INTER_AREA)
 for name, rgba in extras.items(): flat.append(('_x', name, 0, (rgba, rgba.shape[1] / 2, rgba.shape[0] / 2)))
+first = {}                                                                    # a frame used by several animations is stored once
 for kind, anim in frames.items():
     for nm, fr in anim.items():
         if kind == 'flyer' and nm == 'walk': continue
-        for j, (rgba, ax, ay) in enumerate(fr):
+        for j, f in enumerate(fr):
+            if id(f) in first: continue
+            first[id(f)] = (kind, nm, j)
+            rgba, ax, ay = f
             h, w = rgba.shape[:2]; small = cv2.resize(rgba, (max(1, round(w * PACK)), max(1, round(h * PACK))), interpolation=cv2.INTER_AREA)
             flat.append((kind, nm, j, (small, ax * PACK, ay * PACK)))
 W, x, y, row, pos = 2048, 2, 2, 0, {}
@@ -128,7 +159,7 @@ for (kind, nm, j), p in pos.items():
 od = os.path.join(ROOT, 'art', 'creatures'); atlas.save(os.path.join(od, 'anim.webp'), quality=90, method=6)
 meta = {}
 for kind, anim in frames.items():
-    meta[kind] = {nm: [pos[(kind, 'idle' if (kind == 'flyer' and nm == 'walk') else nm, j)] for j in range(len(fr))] for nm, fr in anim.items()}
+    meta[kind] = {nm: [pos[(kind, 'idle', j)] if (kind == 'flyer' and nm == 'walk') else pos[first[id(f)]] for j, f in enumerate(fr)] for nm, fr in anim.items()}
 xmeta = {name: pos[('_x', name, 0)][:4] for name in extras}
-open(os.path.join(ROOT, 'js', 'creature_anims_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_anims.py: the animation frames of the creatures drawn by the owner, in art/creatures/anim.webp\n// [x, y, w, h, ax, ay]: (ax, ay) is the ground point under the body. CREATURE_EXTRAS: their projectiles, drawn on their own, [x, y, w, h]\nconst CREATURE_ANIMS = " + json.dumps(meta, separators=(',', ':')) + ";\nconst CREATURE_EXTRAS = " + json.dumps(xmeta, separators=(',', ':')) + ";\n")
+open(os.path.join(ROOT, 'js', 'creature_anims_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_anims.py: the animation frames of the creatures drawn by the owner, in art/creatures/anim.webp\n// [x, y, w, h, ax, ay]: (ax, ay) is the ground point under the body. CREATURE_EXTRAS: their projectiles, drawn on their own, [x, y, w, h]\nconst CREATURE_ANIMS = " + json.dumps(meta, separators=(',', ':')) + ";\nconst CREATURE_EXTRAS = " + json.dumps(xmeta, separators=(',', ':')) + ";\n// how many frames of 'atk' are the wind-up, the strike and the recovery (creatures cut by roles)\nconst CREATURE_PARTS = " + json.dumps({k: v for k, v in parts.items() if v}, separators=(',', ':')) + ";\n")
 print(atlas.size, os.path.getsize(os.path.join(od, 'anim.webp')), 'bytes', {k: {n: len(v) for n, v in a.items()} for k, a in frames.items()})

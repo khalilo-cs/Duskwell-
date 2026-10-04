@@ -29,10 +29,10 @@ class Bonewright extends Boss {
     yield* this.wait(0.45 * this.spd);
     this.tele = 0; Sound.play('shoot');
     const n = this.phase >= 2 ? 5 : 3, a = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx);
-    for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.22; G.projs.push(new Proj({ kind: 'shard', x: this.cx + this.face * 30, y: this.cy - 14, vx: Math.cos(a + o) * 400, vy: Math.sin(a + o) * 400, r: 7, dmg: 1, color: '#efe6d0', life: 2.4, rot: a + o, pal: BONEP })); }
+    for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.22; G.projs.push(new Proj({ kind: 'shard', x: this.cx + this.face * 30, y: this.cy - 14, vx: Math.cos(a + o) * 400, vy: Math.sin(a + o) * 400, r: 7, dmg: 1, color: '#efe6d0', life: 2.4, rot: a + o, pal: BONEP, boss: true })); }
     yield* this.wait(0.45);
     this.facePlayer(); Sound.play('shoot');
-    G.projs.push(new Proj({ kind: 'shard', x: this.cx + this.face * 30, y: this.cy - 14, vx: this.face * 520, vy: 0, r: 8, dmg: 1, color: '#efe6d0', life: 2.4, rot: this.face > 0 ? 0 : Math.PI, pal: BONEP }));
+    G.projs.push(new Proj({ kind: 'shard', x: this.cx + this.face * 30, y: this.cy - 14, vx: this.face * 520, vy: 0, r: 8, dmg: 1, color: '#efe6d0', life: 2.4, rot: this.face > 0 ? 0 : Math.PI, pal: BONEP, boss: true }));
     this.casting = false;
     yield* this.wait(0.6 * this.spd);
   }

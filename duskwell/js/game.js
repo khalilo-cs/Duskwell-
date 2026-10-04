@@ -1121,10 +1121,13 @@ function syncAbilityButtons() {
   const b = document.querySelector('[data-act=superdash]');
   if (b) b.hidden = !P.ab.superdash;
 }
-// language of the touch button captions
+// names of the touch buttons in the current language (read by screen readers, shown as a tooltip)
 function refreshTouchLabels() {
-  const caps = { cast: ['روح', 'Soul'], dash: ['اندفاع', 'Dash'], attack: ['ضرب', 'Strike'], jump: ['قفز', 'Jump'], superdash: ['شهاب', 'Comet'] };
-  document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
+  const names = { up: ['أعلى', 'Up'], down: ['أسفل', 'Down'], left: ['يسار', 'Left'], right: ['يمين', 'Right'], cast: ['روح', 'Soul'], dash: ['اندفاع', 'Dash'], attack: ['ضرب', 'Strike'], jump: ['قفز', 'Jump'], superdash: ['شهاب', 'Comet'], map: ['الخريطة', 'Map'], pause: ['إيقاف', 'Pause'] };
+  document.querySelectorAll('[data-act]').forEach(el => {
+    const n = names[el.dataset.act]; if (!n) return;
+    el.setAttribute('aria-label', n[LANG.cur === 'ar' ? 0 : 1]); el.setAttribute('role', 'button');
+  });
 }
 window.refreshTouchLabels = refreshTouchLabels;
 // handles used by the tests

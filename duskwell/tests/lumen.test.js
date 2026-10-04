@@ -29,8 +29,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   }
 
   // ---------- terrain shadows: a wall between a light and a spot leaves that spot darker
-  const measure = async q => {
-    await ev(q => { Lumen.setQuality(q); }, q);
+  const measure = async (q, zoom) => {
+    await ev(([q, zoom]) => { Lumen.setQuality(q); DW.G.zoom = zoom || 1; }, [q, zoom]);
     return ev(() => {
       const { G, P, enterRoom } = DW;
       enterRoom('cx1', { pos: { x: 10 * 32, y: 40 * 32 } }); G.state = 'play'; G.areaBanner = null; G.fadeA = 0; G.trans = null; G.enemies = []; P.invuln = 1e9;
@@ -39,8 +39,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       for (let y = 30; y <= 39; y++) for (let x = 12; x <= 13; x++) L.set(x, y, T_SOLID);          // a wall to the right of the hero
       DW.step(2); G.tileCanvas = null; DW.draw(); DW.draw();
       const c = G.canvas, g = c.getContext('2d'), k = G.k, cam = G.cam;
+      const Z = G.zoomNow;                                           // the picture is magnified: room units are Z times larger on screen
       const lum = (wx0, wx1, wy0, wy1) => {
-        const x0 = Math.round((wx0 - cam.x) * k), y0 = Math.round((wy0 - cam.y) * k), w = Math.round((wx1 - wx0) * k), h = Math.round((wy1 - wy0) * k);
+        const x0 = Math.round((wx0 - cam.x) * k * Z), y0 = Math.round((wy0 - cam.y) * k * Z), w = Math.round((wx1 - wx0) * k * Z), h = Math.round((wy1 - wy0) * k * Z);
         const d = g.getImageData(x0, y0, w, h).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2]; return s / (d.length / 4) / 3;
       };
       const cx = P.cx;
@@ -53,6 +54,10 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   const r1 = m1.right / m1.left, r2 = m2.right / m2.left;
   ok('without shadows both sides are similarly lit', r1 > 0.6 && r1 < 1.6, { r1, m1 });
   ok('with shadows the far side of the wall is clearly darker', r2 < r1 * 0.8, { r1, r2, m2 });
+  // the same with the closer picture (zoom 1.5): the shader maps screen to room through the zoom, so the shadow still lands behind the wall
+  const z1 = await measure(1, 1.5), z2 = await measure(2, 1.5);
+  ok('with the zoom on, shadows still darken the far side of the wall', z2.right / z2.left < (z1.right / z1.left) * 0.85, { without: z1, with: z2 });
+  await ev(() => { DW.G.zoom = 1.25; });
   await page.screenshot({ path: shot('lumen_shadow.png'), clip: { x: 250, y: 250, width: 800, height: 450 } });
 
   // ---------- creatures are lit: the rim and slope shading change the picture

@@ -45,6 +45,7 @@ void main() {
 precision highp float;
 uniform sampler2D uScene, uEnt, uHeight, uNorm;
 uniform vec2 uLog, uCam, uRoom, uTexel;
+uniform float uZoom;
 uniform int uNL, uNS;
 uniform vec4 uL[${MAXL}];
 uniform vec3 uLC[${MAXL}];
@@ -66,8 +67,8 @@ float lightReach(vec2 p, vec2 lp) {
   for (int s = 1; s <= 12; s++) {
     float t = (float(s) + jit - 0.5) / 13.0;
     vec2 q = mix(p, lp, t);
-    if (distance(q, lp) < 26.0) continue;
-    occ += solidAt(q + uCam);
+    if (distance(q, lp) < 26.0 * uZoom) continue;
+    occ += solidAt(q / uZoom + uCam);
   }
   return 1.0 - clamp(occ * 0.5, 0.0, 1.0);
 }
@@ -96,7 +97,7 @@ vec3 shade(vec3 albedo, vec3 N, vec2 p, float nStr, float specK, bool shadowed) 
 void main() {
   vec2 p = vec2(vUv.x, 1.0 - vUv.y) * uLog;                // logical screen pixels, y down
   vec4 sc = texture(uScene, vUv), en = texture(uEnt, vUv);
-  vec2 wp = p + uCam;
+  vec2 wp = p / uZoom + uCam;
   // ---- the scene: rock has a baked relief, everything else is flat
   vec4 nm = normAt(wp);
   float rock = smoothstep(0.3, 0.9, nm.a);
@@ -204,7 +205,7 @@ void main() {
       if (!gl) return false;
       canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); ok = false; });
       P.height = program(FRAG_HEIGHT, ['uTex', 'uDir', 'uMode']);
-      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint', 'uCaustic']);
+      P.light = program(FRAG_LIGHT, ['uScene', 'uEnt', 'uHeight', 'uNorm', 'uLog', 'uCam', 'uZoom', 'uRoom', 'uTexel', 'uNL', 'uNS', 'uL', 'uLC', 'uDark', 'uSpec', 'uShadow', 'uTime', 'uTint', 'uCaustic']);
       P.bright = program(FRAG_BRIGHT, ['uTex', 'uThr']);
       P.blur = program(FRAG_BLUR, ['uTex', 'uDir']);
       P.final = program(FRAG_FINAL, ['uLit', 'uBloom', 'uLog', 'uBloomK', 'uAberr', 'uHaze', 'uTime', 'uShaft']);
@@ -302,7 +303,7 @@ void main() {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
   }
 
-  // o: { lights: [{x,y,r,a,c}] (screen space), cx, cy, dark, tint:[r,g,b], spec, time, aberr, haze, shaft:{x,y,k} }
+  // o: { lights: [{x,y,r,a,c}] (screen space), cx, cy, zoom (the picture's magnification), dark, tint:[r,g,b], spec, time, aberr, haze, shaft:{x,y,k} }
   function render(o) {
     try { return renderNow(o); } catch (e) { console.error('Lumen: ' + e.message); ok = false; return null; }      // fall back to the 2D lighting for good
   }
@@ -322,7 +323,7 @@ void main() {
     u = pass(P.light, F.lit, W, H);
     bindTex(0, T.scene); gl.uniform1i(u.uScene, 0); bindTex(1, T.ent); gl.uniform1i(u.uEnt, 1);
     bindTex(2, F.hB.t); gl.uniform1i(u.uHeight, 2); bindTex(3, T.norm); gl.uniform1i(u.uNorm, 3);
-    gl.uniform2f(u.uLog, VW, VH); gl.uniform2f(u.uCam, o.cx, o.cy); gl.uniform2f(u.uRoom, room.pw, room.ph); gl.uniform2f(u.uTexel, 1 / hw, 1 / hh);
+    gl.uniform2f(u.uLog, VW, VH); gl.uniform2f(u.uCam, o.cx, o.cy); gl.uniform1f(u.uZoom, o.zoom || 1); gl.uniform2f(u.uRoom, room.pw, room.ph); gl.uniform2f(u.uTexel, 1 / hw, 1 / hh);
     gl.uniform1i(u.uNL, lights.length); gl.uniform1i(u.uNS, SHADOWED); gl.uniform4fv(u.uL, Lu); gl.uniform3fv(u.uLC, Lc);
     gl.uniform1f(u.uDark, o.dark); gl.uniform1f(u.uSpec, o.spec); gl.uniform1f(u.uShadow, quality >= 2 ? 1 : 0); gl.uniform1f(u.uTime, o.time); gl.uniform1f(u.uCaustic, o.caustic || 0);
     gl.uniform3f(u.uTint, o.tint[0], o.tint[1], o.tint[2]);

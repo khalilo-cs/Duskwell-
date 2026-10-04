@@ -59,3 +59,6 @@ fantasy and Metroidvania motifs; only the ideas are shared.
 
 ## المخلوقات (art/source/creatures, art/creatures)
 ورقة الأوضاع من أعمال صاحب المشروع، وقصصتُها وجمّعتُها وحرّكتُها بكودنا. وورقة إطارات البطل المجاورة محفوظة في المستودع ولم تُدمج بعد. على صاحب المشروع التأكد من أن حقوق استعمالها تجارياً مضمونة له.
+
+## The shop, forge, wizard, road and menu pieces
+The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `road.mp3`, `rest.mp3`) are original compositions written in `tools/music/compose.py` and played with the FluidR3 GM SoundFont as above. Their tunes are written from scratch; none of them is taken from, or arranged from, an existing song.

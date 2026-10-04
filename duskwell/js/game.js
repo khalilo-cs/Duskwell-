@@ -132,7 +132,7 @@ function enterRoom(id, spawn) {
     P.place(spawn.pos.x, spawn.pos.y, 1);
   }
   G.visited[id] = true;
-  Sound.setTheme(def.theme); Sound.boss(false); syncAbilityButtons();
+  Sound.setTheme(def.bg === 'townb' ? 'road' : def.theme); Sound.boss(false); syncAbilityButtons();
   // painted backdrops for this area, then for the areas behind its doors so they are ready in time
   Art.loadPainted(def.bg);
   for (const d of def.doors) { const n = WORLD.rooms[d.to]; if (n && n.bg !== def.bg) Art.loadPainted(n.bg); }
@@ -571,7 +571,16 @@ function updateBanner(dt) {
 }
 
 // one logic step, by state
+// the music of the moment: the shops and the menus have a track of their own, played instead of the area's
+const SHOP_MOOD = { wizard: 'wizard', smith: 'forge', outfitter: 'forge' };
+const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'bestiary', 'travel'];
+function moodNow() {
+  const inShop = G.state === 'shop' || (G.state === 'dialog' && G.dialog && G.dialog.shop);
+  if (inShop) return SHOP_MOOD[G.shopId] || 'fiddler';
+  return MENU_STATES.includes(G.state) ? 'rest' : null;
+}
 function update(dt) {
+  Sound.setMood(moodNow());
   G.t += dt;
   if (G.toast) { G.toast.t += dt; if (G.toast.t > G.toast.dur) G.toast = null; }
   if (G.areaBanner) { G.areaBanner.t += dt; if (G.areaBanner.t > 3.6) G.areaBanner = null; }

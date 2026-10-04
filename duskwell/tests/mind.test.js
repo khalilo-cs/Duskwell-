@@ -14,20 +14,20 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await setup();
   // ---- difficulty
   let r = await ev(() => ({ hp0: Diff.enemyHp('hushvale'), hp14: Diff.enemyHp('throne'), boss0: Diff.bossHp('hushvale'), t: Diff.tempo('throne'), s: Diff.sight('throne'), grace: Diff.grace }));
-  ok('creatures are much tougher, quicker and sharper-eyed, more so the deeper the area', r.hp0 === 1.6 && Math.abs(r.hp14 - 2.3) < 1e-9 && r.boss0 === 1.5 && r.t > 1.25 && r.s > 1.3 && r.grace === 0.9, r);
+  ok('creatures are tougher, quicker and sharper-eyed, more so the deeper the area', r.hp0 === 1.25 && Math.abs(r.hp14 - 1.6) < 1e-9 && r.boss0 === 1.2 && r.t > 1.1 && r.s > 1.15 && r.grace === 1.1, r);
   // ---- born clever: the depth gives a level before the player has taught anything
   r = await ev(() => ({ a: Diff.innate('hushvale'), b: Diff.innate('crossroads'), c: Diff.innate('crystal'), d: Diff.innate('frost'), e: Diff.innate('lunar'), f: Diff.innate('throne'),
     fresh: (Mind.reset(), Mind.level({ kind: 'husk', area: 'throne' })), shallow: Mind.level({ kind: 'husk', area: 'crossroads' }), taught: (G.mind = { husk: { k: 100, w: 0, d: 0, sp: 0 } }, Mind.level({ kind: 'husk', area: 'crystal' })) }));
-  ok('the first areas are born at level 0, the deep ones at 1, 2 and 3', r.a === 0 && r.b === 0 && r.c === 1 && r.d === 2 && r.e === 3 && r.f === 3, r);
-  ok('a creature that has never met you is already clever in the throne, and what it learned still counts when it is more', r.fresh === 3 && r.shallow === 0 && r.taught === 5, r);
+  ok('the first five areas are born at level 0, the next ones at 1, the last ones at 2', r.a === 0 && r.b === 0 && r.c === 0 && r.d === 1 && r.e === 2 && r.f === 2, r);
+  ok('a creature that has never met you is already clever in the throne, and what it learned still counts when it is more', r.fresh === 2 && r.shallow === 0 && r.taught === 5, r);
   // ---- they flinch less the deeper they live
   r = await ev(() => { const mk = area => { const e = new ENEMY_TYPES.crawler({ x: 12, y: 17 }); e.kind = 'crawler'; Mind.prepare(e, area); return e.kb; }; return { shallow: mk('crossroads'), deep: mk('throne') }; });
   ok('a deep creature is knocked back less than a shallow one', r.deep < r.shallow && r.deep >= 0.5, r);
   // ---- the soul vessel holds three times as much and every blow fills half of what it did
   r = await ev(() => { const { P } = DW; P.soul = 0; P.maxSoul = Diff.soulMax; P.gainSoul(11); const one = P.soul; P.gainSoul(10000); return { max: Diff.soulMax, one, full: P.soul, start: new Player().maxSoul }; });
-  ok('the vessel holds 297, a blow of 11 gathers 5.5, and it never overflows', r.max === 297 && r.one === 5.5 && r.full === 297 && r.start === 297, r);
+  ok('the vessel holds 297, a blow of 11 gathers 8.25, and it never overflows', r.max === 297 && r.one === 8.25 && r.full === 297 && r.start === 297, r);
   r = await ev(() => { const { P } = DW; P.soul = 0; let hits = 0; while (P.soul < P.spellCost() && hits < 100) { P.gainSoul(P.soulGain); hits++; } return { hits }; });
-  ok('it takes six blows to gather one spell where it took three', r.hits === 6, r);
+  ok('it takes four blows to gather one spell where it took three', r.hits === 4, r);
   // ---- levels
   r = await ev(() => {
     const out = {}, e = { kind: 'husk' };
@@ -163,7 +163,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     const e = new ENEMY_TYPES.husk({ x: 12, y: 17 }); e.kind = 'husk'; G.enemies = [e]; try { DW.draw(); out.pips = true; } catch (e2) { out.err2 = e2.message; }
     return out;
   });
-  ok('the bestiary and the pips draw', r.level === 5 && r.learned >= 3 && r.none === 0 && r.drew && r.pips, r);
+  ok('the bestiary and the pips draw', r.level === 4 && r.learned >= 3 && r.none === 0 && r.drew && r.pips, r);
   ok('no page errors', errors.length === 0, errors.slice(0, 3));
   await browser.close();
   process.exit(fails ? 1 : 0);

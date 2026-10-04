@@ -11,7 +11,7 @@
 // Bosses do not sidestep: a boss that has beaten you before only shortens its pauses.
 // Nothing here is in the creatures' own code: update() and seesPlayer() of every class are wrapped once, below.
 const Mind = (() => {
-  const LEVELS = [2, 5, 10, 18, 30];                                        // score needed for levels 1 to 5
+  const LEVELS = [3, 7, 14, 24, 40];                                        // score needed for levels 1 to 5
   const NAMES = [['غِرّ', 'Green'], ['متنبّه', 'Wary'], ['متمرّس', 'Seasoned'], ['ماكر', 'Cunning'], ['خبير', 'Veteran'], ['داهية', 'Mastermind']];
   const ROOTED = new Set(['shard', 'spitter', 'icicle', 'censer', 'heap', 'mole', 'lavaworm', 'shroom', 'orrery']);       // these never move out of the way
   const SPELL_HOW = new Set(['spell', 'wail', 'dive', 'nova']);
@@ -64,7 +64,7 @@ const Mind = (() => {
     if (e.isBoss) { const l = level(e); if (l) e.spd = Math.max(0.55, e.spd * (1 - 0.045 * l)); }
   }
   // how much faster than normal a creature acts: the area's tempo times what it has learned
-  const tempo = e => Math.min(1.5, (e.tempo || 1) * (1 + 0.04 * level(e)));
+  const tempo = e => Math.min(1.4, (e.tempo || 1) * (1 + 0.03 * level(e)));
   // how much farther it notices you
   const sight = e => (e.sightK || 1) * (1 + 0.12 * level(e)) * (e.alertT > 0 ? 1.8 : 1);
 
@@ -76,8 +76,8 @@ const Mind = (() => {
     const busy = e.currentState === ST.ANTICIPATION || e.currentState === ST.ATTACK || e.stun > 0 || e.isBoss || ROOTED.has(e.kind);
     if (l >= 2 && !busy && e.dodgeCD <= 0 && swing) {
       const dx = e.cx - p.cx;
-      if (Math.abs(dx) < 120 && Math.abs(e.cy - p.cy) < 70 && Math.sign(dx) === p.face && Math.random() < Math.min(0.65, 0.13 * l)) {
-        e.dodgeT = 0.22; e.dodgeVx = Math.sign(dx) * 340; e.dodgeCD = 1.4 - 0.1 * l;
+      if (Math.abs(dx) < 120 && Math.abs(e.cy - p.cy) < 70 && Math.sign(dx) === p.face && Math.random() < Math.min(0.5, 0.1 * l)) {
+        e.dodgeT = 0.22; e.dodgeVx = Math.sign(dx) * 340; e.dodgeCD = 1.6 - 0.1 * l;
         if (e.onGround) e.vy = -200;
       }
     }
@@ -103,7 +103,7 @@ const Mind = (() => {
     const dx = p.cx - q.x, dy = p.cy - q.y, t = Math.hypot(dx, dy) / sp;
     const a0 = Math.atan2(dy, dx), a1 = Math.atan2(dy + p.vy * t, dx + p.vx * t);
     let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
-    const k = Math.min(1, 0.3 * l), c = Math.cos(d * k), sn = Math.sin(d * k);
+    const k = Math.min(1, 0.2 * l), c = Math.cos(d * k), sn = Math.sin(d * k);
     const vx = q.vx * c - q.vy * sn, vy = q.vx * sn + q.vy * c; q.vx = vx; q.vy = vy;
   }
 

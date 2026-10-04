@@ -70,7 +70,7 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
     P.soul = 0; P.hurt(1, P.cx + 40); out.enemyHp = e.hp; out.soul = P.soul; out.hp = P.hp;
     return out;
   });
-  ok('thorn burst hurt the enemy (9)', r.enemyHp === 21, r.enemyHp); ok('pain echo gave 18 soul at half value (9)', r.soul === 9, r.soul);
+  ok('thorn burst hurt the enemy (9)', r.enemyHp === 21, r.enemyHp); ok('pain echo gave 18 soul at three quarters (13.5)', r.soul === 13.5, r.soul);
 
   // ---------- numbers
   await setup();
@@ -123,7 +123,7 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
     return out;
   });
   ok('long edge widens the strike', r.w0 === 70 && r.w1 === 94.5, [r.w0, r.w1]);
-  ok('soul siphon: (11 + 6) at half value per hit', r.soul === 8.5, r.soul);
+  ok('soul siphon: (11 + 6) at three quarters per hit', r.soul === 12.75, r.soul);
 
   await setup();
   r = await ev(() => {

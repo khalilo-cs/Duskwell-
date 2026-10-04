@@ -29,6 +29,7 @@ STRINGS, SLOW_STRINGS, CHOIR, OOHS = 48, 49, 52, 53
 TRUMPET, TROMBONE, HORN, BRASS = 56, 57, 60, 61
 OBOE, ENGLISH_HORN, BASSOON, CLARINET, FLUTE = 68, 69, 70, 71, 73
 AGOGO, WOODBLOCK, TAIKO, REVERSE_CYMBAL = 113, 115, 116, 119
+ACCORDION, NYLON, TUBULAR = 21, 24, 14
 
 
 def pitch(s):
@@ -929,7 +930,162 @@ def ending():
     return s, len(prog)
 
 
-PIECES = [overture, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, storm, mirror, ossuary, lunar, boss, boss_bone, boss_moon, king, ending]
+def fiddler():
+    """The merchant's piece, for the shops: a ghostly waltz in D minor. A lone violin sings low over a reed organ that holds its
+    chords, a cello walks under it, a far bell tolls on the first beat of every second bar and a celesta glints now and then.
+    The tune is two plain phrases, the second one answering the first from a step lower."""
+    s = Song('fiddler', 76, beats_per_bar=3, seed=61)
+    s.track('violin', VIOLIN, vol=100, pan=70, reverb=88)
+    s.track('reed', ACCORDION, vol=64, pan=50, reverb=80)
+    s.track('cello', CELLO, vol=96, pan=54, reverb=80)
+    s.track('bass', CONTRABASS, vol=78, pan=60, reverb=60)
+    s.track('bell', TUBULAR, vol=58, pan=84, reverb=100)
+    s.track('celesta', CELESTA, vol=52, pan=90, reverb=96)
+    s.track('choir', CHOIR, vol=56, pan=64, reverb=100)
+    A = ['Dm', 'Dm', 'Bb', 'A', 'Dm', 'Gm', 'A7', 'Dm']
+    B = ['Bb', 'F', 'Gm', 'A', 'Bb', 'Gm', 'A7', 'A']
+    prog = A + B + A + B
+    for b, c in enumerate(prog):
+        s.pad('reed', b, c, low=50, count=3, vel=34)
+        s.bass('cello', b, c, low=38, rhythm=((0, 1.4), (1.5, 0.7), (2.25, 0.6)), vel=62)
+        s.bass('bass', b, c, low=26, rhythm=((0, 2.9),), vel=58)
+        if b % 2 == 0:
+            s.note('bell', s.bar(b), 2.8, bass_note(c, 62), 46)
+        if b % 4 == 3:
+            s.note('celesta', s.bar(b) + 2, 0.9, tones(c, 81, 1)[0], 44)
+        if b >= 16:
+            s.pad('choir', b, c, low=57, count=3, vel=38)
+    tune_a = ('A4:2 D5:1  F5:1.5 E5:0.5 D5:1  Bb4:2 D5:1  C#5:3  A4:1 D5:1 F5:1  G5:2 F5:1  E5:1.5 D5:0.5 C#5:1  D5:3')
+    tune_b = ('D5:2 F5:1  E5:1.5 D5:0.5 Bb4:1  A4:2 C5:1  C#5:3  D5:1 Bb4:1 G4:1  A4:2 Bb4:1  C#5:1 E5:1 G5:1  A5:3')
+    s.melody('violin', 0, tune_a, vel=72)
+    s.melody('violin', 8, tune_b, vel=76)
+    s.melody('violin', 16, tune_a, vel=80, shift=0)
+    s.melody('violin', 24, tune_b, vel=82)
+    return s, len(prog)
+
+
+def wizard():
+    """The wizard's study: A Phrygian in three, very slow. A low English horn over a harp that turns its notes over like pages,
+    tremolo strings under everything, a choir that holds the dark chords from the second half and a celesta that glints a flat
+    second above the key, as if something were wrong in the room."""
+    s = Song('wizard', 54, beats_per_bar=3, seed=62)
+    s.track('horn', ENGLISH_HORN, vol=100, pan=72, reverb=92)
+    s.track('harp', HARP, vol=84, pan=52, reverb=88)
+    s.track('celesta', CELESTA, vol=60, pan=90, reverb=98)
+    s.track('choir', CHOIR, vol=70, pan=64, reverb=100)
+    s.track('tremolo', TREMOLO, vol=70, pan=60, reverb=90)
+    s.track('bass', CONTRABASS, vol=84, pan=58, reverb=60)
+    prog = ['Am', 'Bb', 'Am/E', 'E', 'Am', 'Dm', 'Bb', 'E'] * 2
+    for b, c in enumerate(prog):
+        s.arp('harp', b, c, [0, 2, 1, 3, 2, 1], step=0.5, low=45, vel=44, dur=1.4)
+        s.bass('bass', b, c, low=28, rhythm=((0, 2.9),), vel=66)
+        s.pad('tremolo', b, c, low=52, count=3, vel=38)
+        if b >= 8:
+            s.pad('choir', b, c, low=57, count=3, vel=44)
+        if b % 4 == 3:
+            s.note('celesta', s.bar(b) + 1, 1.2, pitch('Bb6'), 46)
+    tune_a = ('E5:2 F5:1  E5:1.5 D5:0.5 C5:1  B4:2 C5:1  B4:3  A4:1 C5:1 E5:1  F5:2 E5:1  D5:1.5 C5:0.5 Bb4:1  G#4:3')
+    tune_b = ('C5:2 E5:1  D5:1.5 C5:0.5 B4:1  A4:2 B4:1  E5:3  A4:1 C5:1 E5:1  F5:2 D5:1  Bb4:1 D5:1 F5:1  E5:3')
+    s.melody('horn', 0, tune_a, vel=76)
+    s.melody('horn', 8, tune_b, vel=80)
+    return s, len(prog)
+
+
+def rest():
+    """Lanternlight, for the menus: A minor, a piano that moves as little as it can over a cello and thin strings, with a far
+    glockenspiel. A lament: each phrase falls and ends on the dominant, unanswered until the next."""
+    s = Song('rest', 50, seed=63)
+    s.track('piano', PIANO, vol=100, pan=62, reverb=92)
+    s.track('strings', SLOW_STRINGS, vol=58, pan=64, reverb=96)
+    s.track('cello', CELLO, vol=92, pan=50, reverb=86)
+    s.track('glock', GLOCK, vol=40, pan=88, reverb=98)
+    s.track('bass', CONTRABASS, vol=70, pan=58, reverb=60)
+    prog = ['Am', 'F', 'Dm', 'E', 'Am', 'G', 'F', 'E', 'Dm', 'Am', 'Bb', 'A', 'Dm', 'Am/C', 'F', 'E'] * 2
+    for b, c in enumerate(prog):
+        s.arp('piano', b, c, [0, 2, 1, 3, 2, 1, 0, 1], step=0.5, low=45, vel=38, dur=1.3)
+        s.bass('cello', b, c, low=33, rhythm=((0, 3.8),), vel=60)
+        s.bass('bass', b, c, low=24, rhythm=((0, 3.9),), vel=54)
+        s.pad('strings', b, c, low=52, count=3, vel=30)
+        if b % 4 == 3:
+            s.note('glock', s.bar(b) + 3, 1, tones(c, 88, 1)[0], 38)
+    tune = ('E5:2 D5:1 C5:1  B4:2 C5:2  A4:1 C5:1 F5:2  E5:3 r:1  E5:2 D5:1 C5:1  D5:2 B4:2  C5:1 A4:1 F4:2  G#4:4  '
+            'D5:2 F5:2  E5:2 C5:2  D5:1 F5:1 Bb5:2  A5:3 r:1  F5:2 E5:2  C5:2 A4:2  C5:2 A4:1 F4:1  E4:4')
+    s.melody('piano', 0, tune, vel=62)
+    return s, len(prog)
+
+
+def road():
+    """The road between the village and the caves at dusk: E minor, a slow walking pace. A nylon guitar picks under a low oboe,
+    a cello holds the root, a soft timpani beats like a heart every other bar and the strings come in for the second half."""
+    s = Song('road', 80, seed=64)
+    s.track('oboe', OBOE, vol=98, pan=72, reverb=86)
+    s.track('guitar', NYLON, vol=82, pan=46, reverb=70)
+    s.track('cello', CELLO, vol=90, pan=56, reverb=78)
+    s.track('bass', CONTRABASS, vol=78, pan=60, reverb=55)
+    s.track('timpani', TIMPANI, vol=70, pan=64, reverb=70)
+    s.track('strings', SLOW_STRINGS, vol=56, pan=64, reverb=94)
+    s.track('harp', HARP, vol=56, pan=40, reverb=90)
+    prog = ['Em', 'C', 'G', 'D', 'Em', 'Am', 'B7', 'Em', 'C', 'G', 'Am', 'B7', 'Em', 'C', 'D', 'B7'] * 2
+    for b, c in enumerate(prog):
+        s.arp('guitar', b, c, [0, 2, 1, 2, 3, 2, 1, 2], step=0.5, low=45, vel=48, dur=0.9)
+        s.bass('cello', b, c, low=36, rhythm=((0, 3.8),), vel=62)
+        s.bass('bass', b, c, low=28, rhythm=((0, 3.9),), vel=54)
+        if b % 2 == 0:
+            s.note('timpani', s.bar(b), 1.0, bass_note(c, 40), 56)
+        if b >= 16:
+            s.pad('strings', b, c, low=52, count=3, vel=36)
+            s.arp('harp', b, c, [3, 2, 4, 2], step=1, low=57, vel=36, dur=1.6)
+    tune_a = ('B4:1 E5:1 G5:1.5 F#5:0.5  E5:2 B4:2  G4:1 C5:1 E5:1.5 D5:0.5  B4:3 r:1  '
+              'B4:1 E5:1 G5:1 B5:1  A5:1 F#5:1 D5:2  E5:1.5 D5:0.5 B4:1 G4:1  E4:3 r:1')
+    tune_b = ('G5:2 E5:2  E5:1 G5:1 B5:2  C6:1.5 B5:0.5 A5:1 G5:1  F#5:3 r:1  '
+              'D5:1 F#5:1 A5:1 B5:1  A5:1 G5:1 F#5:2  G5:1.5 F#5:0.5 E5:2  E5:3 r:1')
+    s.melody('oboe', 0, tune_a, vel=70)
+    s.melody('oboe', 8, tune_b, vel=72)
+    s.melody('oboe', 16, tune_a, vel=76, shift=0)
+    s.melody('oboe', 24, tune_b, vel=78)
+    return s, len(prog)
+
+
+def forge():
+    """The smithy: a heavy D minor at a walking pace. Taiko and an anvil mark the beat, low strings cut short grind under a horn
+    that leans on its notes, and a trombone doubles the tune an octave down in the second half. The tune is a stubborn little figure
+    that climbs a step and falls back."""
+    s = Song('forge', 92, seed=65)
+    s.track('horn', HORN, vol=92, pan=44, reverb=78)
+    s.track('trombone', TROMBONE, vol=84, pan=70, reverb=72)
+    s.track('strings', STRINGS, vol=70, pan=64, reverb=80)
+    s.track('bass', CONTRABASS, vol=92, pan=58, reverb=50)
+    s.track('anvil', AGOGO, vol=58, pan=40, reverb=70)
+    s.track('taiko', TAIKO, vol=84, pan=64, reverb=60)
+    s.track('timpani', TIMPANI, vol=80, pan=66, reverb=65)
+    A = ['Dm', 'Dm', 'Bb', 'A', 'Dm', 'Gm', 'Eb', 'A']
+    B = ['Bb', 'A', 'Gm', 'A', 'Bb', 'F', 'Eb', 'A']
+    prog = A + B + A + B
+    for b, c in enumerate(prog):
+        root = bass_note(c, 38)
+        s.note('bass', s.bar(b), 1.6, root, 82); s.note('bass', s.bar(b) + 2, 1.6, root, 72)
+        s.hits('taiko', b, 50, (0, 2), dur=0.35, vel=84)
+        s.hits('anvil', b, 72, (1, 3), dur=0.3, vel=60)
+        s.note('timpani', s.bar(b), 1.6, bass_note(c, 38), 70)
+        for off in (0, 0.75, 1.5, 2, 2.75, 3.5):                # strings cut short: a grinding figure on the chord's low notes
+            s.note('strings', s.bar(b) + off, 0.3, tones(c, 45, 3)[(int(off * 4)) % 3], 48)
+        if b >= 8:
+            for p in tones(c, 48, 3):
+                s.note('trombone', s.bar(b), 3.7, p, 52, human=False)
+    tune_a = ('D5:1 D5:0.5 E5:0.5 F5:1 A5:1  G5:1 G5:0.5 A5:0.5 Bb5:1 D6:1  F5:1 G5:0.5 A5:0.5 Bb5:2  A5:3 r:1  '
+              'D5:1 D5:0.5 E5:0.5 F5:1 A5:1  G5:1 G5:0.5 A5:0.5 Bb5:1 D6:1  C#6:1 A5:1 E5:1 A5:1  D6:3 r:1')
+    tune_b = ('Bb5:1 Bb5:0.5 C6:0.5 D6:1 F6:1  E6:1 E6:0.5 F6:0.5 E6:1 C#6:1  G5:1 A5:1 Bb5:1 C6:1  C#6:3 r:1  '
+              'Bb5:1 D6:1 F6:2  E6:1 C#6:1 A5:2  Bb5:1 G5:1 E5:1 C#5:1  A5:3 r:1')
+    s.melody('horn', 0, tune_a, vel=84)
+    s.melody('horn', 8, tune_b, vel=86)
+    s.melody('horn', 16, tune_a, vel=90)
+    s.melody('trombone', 16, tune_a, vel=66, shift=-12)
+    s.melody('horn', 24, tune_b, vel=92)
+    return s, len(prog)
+
+
+PIECES = [overture, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, storm, mirror, ossuary, lunar, boss, boss_bone, boss_moon, king, ending,
+          fiddler, wizard, rest, road, forge]
 
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'build'

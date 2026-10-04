@@ -8,21 +8,21 @@ const Sound = (() => {
   // web audio nodes: master -> effects bus, recorded music bus, synth fallback bus
   let ctx = null, master = null, sfxBus = null, musicBus = null, fileBus = null, delay = null;
   // current state: mute, area theme, boss music, fallback score timer
-  let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
+  let muted = false, theme = 'title', mood = null, bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
   // root note (Hz) of the synth fallback for each area
-  const ROOT = { ending: 73.4, bone: 65.4, lunar: 82.4, storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  const ROOT = { ending: 73.4, bone: 65.4, lunar: 82.4, storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, road: 98, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
   // scale steps used by the fallback score
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
   // area theme -> music file
-  const TRACK = { ending: 'ending', title: 'overture', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
+  const TRACK = { ending: 'ending', title: 'overture', road: 'road', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
   // which battle theme each boss fights to (a boss key, or true for the last one); anything else gets the common one
   const BOSS_TRACKS = { king: 'king', bonewright: 'boss_bone', marrow: 'boss_bone', stargazer: 'boss_moon', regent: 'boss_moon' };
   const bossTrackOf = which => (which === true ? 'king' : (typeof which === 'string' && BOSS_TRACKS[which]) || 'boss');
   // folders of the recorded music and effects
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
-  const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
+  const AMB_THEME = { town: 'forest', moss: 'forest', road: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
   // volumes
   const MUSIC_VOL = 0.8;
   const MASTER_VOL = 0.55;
@@ -69,7 +69,7 @@ const Sound = (() => {
       metaReq.then(m => { this.meta = m; this.mode = 'buffer'; this.update(); })
         .catch(() => { this.mode = 'element'; this.update(); });
     },
-    desired() { return bossMode ? bossTrack : (TRACK[theme] || 'crossroads'); },
+    desired() { return bossMode ? bossTrack : (mood || TRACK[theme] || 'crossroads'); },
     update() {
       if (!ctx || this.mode === 'pending') return;
       if (this.mode === 'synth') { if (!timer) startMusic(); return; }
@@ -319,6 +319,10 @@ const Sound = (() => {
     play(name) { try { const r = Rec.play(name); if (r !== 'replace' && FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
     // area theme: 'title', 'town', 'cave', 'moss', ... (see TRACK)
     setTheme(t) { if (t !== theme) { theme = t; Score.update(); Rec.ambience(); } },
+    // a track for the moment, over the area's own (a shop, the menus): a name from music.json, or null to go back to the area's theme
+    setMood(m) { if (m !== mood) { mood = m; Score.update(); } },
+    // the name of the track that should be playing now (the tests read it)
+    track() { return Score.desired(); },
     // boss music on/off; the final boss has a theme of its own
     boss(on, which) {
       const track = bossTrackOf(which);

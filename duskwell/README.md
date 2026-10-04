@@ -81,6 +81,17 @@
 | ![نحّات العظام](docs/gallery/screens/boss_bonewright.jpg) | ![طاغية النخاع](docs/gallery/screens/boss_marrow.jpg) | ![الراصد](docs/gallery/screens/boss_stargazer.jpg) |
 | ![الموسوعة](docs/gallery/screens/bestiary_marrow.jpg) | ![المعدات](docs/gallery/screens/equipment_weapons.jpg) | ![الحدّاد](docs/gallery/screens/shop_smith.jpg) |
 
+**أرضيات المناطق (من الوادي إلى المرصد):**
+
+![أرضيات المناطق](docs/gallery/screens/floors.jpg)
+
+**أزرار العنوان والإيقاف والجوال، والخريطة المكبّرة:**
+
+| | | |
+| --- | --- | --- |
+| ![العنوان](docs/gallery/screens/title_buttons.jpg) | ![الإيقاف](docs/gallery/screens/pause_menu.jpg) | ![الجوال](docs/gallery/screens/touch_controls.jpg) |
+| ![الخريطة](docs/gallery/screens/map_zoom.jpg) | | |
+
 **البطل الجديد (الافتراضي الآن):** قناع بيضاوي مشقوق وعباءة ممزقة، مقصوص إلى أجزاء ومحرَّك بهيكل مفاصل. كل وضعية تُحسب من حالة اللاعب الفعلية:
 
 ![وضعيات البطل الجديد](docs/gallery/hero2_poses.webp)

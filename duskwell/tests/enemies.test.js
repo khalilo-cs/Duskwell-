@@ -20,9 +20,10 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     for (const id of DW.WORLD.order) for (const e of DW.WORLD.rooms[id].enemies) if (e.type === 'warden' || e.type === 'ram') {
       const rm = DW.WORLD.rooms[id]; out.push({ id, t: e.type, ok: [0, 1].every(k => rm.at(e.x, e.y - k) === 0) && rm.at(e.x, e.y + 1) === 1 });
     }
-    return { out, w: out.filter(o => o.t === 'warden').length, r: out.filter(o => o.t === 'ram').length };
+    const orig = o => !DW.WORLD.rooms[o.id].need;                     // the extra rooms (js/world_extra.js) have wardens and rams of their own
+    return { out, w: out.filter(o => o.t === 'warden' && orig(o)).length, r: out.filter(o => o.t === 'ram' && orig(o)).length };
   });
-  ok('11 wardens and 10 rams, all standing on floor', r.w === 11 && r.r === 10 && r.out.every(o => o.ok), r);
+  ok('11 wardens and 10 rams in the first rooms, every one (extra rooms too) standing on floor', r.w === 11 && r.r === 10 && r.out.every(o => o.ok), r);
 
   // ---------- Warden: the shield
   await setup('cx1', 20, 39);

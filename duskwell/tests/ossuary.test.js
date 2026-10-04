@@ -37,8 +37,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   }, [name, phase]);
 
   // ---------------------------------------------------------------- the way in
-  let r = await ev(() => { const W = DW.WORLD.rooms; return { a: W.fd2.doors.find(d => d.id === 'w'), b: W.os1.doors.find(d => d.id === 'e'), n: Object.keys(W).filter(k => /^os\d$/.test(k)).length }; });
-  ok('the foundry shaft and the Charnel Gate lead to each other; seven rooms', r.a && r.b && r.a.to === 'os1' && r.a.toDoor === 'e' && r.b.to === 'fd2' && r.b.toDoor === 'w' && r.n === 7, r);
+  let r = await ev(() => { const W = DW.WORLD.rooms; return { a: W.fd2.doors.find(d => d.id === 'w'), b: W.os1.doors.find(d => d.id === 'e'), n: Object.keys(W).filter(k => /^os[1-7]$/.test(k)).length }; });
+  ok('the foundry shaft and the Charnel Gate lead to each other; seven first rooms', r.a && r.b && r.a.to === 'os1' && r.a.toDoor === 'e' && r.b.to === 'fd2' && r.b.toDoor === 'w' && r.n === 7, r);
 
   // ---------------------------------------------------------------- the Heap
   await setup('os1', 'e');

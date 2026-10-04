@@ -270,7 +270,7 @@ function interact() {
   }
   const n = nearest(G.npcs, P.cx, 70);
   if (n) {
-    if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3')], i: 0, t: 0 };
+    if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3'), tr('elder4')], i: 0, t: 0 };
     else { G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : 'general'); G.dialog = { lines: [shopGreet(shopDef())], i: 0, t: 0, shop: true }; }
     G.state = 'dialog'; Sound.play('select'); return true;
   }

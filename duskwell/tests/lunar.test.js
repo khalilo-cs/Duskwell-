@@ -38,8 +38,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   }, [name, phase]);
 
   // ---------------------------------------------------------------- the way in
-  let r = await ev(() => { const W = DW.WORLD.rooms; return { a: W.sc7.doors.find(d => d.id === 'e'), b: W.lo1.doors.find(d => d.id === 'w'), n: Object.keys(W).filter(k => /^lo\d$/.test(k)).length, total: Object.keys(W).length, gate: W.sc7.arena.gates.find(g => g.x === 51) }; });
-  ok("the Roc's Nest east door leads to the Gate of Stars and is sealed until the Roc is beaten; seven rooms", r.a && r.b && r.a.to === 'lo1' && r.a.toDoor === 'w' && r.b.to === 'sc7' && r.b.toDoor === 'e' && r.gate && r.gate.close === 'always' && r.n === 7, r);
+  let r = await ev(() => { const W = DW.WORLD.rooms; return { a: W.sc7.doors.find(d => d.id === 'e'), b: W.lo1.doors.find(d => d.id === 'w'), n: Object.keys(W).filter(k => /^lo[1-7]$/.test(k)).length, total: Object.keys(W).length, gate: W.sc7.arena.gates.find(g => g.x === 51) }; });
+  ok("the Roc's Nest east door leads to the Gate of Stars and is sealed until the Roc is beaten; seven first rooms", r.a && r.b && r.a.to === 'lo1' && r.a.toDoor === 'w' && r.b.to === 'sc7' && r.b.toDoor === 'e' && r.gate && r.gate.close === 'always' && r.n === 7, r);
   r = await ev(() => {
     const { G, P, enterRoom } = DW; G.flags = {}; enterRoom('sc7', { door: 'w' }); G.state = 'play'; G.areaBanner = null; G.fadeA = 0; G.trans = null; DW.step(3);
     const shut = G.level.get(51, 20) === 5; G.flags.boss_roc = true; enterRoom('sc7', { door: 'w' }); DW.step(3);

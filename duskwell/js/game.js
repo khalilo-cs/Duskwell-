@@ -72,7 +72,7 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, room: G.bench.room, maxHp: P.maxHp, ab: P.ab, geo: P.geo, nail: P.nail, soulGain: P.soulGain, flags: G.flags,
-      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(), gear: Gear.save(), seen: G.seen,
+      shade: G.shade, visited: G.visited, time: G.time, deaths: G.deaths, charms: Charms.save(), gear: Gear.save(), seen: G.seen, mind: G.mind,
     }));
   } catch (e) { /* storage may be blocked */ }
 }
@@ -95,7 +95,7 @@ function enterRoom(id, spawn) {
   G.gates = []; G.arena = null; G.boss = null; G.bossBarShow = false; G.doorLock = true;
   // persistent changes
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.get(x, y); if ((v === T_BREAK || v === T_CRACK) && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR); }
-  for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; en.hp = Math.max(1, Math.round(en.hp * Diff.enemyHp(def.area))); G.enemies.push(en); }
+  for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; en.hp = Math.max(1, Math.round(en.hp * Diff.enemyHp(def.area))); Mind.prepare(en, def.area); G.enemies.push(en); }
   for (const it of def.items) if (!G.flags[it.id]) G.items.push(new Item(it));
   Mech.init(def);
   if (G.shade && G.shade.room === id) {
@@ -220,6 +220,7 @@ G.onBossDying = function (b) { G.bossBarShow = true; };
 // boss died: open the gates, give the reward, or start the ending
 G.onBossDeath = function (b) {
   const a = G.arena; if (!a) return;
+  Mind.killed(b, b.lastHow);
   a.state = 'won'; G.flags[a.def.flag] = true; G.boss = null; G.bossBarShow = false;
   for (const e of G.enemies) if (e.kind === 'brood_child') e.dead = true;
   G.dropGeo(b.cx, b.cy, b.geo); G.flash = 0.8; Sound.boss(false);
@@ -233,12 +234,12 @@ G.onBossDeath = function (b) {
 function startGame(useSave) {
   Object.assign(P, new Player());
   G.look = 0; G.lookT = 0; G.lookDir = 0;
-  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); Gear.reset(); G.seen = {};
+  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); Gear.reset(); G.seen = {}; Mind.reset();
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
     P.maxHp = s.maxHp; P.hp = s.maxHp; P.ab = Object.assign(P.ab, s.ab); P.geo = s.geo; P.nail = s.nail; P.soulGain = s.soulGain;
-    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms); Gear.load(s.gear); G.seen = s.seen || {};
+    G.flags = s.flags || {}; G.shade = s.shade; G.visited = s.visited || {}; G.time = s.time || 0; G.deaths = s.deaths || 0; Charms.load(s.charms); Gear.load(s.gear); G.seen = s.seen || {}; G.mind = s.mind || {};
     room = s.room; spawn = { bench: true };
   } else {
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
@@ -356,7 +357,7 @@ function updatePlay(dt) {
       if (e.dead || e.ghostly || e.dmg <= 0 || e.frozenT > 0) continue;
       if (e.isBoss && (e.state === 'intro' || e.state === 'dying')) continue;
       if (e.alpha !== undefined && e.alpha < 0.6) continue;
-      if (overlap(hb, e.body())) P.hurt(e.dmg, e.cx);
+      if (overlap(hb, e.body()) && P.hurt(e.dmg, e.cx)) Mind.wounded(e);
     }
   }
 
@@ -389,7 +390,7 @@ function updatePlay(dt) {
     for (const gt of a.def.gates) if (gt.close === 'start') closeGate(gt);
     const B = BOSS_TYPES[a.def.boss];
     const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
-    boss.hp = boss.maxHp = Math.round(boss.hp * Diff.bossHp(G.level.def.area));
+    boss.hp = boss.maxHp = Math.round(boss.hp * Diff.bossHp(G.level.def.area)); Mind.prepare(boss, G.level.def.area);
     G.enemies.push(boss); G.boss = boss;
     Sound.boss(true, a.def.boss);
   }
@@ -928,6 +929,11 @@ function drawWorld(g) {
   if (Charms.shellUp() && !P.dead) {
     bloom(g, P.cx, P.cy, 52, '#e8dcb8', 0.18);
     g.strokeStyle = 'rgba(232,220,184,' + (0.45 + 0.2 * Math.sin(t * 5)) + ')'; g.lineWidth = 2; ellipse(g, P.cx, P.cy, 24, 33); g.stroke();
+  }
+  // pips over the head of a creature that has learned from you: one for each level it has reached
+  for (const e of G.enemies) {
+    const l = e.dead || e.isBoss ? 0 : Mind.level(e);
+    for (let i = 0; i < l; i++) { g.fillStyle = i < 3 ? 'rgba(255,214,150,0.8)' : 'rgba(255,120,110,0.9)'; g.beginPath(); g.moveTo(e.cx + (i - (l - 1) / 2) * 7, e.y - 16); g.lineTo(e.cx + (i - (l - 1) / 2) * 7 + 3, e.y - 12); g.lineTo(e.cx + (i - (l - 1) / 2) * 7, e.y - 8); g.lineTo(e.cx + (i - (l - 1) / 2) * 7 - 3, e.y - 12); g.closePath(); g.fill(); }
   }
   for (const p of G.projs) Art.drawProj(g, p, t);
   for (const f of G.fx) Art.drawFx(g, f);

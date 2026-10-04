@@ -48,6 +48,11 @@ function drawBestiary(g) {
     if (dm && dm.maxHp) { g.font = font(16, '600'); g.fillStyle = '#c8d6ec'; g.direction = 'ltr'; g.fillText(tr('hp') + ': ' + dm.maxHp, 750, 198); setDir(g); }
     g.font = font(19, '500'); g.fillStyle = '#e1ecf8';
     wrapText(g, bestiaryDesc(b), 300).forEach((l, k) => g.fillText(l, 750, 244 + k * 27));
+    // what it has learned from you (Mind): its level and what that changed in it
+    const mi = Mind.describe((b.boss ? 'b:' : '') + b.k);
+    g.font = font(16, '700'); g.fillStyle = mi.level ? '#ffd9a0' : '#7d8aa0'; g.fillText(tr('mindTitle') + ': ' + mi.name + '  ' + '◆'.repeat(mi.level) + '◇'.repeat(Mind.MAX - mi.level), 750, 412);
+    g.font = font(14, '500'); g.fillStyle = '#c8d6ec';
+    (mi.learned.length ? mi.learned : [tr('mindNone')]).slice(0, 4).forEach((l, k) => g.fillText(l, 750, 436 + k * 20));
   } else {
     g.font = font(26, '700'); g.fillStyle = '#6d7a8c'; g.fillText('؟؟؟', 750, 150); g.font = font(18, '500'); g.fillText(tr('bestiaryUnknown'), 750, 196);
   }

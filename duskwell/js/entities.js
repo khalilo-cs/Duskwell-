@@ -692,7 +692,7 @@ class Proj {
       this.active = this.t >= this.tele && this.t < this.tele + this.dur;
       if (this.t >= this.tele + this.dur) this.dead = true;
       if (this.t >= this.tele && !this.fired) { this.fired = true; Sound.play('slam'); G.shake(4, 0.15); }
-      if (this.active && !G.player.dead && overlap(G.player.hurtbox(), this.rect())) G.player.hurt(this.dmg, this.x);
+      if (this.active && !G.player.dead && overlap(G.player.hurtbox(), this.rect()) && G.player.hurt(this.dmg, this.x)) Mind.wounded(this.owner);
       return;
     }
     if (this.kind === 'ray') {                // a thin warning line, then a short window of light that wounds whatever it crosses
@@ -702,14 +702,14 @@ class Proj {
       if (this.active && !G.player.dead) {
         const hb = G.player.hurtbox(), px = hb.x + hb.w / 2, py = hb.y + hb.h / 2, x1 = this.x + Math.cos(this.a) * this.len, y1 = this.y + Math.sin(this.a) * this.len;
         const dx = x1 - this.x, dy = y1 - this.y, l2 = dx * dx + dy * dy || 1, u = clamp(((px - this.x) * dx + (py - this.y) * dy) / l2, 0, 1);
-        if (Math.hypot(px - (this.x + dx * u), py - (this.y + dy * u)) < this.rw / 2 + Math.min(hb.w, hb.h) / 2) G.player.hurt(this.dmg, this.x);
+        if (Math.hypot(px - (this.x + dx * u), py - (this.y + dy * u)) < this.rw / 2 + Math.min(hb.w, hb.h) / 2 && G.player.hurt(this.dmg, this.x)) Mind.wounded(this.owner);
       }
       return;
     }
     if (this.kind === 'blast') {              // an expanding ring of fire that wounds once
       this.r = this.r0 * (0.45 + 0.8 * clamp(this.t / 0.18, 0, 1));
       const pl = G.player;
-      if (!this.hurtDone && !pl.dead && this.t < 0.3 && overlap(pl.hurtbox(), this.rect())) { this.hurtDone = true; pl.hurt(this.dmg, this.x); }
+      if (!this.hurtDone && !pl.dead && this.t < 0.3 && overlap(pl.hurtbox(), this.rect())) { this.hurtDone = true; if (pl.hurt(this.dmg, this.x)) Mind.wounded(this.owner); }
       return;
     }
     if (this.kind === 'bomb') {               // lobbed: bursts on touching the ground or a wall, on the hero, or when the fuse ends
@@ -717,7 +717,7 @@ class Proj {
       const pl = G.player;
       if (L.solidAtPx(this.x, this.y + this.r) || L.solidAtPx(this.x + sign(this.vx) * this.r, this.y) || this.t > this.fuse || (!pl.dead && overlap(pl.hurtbox(), this.rect()))) {
         this.dead = true; Sound.play('slam'); G.shake(4, 0.15);
-        G.projs.push(new Proj({ kind: 'blast', x: this.x, y: this.y, r: 20, r0: this.blastR || 66, dmg: 1, life: 0.45, pierce: true, passWalls: true, color: this.color }));
+        G.projs.push(new Proj({ kind: 'blast', x: this.x, y: this.y, r: 20, r0: this.blastR || 66, dmg: 1, life: 0.45, pierce: true, passWalls: true, color: this.color, owner: this.owner }));
         G.burst(this.x, this.y, 16, { color: this.color, speed: 260, life: 0.5, size: 4 });
       }
       return;
@@ -726,7 +726,7 @@ class Proj {
     this.x += this.vx * dt; this.y += this.vy * dt;
     if (this.kind === 'cloud') {
       if (this.life < 0.3) return;      // fading puff no longer hurts
-      if (!G.player.dead && overlap(G.player.hurtbox(), this.rect())) G.player.hurt(this.dmg, this.x);
+      if (!G.player.dead && overlap(G.player.hurtbox(), this.rect()) && G.player.hurt(this.dmg, this.x)) Mind.wounded(this.owner);
       return;
     }
     if (this.kind === 'rock') {
@@ -747,7 +747,7 @@ class Proj {
         if (overlap(rc, e.hb())) { this.hitSet.add(e); e.hurt(this.dmg, sign(this.vx) || 1, 'spell'); if (!this.pierce) { this.dead = true; return; } }
       }
     } else if (!G.player.dead && overlap(G.player.hurtbox(), rc)) {
-      if (G.player.hurt(this.dmg, this.x) && !this.pierce) this.dead = true;
+      if (G.player.hurt(this.dmg, this.x)) { Mind.wounded(this.owner); if (!this.pierce) this.dead = true; }
     }
   }
 }
@@ -812,7 +812,7 @@ class Item {
     this.guards = [];
     const add = (type, c, r) => {
       const en = new ENEMY_TYPES[type]({ x: c, y: r }); en.kind = type;
-      en.hp = Math.round(en.hp * Diff.enemyHp(L.def.area)); G.enemies.push(en); this.guards.push(en);
+      en.hp = Math.round(en.hp * Diff.enemyHp(L.def.area)); Mind.prepare(en, L.def.area); G.enemies.push(en); this.guards.push(en);
     };
     for (const c of spots.slice(0, want)) add(g.type || 'warden', c, row);
     // a ledge too small for a walker: two flyers come instead
@@ -847,6 +847,7 @@ class Enemy {
   // take a hit: damage, knockback, flash, souls for the player
   hurt(dmg, dir, how) {
     if (this.dead) return;
+    this.lastHow = how;                                       // how the last blow came (Mind counts the kills spells make)
     if (how === 'burn') {                                     // a burn: no flinch, no stop, just the wound
       this.hp -= dmg; this.flash = 0.1; Sound.play('hit');
       G.burst(this.cx, this.cy, 10, { color: pick(['#ff8a3a', '#ffd070']), speed: 150, life: 0.45, size: 3, vy: -60 });
@@ -865,7 +866,7 @@ class Enemy {
   onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   // die: drop geo, burst, count the kill
   kill() {
-    this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15);
+    this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15); Mind.killed(this, this.lastHow);
     if (Charms.has('grave') && !G.player.dead) { G.player.soul = Math.min(G.player.maxSoul, G.player.soul + 8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
     G.burst(this.cx, this.cy, 8, { color: '#0a0d12', speed: 180, life: 0.6, size: 5 });

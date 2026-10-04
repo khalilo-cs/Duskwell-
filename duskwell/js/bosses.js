@@ -114,7 +114,7 @@ class Boss extends Enemy {
     if (this.melee) {
       this.melee.t -= dt;
       if (this.melee.t <= 0) this.melee = null;
-      else if (!G.player.dead && overlap(G.player.hurtbox(), this.meleeRect())) G.player.hurt(this.melee.dmg, this.cx);
+      else if (!G.player.dead && overlap(G.player.hurtbox(), this.meleeRect()) && G.player.hurt(this.melee.dmg, this.cx)) Mind.wounded(this);
     }
     this.physics(dt, this.grav);
     if (this.grav === false) { if (this.hitU || this.onGround) this.vy = 0; }

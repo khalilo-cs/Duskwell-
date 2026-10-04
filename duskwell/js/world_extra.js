@@ -94,7 +94,7 @@
     const westSide = da.x === 0;                              // A's door is on its west wall: the new room lies west of A
     const toA = westSide ? 'e' : 'w', toB = westSide ? 'w' : 'e';
     const mw = Math.ceil(w / 8);
-    const N = room(spec.id, w, H_ROOM, { area: spec.area, theme: spec.theme, map: { x: 0, y: 0 } });
+    const N = room(spec.id, w, H_ROOM, { area: spec.area, theme: spec.theme, bg: spec.bg, map: { x: 0, y: 0 } });
     placeOnMap(N, A, B, da, mw, w);
     N.need = spec.need;                                       // the abilities the tests give the hero to cross it (none, D, DW, DWD)
     N.solid(0, GY, w, H_ROOM - GY);
@@ -130,8 +130,8 @@
 
   // ===================== the extra rooms =====================
   // ----- Hushvale: the roads out of the town
-  extra({ id: 'tw1', area: 'hushvale', theme: 'town', between: ['town', 'east', 'fr1', 'w'], pieces: 'F10 P3 F8 H12 F8', ground: ['crawler', 'husk'], air: ['flyer'], n: [3, 1, 0], need: 'none', cache: 60, seed: 11 });
-  extra({ id: 'tw2', area: 'hushvale', theme: 'town', between: ['town', 'west', 'em1', 'e'], pieces: 'F10 H12 G9 F8', ground: ['crawler', 'husk'], air: ['flyer'], n: [3, 1, 0], need: 'none', cache: 60, seed: 12 });
+  extra({ id: 'tw1', area: 'hushvale', theme: 'town', between: ['town', 'east', 'fr1', 'w'], bg: 'townb', pieces: 'F10 P3 F8 H12 F8', ground: ['crawler', 'husk'], air: ['flyer'], n: [3, 1, 0], need: 'none', cache: 60, seed: 11 });
+  extra({ id: 'tw2', area: 'hushvale', theme: 'town', between: ['town', 'west', 'em1', 'e'], bg: 'townb', pieces: 'F10 H12 G9 F8', ground: ['crawler', 'husk'], air: ['flyer'], n: [3, 1, 0], need: 'none', cache: 60, seed: 12 });
   // ----- the Sunken Crossroads
   extra({ id: 'cx6', area: 'crossroads', theme: 'cave', between: ['cx1', 'r', 'cx2', 'l'], pieces: 'F8 P3 F8 H12 F6 T10 F6', ground: ['crawler', 'husk'], air: ['flyer'], n: [4, 1, 0], need: 'none', cache: 80, seed: 21 });
   extra({ id: 'cx7', area: 'crossroads', theme: 'cave', between: ['cx2', 'r', 'cx3', 'l'], pieces: 'F8 G10 F6 A12 P3 F8', ground: ['crawler', 'husk', 'ram'], air: ['flyer', 'diver'], n: [5, 2, 0], need: 'none', cache: 100, seed: 22 });

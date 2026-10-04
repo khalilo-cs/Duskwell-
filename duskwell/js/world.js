@@ -10,6 +10,7 @@ class RoomBuilder {
   constructor(id, w, h, opt) {
     this.id = id; this.w = w; this.h = h;
     this.area = opt.area; this.theme = opt.theme; this.map = opt.map;
+    this.bg = opt.bg || opt.theme;                       // which painted backdrop set is drawn behind the room (art/bg/<bg>)
     this.t = new Uint8Array(w * h);
     this.doors = []; this.enemies = []; this.items = []; this.npcs = []; this.benches = []; this.deco = []; this.stations = []; this.iceCells = new Set();
     this.signs = []; this.winds = []; this.gravs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];

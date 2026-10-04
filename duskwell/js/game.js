@@ -134,9 +134,9 @@ function enterRoom(id, spawn) {
   G.visited[id] = true;
   Sound.setTheme(def.theme); Sound.boss(false); syncAbilityButtons();
   // painted backdrops for this area, then for the areas behind its doors so they are ready in time
-  Art.loadPainted(def.theme);
-  for (const d of def.doors) { const n = WORLD.rooms[d.to]; if (n && n.theme !== def.theme) Art.loadPainted(n.theme); }
-  Art.loadPainted(def.theme);
+  Art.loadPainted(def.bg);
+  for (const d of def.doors) { const n = WORLD.rooms[d.to]; if (n && n.bg !== def.bg) Art.loadPainted(n.bg); }
+  Art.loadPainted(def.bg);
   if (def.arena && !G.flags[def.arena.flag]) Sound.prefetch(def.arena.boss);
   Art.ambientInit();
   snapCamera();
@@ -720,6 +720,14 @@ function drawHUD(g) {
   if (ab) {
     const k = clamp(ab.t / 0.8, 0, 1) * clamp((3.6 - ab.t) / 0.8, 0, 1);
     g.save(); g.globalAlpha = k; setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
+    const st = AreaArt.strip(AreaArt.THEME_OF[G.level.def.area]);
+    if (st) {                                                // the Sky strip of the area behind its name, faded at both ends
+      g.save(); g.beginPath(); g.rect(0, 74, VW, 90); g.clip(); AreaArt.cover(g, st, 0, 74, VW, 90, 0.8);
+      const fd = g.createLinearGradient(0, 0, VW, 0); fd.addColorStop(0, 'rgba(4,6,12,1)'); fd.addColorStop(0.2, 'rgba(4,6,12,0)'); fd.addColorStop(0.8, 'rgba(4,6,12,0)'); fd.addColorStop(1, 'rgba(4,6,12,1)');
+      g.fillStyle = fd; g.fillRect(0, 74, VW, 90);
+      g.fillStyle = 'rgba(4,6,12,0.35)'; g.fillRect(0, 74, VW, 90);
+      g.fillStyle = rgba(ab.color || '#ffffff', 0.5); g.fillRect(0, 74, VW, 1.5); g.fillRect(0, 162.5, VW, 1.5); g.restore();
+    }
     g.font = font(40, '700'); textShadow(g, tr(ab.key), VW / 2, 118, ab.color || '#fff', 12);
     g.fillStyle = rgba(ab.color || '#ffffff', 0.6); g.fillRect(VW / 2 - 110 * k, 146, 220 * k, 2);
     g.restore();
@@ -986,7 +994,10 @@ function updateMap() {
   if (mv.zoom) { mv.px = clamp(mv.px + Input.axisX() * 0.3, -80, 80); mv.py = clamp(mv.py + Input.axisY() * 0.3, -50, 50); }
 }
 function drawMap(g) {
-  g.fillStyle = 'rgba(3,5,10,0.94)'; g.fillRect(0, 0, VW, VH);
+  g.fillStyle = '#03050a'; g.fillRect(0, 0, VW, VH);
+  const pic = AreaArt.picture(AreaArt.THEME_OF[G.level.def.area]);
+  if (pic) AreaArt.cover(g, pic, 0, 0, VW, VH, 0.34);        // the picture of the area you are in
+  g.fillStyle = 'rgba(3,5,10,0.82)'; g.fillRect(0, 0, VW, VH);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('map'), VW / 2, 44, '#eef5ff');
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   const ids = WORLD.order.filter(id => G.visited[id]);
@@ -1175,6 +1186,8 @@ function drawBanner(g) {
 function drawEnding(g) {
   const t = G.ending.t;
   g.fillStyle = '#04060c'; g.fillRect(0, 0, VW, VH);
+  const dawn = AreaArt.picture('townb');                   // the village in the afternoon light fades in behind the words
+  if (dawn) { AreaArt.cover(g, dawn, 0, 0, VW, VH, 0.55 * clamp(t / 4, 0, 1)); g.fillStyle = 'rgba(4,6,12,0.45)'; g.fillRect(0, 0, VW, VH); }
   glow(g, VW / 2, 150, 300, '#dbe9ff', 0.22 * clamp(t / 3, 0, 1));
   Art.drawAmbient(g, STEP, 'throne', 0, 0, G.t);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -1227,6 +1240,7 @@ function resize() {
 function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
+  AreaArt.applyColors(AREA_COLORS); AreaArt.preload();
   const wake = () => Sound.init();
   // tapping the picture focuses it for the keyboard; a tap on a menu button picks it, a tap on a banner or dialog confirms it
   const pressEnter = () => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' })); };

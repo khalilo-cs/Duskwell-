@@ -41,13 +41,12 @@ def upscale(pic, W=2000, H=875):
     return Image.fromarray(cv2.cvtColor(x, cv2.COLOR_BGR2RGB))
 
 def seamless(a, frac=0.14):
-    """cross-fades the right edge into the left so the picture repeats without a visible seam"""
-    x = np.asarray(a).astype(np.float32); h, w, _ = x.shape; n = int(w * frac)
-    left = x[:, :n]; right = x[:, w - n:]
+    """makes the picture repeat without a seam: the start is cross-faded into what comes after the end, and the end is cut where the fade begins"""
+    x = np.asarray(a).astype(np.float32); h, w = x.shape[:2]; n = int(w * frac); w2 = w - n
     k = np.linspace(0, 1, n)[None, :, None]
-    blend = right * (1 - k) + left * k                                                   # ends exactly on the picture's first columns
-    out = x.copy(); out[:, w - n:] = blend
-    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    out = x[:, :w2].copy()
+    out[:, :n] = x[:, w2:w2 + n] * (1 - k) + x[:, :n] * k
+    return out
 
 def grain(a, amount=3.2, seed=7):
     x = np.asarray(a).astype(np.float32); rng = np.random.default_rng(seed)
@@ -62,7 +61,7 @@ def main():
     for th in themes:
         col, row = AREAS[th]
         pic = picture(sheet, col, row); pic.save(os.path.join(src, th + '.png'))
-        a = seamless(upscale(pic))
+        a = seamless(upscale(pic)); a = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).resize((2000, 875), Image.BILINEAR)
         a = Image.fromarray(np.clip(np.asarray(a).astype(np.float32) * DIM[th], 0, 255).astype(np.uint8))
         out = os.path.join(ROOT, 'art', 'bg', th); os.makedirs(out, exist_ok=True)
         a.save(os.path.join(out, 'sky.webp'), quality=90, method=6)

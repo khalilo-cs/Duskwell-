@@ -439,13 +439,16 @@ function drawCritters(g, th, camX, camY, t) {
 const PAINT_P = 1600, PAINT_H = 700, PAINT_TOP = -40, SKY_Z = 160, PAINT_KEEP = 3;
 // the sky of these areas is a whole concept picture (tools/paint/import_concept.py); the silhouette layers over it are
 // thinned (alpha per layer: sky, far, mid, near) so it shows and the play field stays readable
-const CONCEPT_ALPHA = { default: [1, 0, 0.2, 0.35] };
-for (const k of ['town', 'cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
+// the far, mid and near layers are the strips of the concept sheets (tools/paint/import_layers.py); the village has full-width layers
+const CONCEPT_ALPHA = { default: [1, 1, 1, 1], town: [1, 1, 1, 1], townb: [1, 0, 0, 0] };
+for (const k of ['cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
+// backdrop sets that belong to no theme of their own: the afternoon village behind the roads out of the town
+const EXTRA_BG = { townb: true };
 // painted backgrounds loaded so far
 const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
 // start loading the painted layers of an area
 Art.loadPainted = function (theme) {
-  if (!THEMES[theme]) return;
+  if (!THEMES[theme] && !EXTRA_BG[theme]) return;
   if (painted.has(theme)) { const p = painted.get(theme); painted.delete(theme); painted.set(theme, p); return; }
   const p = { imgs: [], n: 0, ready: false };
   ['sky', 'l0', 'l1', 'l2'].forEach((k, i) => {
@@ -461,12 +464,12 @@ Art.loadPainted = function (theme) {
 // whether an area's painted layers have all arrived (tests wait on it before measuring the picture)
 Art.paintedReady = theme => painted.has(theme) && painted.get(theme).ready;
 // draw the four painted layers with parallax
-function drawPainted(g, th, p, camX, camY, t) {
+function drawPainted(g, th, p, camX, camY, t, key) {
   for (let li = 0; li < 4; li++) {
     const f = depthFactor(li ? LAYER_Z[li - 1] : SKY_Z);
     const off = -(((camX * f) % PAINT_P) + PAINT_P) % PAINT_P;
     const y = PAINT_TOP - camY * f * VERTICAL_PARALLAX + (li ? 14 * (li - 2) : 0);
-    const ca = CONCEPT_ALPHA[th.name], la = ca ? ca[li] : 1;
+    const ca = CONCEPT_ALPHA[key || th.name], la = ca ? ca[li] : 1;
     if (la > 0.01) { g.save(); g.globalAlpha *= la; for (let x = off; x < VW; x += PAINT_P) g.drawImage(p.imgs[li], x, y, PAINT_P, PAINT_H); g.restore(); }
     if (li === 0) drawRays(g, th, camX);
     if (li === 2) drawCritters(g, th, camX, camY, t);
@@ -502,8 +505,8 @@ Art.drawTitleBackdrop = function (g, camX, t) {
 Art.drawBackground = function (g, L, camX, camY, t) {
   const th = THEMES[L.def.theme];
   if (!th.critters) makeLayers(th);
-  const p = painted.get(L.def.theme);
-  if (p && p.ready) { drawPainted(g, th, p, camX, camY, t); return; }
+  const p = painted.get(L.def.bg);
+  if (p && p.ready) { drawPainted(g, th, p, camX, camY, t, L.def.bg); return; }
   if (!th.layers) th.layers = makeLayers(th);
   const sky = g.createLinearGradient(0, 0, 0, VH);
   sky.addColorStop(0, th.sky[0]); sky.addColorStop(0.55, th.sky[1]); sky.addColorStop(1, th.sky[2]);

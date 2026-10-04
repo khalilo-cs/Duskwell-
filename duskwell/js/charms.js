@@ -1,11 +1,10 @@
 'use strict';
-// Charms: small relics the Wanderer wears on the cloak. Each one costs notches. The notches grow
-// with the seals of the guardians and with the merchant. Wearing more than the notches allow
-// "overcharms" the Wanderer: every wound then costs double. Charms can be changed only while
-// resting on a bench. The effects themselves are read by the Player and the Geo pickups through
-// Charms.has(id); this file holds the list, the notch rules and the save data.
+// Charms: relics worn on the cloak. Each costs notches; wearing more than the notches allow
+// makes every wound cost double. The effects are read elsewhere through Charms.has(id).
 const Charms = (() => {
+  // notches available at the start
   const BASE_NOTCHES = 3;
+  // the charms: cost in notches, colour, names and descriptions (ar / en)
   const DEFS = {
     reach:      { cost: 1, color: '#cfe6ff', ar: 'نصل طويل', en: 'Long Edge', dAr: 'ضربتك تمتد أبعد بثلث.', dEn: 'Your strike reaches a third further.' },
     swift:      { cost: 2, color: '#bfe8ff', ar: 'ضربة الريح', en: 'Gale Strike', dAr: 'تضرب أسرع بكثير.', dEn: 'You strike much faster.' },
@@ -29,19 +28,27 @@ const Charms = (() => {
     moonstep:   { cost: 1, color: '#cfd8ff', ar: 'خطوة القمر', en: 'Moonstep', dAr: 'تسقط ببطء أكبر، كأن القمر يسندك من تحت.', dEn: 'You fall more slowly, as if the moon held you up from below.' },
     shell:      { cost: 2, color: '#d8c8a0', ar: 'درع الصدفة', en: 'Shell Ward', dAr: 'بعد الراحة على المقعد تصدّ أول إصابة.', dEn: 'After resting on a bench, it turns aside the first wound.' },
   };
+  // ids in display order
   const ORDER = Object.keys(DEFS);
 
+  // owned: id -> true, worn: ids being worn, shell: shell ward is armed
   let owned = {}, worn = [], shell = false;
 
+  // text helpers for the current language
   const name = id => DEFS[id][LANG.cur === 'ar' ? 'ar' : 'en'];
   const desc = id => DEFS[id][LANG.cur === 'ar' ? 'dAr' : 'dEn'];
+  // is this charm worn
   const has = id => worn.indexOf(id) >= 0;
+  // notches taken by the worn charms
   const used = () => worn.reduce((s, id) => s + DEFS[id].cost, 0);
   // three to begin with, one more for every two guardians' seals, and up to two from the merchant
   const notches = () => BASE_NOTCHES + Math.floor(sealCount() / 2) + (G.flags.buy_notch1 ? 1 : 0) + (G.flags.buy_notch2 ? 1 : 0);
+  // worn charms cost more than the notches allow
   const over = () => used() > notches();
+  // owned charms in display order
   const ownedList = () => ORDER.filter(id => owned[id]);
 
+  // add a charm to the collection
   function give(id) {
     if (!DEFS[id] || owned[id]) return false;
     owned[id] = true; return true;
@@ -64,7 +71,9 @@ const Charms = (() => {
     shell = false; return true;
   }
 
+  // new game: forget everything
   function reset() { owned = {}; worn = []; shell = false; }
+  // save file data
   function save() { return { o: ORDER.filter(id => owned[id]), w: worn.slice() }; }
   function load(d) {
     reset();
@@ -73,5 +82,6 @@ const Charms = (() => {
     for (const id of d.w || []) if (owned[id] && worn.indexOf(id) < 0) worn.push(id);
   }
 
+  // public api
   return { DEFS, ORDER, name, desc, has, used, notches, over, ownedList, give, toggle, rest, absorb, reset, save, load, shellUp: () => shell && has('shell') };
 })();

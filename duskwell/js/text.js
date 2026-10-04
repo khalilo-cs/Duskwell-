@@ -3,6 +3,7 @@
 const LANG = { cur: 'ar' };
 try { const l = localStorage.getItem('duskwell_lang'); if (l === 'en' || l === 'ar') LANG.cur = l; } catch (e) { /* storage blocked */ }
 
+// all the on-screen strings by key, Arabic first then English
 const STR = {
   ar: {
     title: 'أرض الغسق', subtitle: 'مملكة سقط نورها في الأعماق',
@@ -159,8 +160,12 @@ const STR = {
     abil_wail: 'Dusk Cry', abil_wail_d: 'Hold Up and press F to loose a column of light above you that strikes everything in it several times. It costs soul like the other spells.',
   },
 };
+// look a string up in the current language, falling back to English, then to the key itself
 function tr(k) { return (STR[LANG.cur] && STR[LANG.cur][k]) || STR.en[k] || k; }
+// switch language and remember it
 function setLang(l) { LANG.cur = l; try { localStorage.setItem('duskwell_lang', l); } catch (e) { /* ignore */ } if (window.refreshTouchLabels) window.refreshTouchLabels(); }
+// font stacks for each language
 const FONT_AR = '"Cairo","Noto Naskh Arabic","Segoe UI",Tahoma,sans-serif';
 const FONT_EN = '"Cinzel","Trajan Pro","Palatino Linotype",Georgia,serif';
+// canvas font string for the current language
 function font(px, weight) { return (weight || '700') + ' ' + px + 'px ' + (LANG.cur === 'ar' ? FONT_AR : FONT_EN); }

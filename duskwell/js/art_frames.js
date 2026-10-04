@@ -1,9 +1,6 @@
 'use strict';
-// The creatures drawn from the owner's pose sheet (art/creatures/creatures.webp, cut and packed by tools/sprites/cut_creatures.py).
-// Each creature has a few poses (idle first); this picks one from what the creature is doing and moves it a little (breathing,
-// walking bounce, squash before an attack, spinning when it rolls). The poses are used exactly as drawn, never repainted.
-// Creatures that are still missing a pose, or are in a state the sheet does not show (buried, a pile of bones), fall back
-// to the old procedural drawing, so nothing disappears.
+// Creatures drawn from the pose sheet (art/creatures/creatures.webp). One pose is picked from what the
+// creature is doing and moved a little (breathing, bounce, squash, spin). Without a pose the code-drawn one is used.
 const FrameArt = (() => {
   const img = new Image(); img.src = 'art/creatures/creatures.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
@@ -40,9 +37,12 @@ const FrameArt = (() => {
     lunarhare: { idle: [2], move: [2, 3], atk: [0], air: [1, 1], h: 1.15, w: 1.5 },
   };
   const K = 1.35;                                   // the drawings are bigger than the boxes that hurt and get hurt
+  // kinds drawn as another kind
   const ALIAS = { slimelet: 'slime', brood_child: 'spider' };
 
+  // frame of a list for time t
   const pickFrame = (list, t, rate, ph) => list[Math.floor(t * rate + ph) % list.length];
+  // which pose: attack, in the air, moving or idle
   function frameFor(c, e, t, ph) {
     const st = e.currentState, acting = st === 'attack' || st === 'anticipation';
     if (acting && c.atk) return pickFrame(c.atk, t, 8, ph);
@@ -52,6 +52,7 @@ const FrameArt = (() => {
     return pickFrame(c.idle, t, c.rate ? c.rate * 0.6 : 2, ph);
   }
 
+  // draw one creature: scale from its box, squash / bounce, facing, white flash
   function draw(g, e, t, kind) {
     const c = CFG[kind], fr = CREATURE_FRAMES[kind], ph = (e.ph || (e.x || 0) * 0.013) % 7;
     const fi = Math.min(fr.length - 1, frameFor(c, e, t, ph)), r = fr[fi], ref = fr[Math.min(fr.length - 1, c.idle[0])];
@@ -118,6 +119,7 @@ const FrameArt = (() => {
     },
   };
 
+  // replace Art.enemy[kind] for every creature that has poses
   function install() {
     for (const kind of Object.keys(CFG)) {
       const target = kind;

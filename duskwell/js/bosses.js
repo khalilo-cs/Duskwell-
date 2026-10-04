@@ -2,6 +2,7 @@
 // Boss fights. Every boss runs a generator "brain": each yield waits one frame,
 // so an attack reads like a script (telegraph, strike, recover).
 
+// shockwave that runs along the floor
 function spawnShock(x, y, dir, speed, color, life) {
   G.projs.push(new Proj({ kind: 'shock', x, y, vx: dir * speed, vy: 0, w: 46, h: 36, dmg: 1, color: color || '#c9d3de', life: life || 1.8, pierce: true, passWalls: true }));
 }
@@ -10,19 +11,23 @@ function spawnRock(x, tele, pal) {
   const y0 = 2 * TILE;
   G.projs.push(new Proj({ kind: 'rock', x, y: y0, y0, r: 17, vx: 0, vy: 0, grav: 1500, dmg: 1, tele: tele || 0.7, life: 4, color: (pal && pal.glow) || '#8d97a3', passWalls: true, pal }));
 }
+// beam from the ceiling: a warning, then a short damaging window
 function spawnBeam(x, tele, dur, w, pal) {
   Sound.play('tele');
   G.projs.push(new Proj({ kind: 'beam', x, y: 0, bw: w || 44, tele, dur: dur || 0.3, dmg: 1, life: 5, color: '#dff3ff', pierce: true, passWalls: true, pal }));
 }
+// pillar that rises at x after a warning
 function spawnPillar(x, y, tele, dur, h, pal) {
   Sound.play('tele');
   G.projs.push(new Proj({ kind: 'pillar', x, y, bw: 46, ph: h || 230, tele, dur: dur || 0.4, dmg: 1, life: 5, color: (pal && pal.glow) || '#ff9bd6', pierce: true, passWalls: true, pal }));
 }
+// colour sets that re-tint the boss projectiles of other areas
 const ICE = { fill: '#bfe8ff', fill2: '#f4fcff', glow: '#9fdcff', rgb: '170,225,255', spike: true };
 const BOLT = { fill: '#d8e6ff', fill2: '#ffffff', glow: '#a8c0ff', rgb: '170,200,255' };
 const GLASS = { fill: '#d4ccff', fill2: '#ffffff', glow: '#c8b8ff', rgb: '200,185,255', spike: true };
 const SLAG = { fill: '#ff8a3a', fill2: '#ffe08a', glow: '#ff7a2a', rgb: '255,150,70' };
 
+// base boss: intro, fight, dying. In the fight a generator (brain) picks attacks and yields once per frame
 class Boss extends Enemy {
   constructor(def, w, h, cfg) {
     super(def, w, h);
@@ -34,17 +39,23 @@ class Boss extends Enemy {
   }
   // what the boss is doing right now, for its drawing: an attack, its stage (wind / hit / air / land ...), how long the stage runs
   setAct(name, stage, dur) { this.actName = name; this.actStage = stage || ''; this.actT = 0; this.actDur = dur || 0; }
+  // y of the arena floor
   get floorY() { return G.floorY; }
+  // turn toward the player
   facePlayer() { this.face = G.player.cx > this.cx ? 1 : -1; }
   body() { return this.hb(); }
+  // hit box, a little smaller than the sprite
   hb() { return { x: this.x + 6, y: this.y + 4, w: this.w - 12, h: this.h - 4 }; }
+  // generator helpers: wait s seconds, wait for a condition, fly to a point, hover
   *wait(s) { let t = s; while (t > 0) { t -= this.dt; yield; } }
   *until(fn, maxT) { let t = maxT || 3; while (!fn() && t > 0) { t -= this.dt; yield; } }
   doMelee(ox, oy, w, h, dmg, dur) { this.melee = { ox, oy, w, h, dmg, t: dur, face: this.face }; }
+  // the melee box in world coordinates
   meleeRect() {
     const m = this.melee;
     return { x: m.face > 0 ? this.cx + m.ox : this.cx - m.ox - m.w, y: this.y + m.oy, w: m.w, h: m.h };
   }
+  // attack after attack, forever
   *brain() { while (true) yield* this.chooseAttack(); }
   *flyTo(tx, ty, speed, maxT) {
     let t = maxT || 2;
@@ -57,6 +68,7 @@ class Boss extends Enemy {
   }
   *hover(s) { let t = s; while (t > 0) { this.vy = Math.sin(this.t * 3) * 30; this.vx = 0; this.facePlayer(); t -= this.dt; yield; } this.vy = 0; }
 
+  // take a hit; at a health threshold the boss enters its next phase
   hurt(dmg, dir, how) {
     if (this.dead || this.state !== 'fight' || this.invul || this.ghostly) { if (!this.invul && this.state === 'fight') Sound.play('hit'); return; }
     const burn = how === 'burn';
@@ -67,6 +79,7 @@ class Boss extends Enemy {
     const th = this.phases[this.phase - 1];
     if (th !== undefined && this.hp < this.maxHp * th) { this.phase++; this.spd = Math.max(0.55, this.spd * 0.78); this.co = this.shiftRoutine(); }
   }
+  // phase change: roar, clear the projectiles, become hittable again
   *shiftRoutine() {
     this.invul = true; this.vx = 0; this.grav = true; this.melee = null; this.alpha = 1; this.ghostly = false; this.stunned = false; this.tele = 1; this.setAct('roar', '', 1.25);
     G.clearHostile();
@@ -76,11 +89,13 @@ class Boss extends Enemy {
     yield* this.wait(0.9);
     this.tele = 0; this.invul = false; this.setAct('', '');
   }
+  // start the death sequence
   kill() {
     this.state = 'dying'; this.dyingT = 0; this.melee = null; this.vx = 0; this.grav = true; this.tele = 0; this.alpha = 1; this.ghostly = false;
     G.clearHostile(); Sound.play('bossDie'); G.slowmo = 2.2; G.shake(12, 2.2); G.flash = 0.6;
     G.onBossDying(this);
   }
+  // intro, fight (run the attack generator and the melee box) or dying
   update(dt) {
     this.t += dt; this.flash -= dt; this.dt = dt; this.actT += dt;
     if (this.state === 'intro') {
@@ -109,6 +124,7 @@ class Boss extends Enemy {
 // ---------------------------------------------------------------- Stone Guardian
 class Guardian extends Boss {
   constructor(d) { super(d, 84, 108, { key: 'guardian', hp: 130, geo: 120, phases: [0.5], blood: '#c9d2dc' }); this.last = ''; }
+  // pick leap, slam or charge, never the same twice
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.75 : 0.45);
@@ -116,6 +132,7 @@ class Guardian extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
+  // jump at the player; the landing sends shockwaves
   *leap() {
     this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('leap', 'wind', 0.5 * this.spd);
     yield* this.wait(0.5 * this.spd);
@@ -131,10 +148,12 @@ class Guardian extends Boss {
     yield* this.wait(0.55 * this.spd);
     this.setAct('', '');
   }
+  // rocks fall around the player
   dropRocks(n) {
     const L = G.level;
     for (let i = 0; i < n; i++) spawnRock(clamp(G.player.cx + rand(-260, 260), 3 * TILE, L.pw - 3 * TILE), 0.7 + i * 0.12);
   }
+  // overhead slam with a shockwave and falling rocks
   *slam() {
     this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('slam', 'wind', 0.75 * this.spd);
     yield* this.wait(0.75 * this.spd);
@@ -145,6 +164,7 @@ class Guardian extends Boss {
     yield* this.wait(0.9 * this.spd);
     this.setAct('', '');
   }
+  // run across the arena
   *charge() {
     this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('charge', 'wind', 0.55 * this.spd);
     yield* this.wait(0.55 * this.spd);
@@ -163,6 +183,7 @@ class Guardian extends Boss {
 // ---------------------------------------------------------------- Thornweaver
 class Weaver extends Boss {
   constructor(d) { super(d, 44, 82, { key: 'weaver', hp: 120, geo: 120, phases: [0.5], blood: '#b6ef6a' }); this.last = ''; }
+  // pick one of four attacks
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.55 : 0.3);
@@ -170,6 +191,7 @@ class Weaver extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
+  // dash through the player with a scythe swing
   *dashSlash() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.34 * this.spd);
@@ -180,6 +202,7 @@ class Weaver extends Boss {
     if (this.phase >= 2) { this.facePlayer(); yield* this.wait(0.15); this.vy = -380; this.vx = this.face * 300; yield* this.until(() => this.onGround, 1); this.vx = 0; }
     yield* this.wait(0.4 * this.spd);
   }
+  // throws needles
   *needle() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.36 * this.spd);
@@ -191,6 +214,7 @@ class Weaver extends Boss {
     this.vx = 0;
     yield* this.wait(0.5 * this.spd);
   }
+  // leap high, hang in the air and fire thorns
   *thorns() {
     const L = G.level;
     this.vy = -900; this.vx = clamp((L.pw / 2 - this.cx) * 0.6, -200, 200);
@@ -208,6 +232,7 @@ class Weaver extends Boss {
     yield* this.until(() => this.onGround, 2);
     yield* this.wait(0.5 * this.spd);
   }
+  // spinning slash
   *spin() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.3 * this.spd);
@@ -227,12 +252,14 @@ class Weaver extends Boss {
 class Wraith extends Boss {
   constructor(d) { super(d, 62, 78, { key: 'wraith', hp: 140, geo: 140, phases: [0.5], blood: '#ff9bd6' }); this.grav = false; this.last = ''; }
   get hoverY() { return this.floorY - 6.5 * TILE; }
+  // pick volley, dive, pillars or blink
   *chooseAttack() {
     yield* this.wait(this.phase === 1 ? 0.5 : 0.3);
     const opts = ['volley', 'dive', 'pillars', 'blink'].filter(o => o !== this.last);
     this.last = pick(opts);
     yield* this[this.last]();
   }
+  // fly beside the player and fire rounds of shards
   *volley() {
     const L = G.level;
     const tx = clamp(G.player.cx + pick([-1, 1]) * rand(160, 280), 4 * TILE, L.pw - 4 * TILE);
@@ -251,6 +278,7 @@ class Wraith extends Boss {
     }
     yield* this.wait(0.3);
   }
+  // swoop at the player
   *dive() {
     const L = G.level;
     yield* this.flyTo(clamp(G.player.cx, 4 * TILE, L.pw - 4 * TILE), this.hoverY - 40, 420);
@@ -269,6 +297,7 @@ class Wraith extends Boss {
     yield* this.wait(0.35);
     yield* this.flyTo(this.cx, this.hoverY, 320);
   }
+  // pillars of light rise under the player
   *pillars() {
     const L = G.level;
     yield* this.flyTo(L.pw / 2, this.hoverY - 30, 360);
@@ -287,6 +316,7 @@ class Wraith extends Boss {
       yield* this.hover(0.9);
     }
   }
+  // vanish and appear somewhere else
   *blink() {
     const L = G.level;
     this.ghostly = true;
@@ -302,6 +332,7 @@ class Wraith extends Boss {
 // ---------------------------------------------------------------- The Hollow King
 class King extends Boss {
   constructor(d) { super(d, 92, 138, { key: 'king', hp: 240, geo: 300, phases: [0.66, 0.33], blood: '#eaf6ff' }); this.last = ''; }
+  // pick an attack; later phases add more
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.7 : this.phase === 2 ? 0.45 : 0.3);
@@ -312,6 +343,7 @@ class King extends Boss {
     this.last = pick(o2);
     yield* this[this.last]();
   }
+  // wide sword sweep
   *sweep() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.8 * this.spd);
@@ -321,6 +353,7 @@ class King extends Boss {
     if (this.phase >= 3) spawnShock(this.cx - this.face * 90, this.y + this.h, -this.face, 520, '#e8f4ff');
     yield* this.wait(0.75 * this.spd);
   }
+  // leap and slam down
   *leapSlam() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.5 * this.spd);
@@ -335,6 +368,7 @@ class King extends Boss {
     for (const d of [-1, 1]) spawnShock(this.cx + d * 40, this.y + this.h, d, 300, '#e8f4ff');
     yield* this.wait(0.6 * this.spd);
   }
+  // beams of light from the ceiling
   *beams() {
     const L = G.level, n = 2 + this.phase;
     this.tele = 1;
@@ -346,6 +380,7 @@ class King extends Boss {
     yield* this.wait(0.9);
     this.tele = 0;
   }
+  // rings of orbs
   *orbs() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.6 * this.spd);
@@ -361,6 +396,7 @@ class King extends Boss {
     }
     yield* this.wait(0.5 * this.spd);
   }
+  // rocks fall around the player
   *rain() {
     const L = G.level;
     this.tele = 1; Sound.play('roar');
@@ -369,6 +405,7 @@ class King extends Boss {
     yield* this.wait(1.0);
     this.tele = 0;
   }
+  // vanish, reappear next to the player and strike
   *blinkStrike() {
     const L = G.level;
     this.ghostly = true;
@@ -390,6 +427,7 @@ class King extends Boss {
 // ---------------------------------------------------------------- Sporecap Matriarch
 class Sporecap extends Boss {
   constructor(d) { super(d, 110, 104, { key: 'spore', hp: 150, geo: 150, phases: [0.5], blood: '#ffb070' }); this.last = ''; }
+  // pick hop, spore rain, clouds or burrow
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
@@ -397,6 +435,7 @@ class Sporecap extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
+  // spit n globs upward in a spread
   spit(n, spread) {
     Sound.play('shoot');
     for (let i = 0; i < n; i++) {
@@ -404,6 +443,7 @@ class Sporecap extends Boss {
       G.projs.push(new Proj({ kind: 'glob', x: this.cx, y: this.y + 10, vx, vy: rand(-720, -560), grav: 900, r: 9, dmg: 1, life: 4, color: '#ffb070' }));
     }
   }
+  // big hop with a landing shockwave
   *hop() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.45 * this.spd);
@@ -416,12 +456,14 @@ class Sporecap extends Boss {
     this.spit(this.phase >= 2 ? 5 : 3, 90);
     yield* this.wait(0.55 * this.spd);
   }
+  // lob spores upward so they rain down
   *sporeRain() {
     this.tele = 1; Sound.play('tele');
     yield* this.wait(0.5 * this.spd);
     this.tele = 0; this.spit(this.phase >= 2 ? 9 : 6, 70);
     yield* this.wait(1.0 * this.spd);
   }
+  // drifting spore clouds
   *clouds() {
     this.tele = 1; Sound.play('tele');
     yield* this.wait(0.4 * this.spd);
@@ -434,6 +476,7 @@ class Sporecap extends Boss {
     }
     yield* this.wait(0.9 * this.spd);
   }
+  // dig down and come up under the player
   *burrow() {
     this.ghostly = true;
     for (let a = 1; a > 0; a -= 0.08) { this.alpha = a; yield; }
@@ -456,6 +499,7 @@ class Sporecap extends Boss {
 // ---------------------------------------------------------------- Drowned Colossus
 class Drowned extends Boss {
   constructor(d) { super(d, 96, 128, { key: 'drowned', hp: 180, geo: 180, phases: [0.5], blood: '#8fe0ff' }); this.last = ''; }
+  // pick charge, geysers, bubbles or slam
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
@@ -463,6 +507,7 @@ class Drowned extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
+  // charge across the arena
   *charge() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.55 * this.spd);
@@ -479,6 +524,7 @@ class Drowned extends Boss {
     yield* this.wait(0.9);
     this.stunned = false;
   }
+  // water geysers burst from the floor
   *geysers() {
     this.tele = 1; Sound.play('roar');
     const rounds = this.phase >= 2 ? 2 : 1;
@@ -493,6 +539,7 @@ class Drowned extends Boss {
     this.tele = 0;
     yield* this.wait(0.3);
   }
+  // fan of bubbles aimed at the player
   *bubbles() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.5 * this.spd);
@@ -504,6 +551,7 @@ class Drowned extends Boss {
     }
     yield* this.wait(0.8 * this.spd);
   }
+  // overhead slam
   *slam() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.5 * this.spd);
@@ -521,6 +569,7 @@ class Drowned extends Boss {
 // ---------------------------------------------------------------- Brood Mother
 class Brood extends Boss {
   constructor(d) { super(d, 128, 80, { key: 'brood', hp: 170, geo: 170, phases: [0.5], blood: '#c8a8ff' }); this.last = ''; this.onCeil = false; }
+  // pick one of four attacks
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.6 : 0.4);
@@ -528,6 +577,7 @@ class Brood extends Boss {
     this.last = pick(opts);
     yield* this[this.last]();
   }
+  // leap onto the player
   *pounce() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.42 * this.spd);
@@ -540,6 +590,7 @@ class Brood extends Boss {
     if (this.phase >= 2) { spawnShock(this.cx - 50, this.y + this.h, -1, 360, '#c8a8ff'); spawnShock(this.cx + 50, this.y + this.h, 1, 360, '#c8a8ff'); }
     yield* this.wait(0.5 * this.spd);
   }
+  // fan of web shots
   *webShot() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.45 * this.spd);
@@ -548,6 +599,7 @@ class Brood extends Boss {
     for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * 0.2; G.projs.push(new Proj({ kind: 'web', x: this.cx + this.face * 50, y: this.cy - 10, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, r: 10, dmg: 1, life: 2.5, color: '#e6e0ff' })); }
     yield* this.wait(0.6 * this.spd);
   }
+  // hatch spiderlings (pounce instead if four are alive)
   *spawnBrood() {
     const alive = G.enemies.filter(e => e.kind === 'brood_child' && !e.dead).length;
     if (alive >= 4) { yield* this.pounce(); return; }
@@ -561,6 +613,7 @@ class Brood extends Boss {
     }
     yield* this.wait(0.8 * this.spd);
   }
+  // climb the ceiling and drop down
   *ceilingDrop() {
     this.vy = -1100; this.onGround = false;
     yield; yield;
@@ -582,6 +635,7 @@ class Brood extends Boss {
 class Queen extends Boss {
   constructor(d) { super(d, 72, 100, { key: 'queen', hp: 210, geo: 240, phases: [0.66, 0.33], blood: '#cfeeff' }); this.grav = false; this.last = ''; }
   get hoverY() { return this.floorY - 6 * TILE; }
+  // pick one of the ice attacks
   *chooseAttack() {
     yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.4 : 0.28);
     const opts = ['shards', 'icefall', 'ring'];
@@ -590,6 +644,7 @@ class Queen extends Boss {
     this.last = pick(opts.filter(o => o !== this.last));
     yield* this[this.last]();
   }
+  // fan of n shards
   fan(n, spread, speed) {
     const a = Math.atan2(G.player.cy - this.cy, G.player.cx - this.cx);
     for (let i = 0; i < n; i++) {
@@ -597,6 +652,7 @@ class Queen extends Boss {
       G.projs.push(new Proj({ kind: 'shard', x: this.cx, y: this.cy, vx: Math.cos(a + o) * speed, vy: Math.sin(a + o) * speed, r: 7, dmg: 1, color: '#9fdcff', life: 3, rot: a + o, pal: ICE }));
     }
   }
+  // volleys of ice shards
   *shards() {
     const L = G.level;
     yield* this.flyTo(clamp(G.player.cx + pick([-1, 1]) * rand(170, 290), 4 * TILE, L.pw - 4 * TILE), this.hoverY, 380);
@@ -610,6 +666,7 @@ class Queen extends Boss {
     }
     yield* this.wait(0.25);
   }
+  // icicles fall from the ceiling
   *icefall() {
     const L = G.level;
     yield* this.flyTo(L.pw / 2, this.hoverY - 50, 380);
@@ -622,6 +679,7 @@ class Queen extends Boss {
     yield* this.hover(0.9);
     this.tele = 0;
   }
+  // ring of orbs
   *ring() {
     const L = G.level;
     yield* this.flyTo(clamp(L.pw / 2 + rand(-120, 120), 5 * TILE, L.pw - 5 * TILE), this.hoverY - 20, 360);
@@ -655,6 +713,7 @@ class Queen extends Boss {
     this.fan(5, 0.4, 340);
     yield* this.flyTo(this.cx, this.hoverY, 380);
   }
+  // beams of cold
   *beams() {
     const L = G.level, n = 2 + this.phase;
     yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
@@ -666,6 +725,7 @@ class Queen extends Boss {
     yield* this.hover(0.9);
     this.tele = 0;
   }
+  // vanish and reappear
   *blink() {
     const L = G.level;
     this.ghostly = true;
@@ -686,6 +746,7 @@ class Queen extends Boss {
 // into walls, calls geysers up under the hero's feet and, when nearly spent, shakes the whole floor.
 class Colossus extends Boss {
   constructor(d) { super(d, 118, 150, { key: 'colossus', hp: 300, geo: 340, phases: [0.66, 0.33], blood: '#ffb070' }); this.last = ''; this.rolling = false; }
+  // pick one of the fire attacks
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.8 : this.phase === 2 ? 0.55 : 0.38);
@@ -695,10 +756,12 @@ class Colossus extends Boss {
     this.last = pick(opts.filter(o => o !== this.last));
     yield* this[this.last]();
   }
+  // slag falls from the ceiling
   slagDrops(n) {
     const L = G.level;
     for (let i = 0; i < n; i++) spawnRock(clamp(G.player.cx + rand(-280, 280), 3 * TILE, L.pw - 3 * TILE), 0.75 + i * 0.12, SLAG);
   }
+  // fist smash
   *smash() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.85 * this.spd);
@@ -710,6 +773,7 @@ class Colossus extends Boss {
     if (this.phase >= 2) this.slagDrops(this.phase >= 3 ? 4 : 2);
     yield* this.wait(0.9 * this.spd);
   }
+  // lob bombs at the player
   *lob() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.55 * this.spd);
@@ -723,6 +787,7 @@ class Colossus extends Boss {
     }
     yield* this.wait(0.55 * this.spd);
   }
+  // roll across the arena
   *roll() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.6 * this.spd);
@@ -739,6 +804,7 @@ class Colossus extends Boss {
     yield* this.wait(1.15);
     this.stunned = false;
   }
+  // fire geysers
   *geysers() {
     const L = G.level, n = this.phase >= 3 ? 5 : 3;
     this.tele = 1; Sound.play('roar');
@@ -750,6 +816,7 @@ class Colossus extends Boss {
     yield* this.wait(1.1);
     this.tele = 0;
   }
+  // fire rain
   *rain() {
     this.tele = 1; Sound.play('roar');
     const n = this.phase >= 3 ? 10 : 7;
@@ -780,6 +847,7 @@ class Colossus extends Boss {
 // once it is hurt enough it calls the lightning down. (Mid-bosses guard a way on; they leave geo, not a seal.)
 class Thunderhoof extends Boss {
   constructor(d) { super(d, 132, 92, { key: 'thunderhoof', hp: 170, geo: 160, phases: [0.5], blood: '#cfe0ff' }); this.last = ''; }
+  // pick one of the storm attacks
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.7 : 0.45);
@@ -788,10 +856,12 @@ class Thunderhoof extends Boss {
     this.last = pick(opts.filter(o => o !== this.last));
     yield* this[this.last]();
   }
+  // n lightning bolts at the player's x
   bolts(n) {
     const L = G.level;
     for (let i = 0; i < n; i++) spawnBeam(clamp(G.player.cx + (i === 0 ? 0 : rand(-260, 260)), 3 * TILE, L.pw - 3 * TILE), 0.85 + i * 0.12, 0.3, 44, BOLT);
   }
+  // charge across the arena
   *charge() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.6 * this.spd);
@@ -807,6 +877,7 @@ class Thunderhoof extends Boss {
     yield* this.wait(1.2);
     this.stunned = false;
   }
+  // stomp with a shockwave
   *stomp() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.7 * this.spd);
@@ -815,6 +886,7 @@ class Thunderhoof extends Boss {
     for (const d of [-1, 1]) spawnShock(this.cx + d * 80, this.y + this.h, d, 430, '#dfe9ff');
     yield* this.wait(0.8 * this.spd);
   }
+  // gore with the horns
   *gore() {
     const lunges = this.phase >= 2 ? 2 : 1;
     for (let i = 0; i < lunges; i++) {
@@ -828,6 +900,7 @@ class Thunderhoof extends Boss {
     }
     yield* this.wait(0.5 * this.spd);
   }
+  // calls down lightning
   *thunder() {
     this.tele = 1; Sound.play('roar'); G.shake(5, 0.6);
     yield* this.wait(0.4);
@@ -843,6 +916,7 @@ class Thunderhoof extends Boss {
 class Roc extends Boss {
   constructor(d) { super(d, 124, 90, { key: 'roc', hp: 260, geo: 280, phases: [0.66, 0.33], blood: '#cfe0ff' }); this.grav = false; this.last = ''; this.galeZone = null; }
   get hoverY() { return this.floorY - 5.5 * TILE; }
+  // pick one of the flying attacks
   *chooseAttack() {
     yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.4 : 0.28);
     const opts = ['strafe', 'swoop', 'lightning'];
@@ -850,6 +924,7 @@ class Roc extends Boss {
     this.last = pick(opts.filter(o => o !== this.last));
     yield* this[this.last]();
   }
+  // fire one needle
   needle(x, y, vx, vy) { G.projs.push(new Proj({ kind: 'needle', x, y, vx, vy, r: 8, dmg: 1, color: '#e8f0ff', life: 2.6 })); }
   *strafe() {                                    // fly the length of the hall, a rain of needles behind
     const L = G.level, side = this.cx < L.pw / 2 ? 1 : -1;
@@ -883,6 +958,7 @@ class Roc extends Boss {
     for (const dd of [-1, 1]) spawnShock(this.cx + dd * 30, this.floorY, dd, 380, '#dfe9ff');
     yield* this.flyTo(this.cx, this.hoverY, 380);
   }
+  // lightning strikes
   *lightning() {
     const L = G.level, n = 3 + this.phase;
     yield* this.flyTo(L.pw / 2, this.hoverY - 40, 380);
@@ -894,6 +970,7 @@ class Roc extends Boss {
     yield* this.hover(0.9);
     this.tele = 0;
   }
+  // dive at the player
   *dive() {
     const L = G.level;
     yield* this.flyTo(clamp(G.player.cx, 4 * TILE, L.pw - 4 * TILE), this.hoverY - 60, 440);
@@ -921,7 +998,9 @@ class Roc extends Boss {
     }
     this.endGale(); this.tele = 0;
   }
+  // remove the crosswind zone
   endGale() { if (this.galeZone) { const L = G.level; L.winds = L.winds.filter(w => w !== this.galeZone); this.galeZone = null; } }
+  // the gale ends when the phase changes or the Roc dies
   shiftRoutine() { this.endGale(); return super.shiftRoutine(); }
   kill() { this.endGale(); super.kill(); }
 }
@@ -931,6 +1010,7 @@ class Roc extends Boss {
 // while the blade is up your strikes ring off it and it answers with a riposte. Wait out the guard, strike after.
 class Duelist extends Boss {
   constructor(d) { super(d, 46, 90, { key: 'duelist', hp: 190, geo: 170, phases: [0.5], blood: '#d4ccff' }); this.last = ''; this.guarding = false; this.parried = false; }
+  // blows that land on the raised blade are answered
   hurt(dmg, dir, how) {
     if (this.guarding && this.state === 'fight' && !this.invul && how !== 'burn') {            // the blade is up: it turns the blow aside
       this.parried = true; Sound.play('clank'); G.hitstop(0.04);
@@ -939,6 +1019,7 @@ class Duelist extends Boss {
     }
     super.hurt(dmg, dir, how);
   }
+  // pick one of the sword attacks
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.6 : 0.35);
@@ -947,6 +1028,7 @@ class Duelist extends Boss {
     this.last = pick(opts.filter(o => o !== this.last));
     yield* this[this.last]();
   }
+  // step sideways for t seconds
   *step(dir, speed, t) { let x = t; while (x > 0) { this.vx = dir * speed; x -= this.dt; if (this.hitL || this.hitR) break; yield; } this.vx = 0; }
   *lunge() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
@@ -957,6 +1039,7 @@ class Duelist extends Boss {
     this.vx = 0; this.lunging = false;
     yield* this.wait(0.7 * this.spd);
   }
+  // a chain of slashes
   *combo() {
     const n = this.phase >= 2 ? 4 : 3;
     for (let i = 0; i < n; i++) {
@@ -1003,6 +1086,7 @@ class Duelist extends Boss {
     yield* this.wait(0.3);
     yield* this.lunge();
   }
+  // shards of glass fall
   *rain() {
     const L = G.level; this.tele = 1; Sound.play('roar');
     for (let i = 0; i < 7; i++) { spawnRock(clamp(G.player.cx + rand(-300, 300), 3 * TILE, L.pw - 3 * TILE), 0.8, GLASS); yield* this.wait(0.2); }
@@ -1015,7 +1099,9 @@ class Duelist extends Boss {
 // dash, the double jump, the soul bolt, the Dusk Cry. Third phase: it steps through the mirror to strike from behind.
 class Twin extends Boss {
   constructor(d) { super(d, 32, 58, { key: 'twin', hp: 330, geo: 400, phases: [0.66, 0.33], blood: '#d8c8ff' }); this.last = ''; this.dashing = false; this.slashing = 0; this.airborne = false; }
+  // hit box, as small as the player's
   hb() { return { x: this.x + 3, y: this.y + 2, w: this.w - 6, h: this.h - 2 }; }
+  // pick a move the player knows: slash, rush, dash, leap, bolt, cry, echo
   *chooseAttack() {
     this.facePlayer();
     yield* this.wait(this.phase === 1 ? 0.55 : this.phase === 2 ? 0.38 : 0.26);
@@ -1106,4 +1192,5 @@ class Twin extends Boss {
   }
 }
 
+// boss key -> class
 const BOSS_TYPES = { duelist: Duelist, twin: Twin, thunderhoof: Thunderhoof, roc: Roc, queen: Queen, colossus: Colossus, guardian: Guardian, weaver: Weaver, wraith: Wraith, king: King, spore: Sporecap, drowned: Drowned, brood: Brood };

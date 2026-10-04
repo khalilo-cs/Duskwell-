@@ -3,6 +3,7 @@
 // stitching, a lantern's flame. Each stands with its feet at (n.px, n.py) and looks to the right.
 // n.type picks the figure; a trader's palette comes from n.shop (frost, ember, storm, mirror).
 
+// a small flame with its glow
 const flame = (g, x, y, r, t, col) => {
   bloom(g, x, y, r * 4.2, col || '#ffd98a', 0.5 + 0.1 * Math.sin(t * 9 + x));
   g.save(); g.translate(x, y);
@@ -24,6 +25,7 @@ const stitchD = (g, x0, y0, x1, y1, col, n) => {             // a seam of small 
   g.restore();
 };
 
+// one drawing function per kind of person
 const NPC_ART = {};
 
 // ---- the elder: a tall robed figure under a shell hat, an old staff with a crystal
@@ -169,6 +171,7 @@ const TRADER_PAL = {
   ossuary: { cloak: '#8a7e66', trim: '#e8dcc0', eye: '#9fe8c0', fur: false, lamp: '#9fe8c0' },
   lunar:  { cloak: '#2a3070', trim: '#ffe6a8', eye: '#e8ecff', fur: false, lamp: '#e8ecff' },
 };
+// travelling trader: the palette comes from the shop (frost, ember, storm, mirror ...)
 NPC_ART.trader = (g, n, t, bob) => {
   const pal = TRADER_PAL[n.shop] || TRADER_PAL.frost;
   groundD(g, 36);
@@ -209,6 +212,7 @@ NPC_ART.trader = (g, n, t, bob) => {
   hk(20, -58, 5);
 };
 
+// draw a person at its feet with a slow bob
 Art.drawNPC = function (g, n, t) {
   const fn = NPC_ART[n.type] || NPC_ART.merchant;
   const bob = Math.sin(t * 2 + n.px) * 1.2;

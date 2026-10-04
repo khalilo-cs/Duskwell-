@@ -2,6 +2,7 @@
 // Drawing for the room machinery in mechanics.js, in the same heavy-ink style as the rest:
 // rails and chains behind the tiles, plates, decks, blades, levers and stalactites in front.
 
+// colours of the machinery
 const RUST = { plate: '#5a3424', plateHi: '#a8643c', bolt: '#d8a070', metal: '#6a6a72', metalHi: '#c8ccd6', ember: '#ffb070' };
 
 // rails, slots and chains: everything that sits behind the play plane
@@ -35,6 +36,7 @@ Art.mechBack = function (g, t) {
   g.restore();
 };
 
+// a rusty plate with rivets
 function drawPlate(g, x, y, w, alpha, seed) {
   g.save(); g.globalAlpha = alpha;
   g.beginPath(); g.moveTo(x + 2, y + 2); g.lineTo(x + w - 2, y + 2); g.lineTo(x + w - 6, y + 20); g.lineTo(x + 6, y + 20); g.closePath();
@@ -49,6 +51,7 @@ function drawPlate(g, x, y, w, alpha, seed) {
   g.restore();
 }
 
+// saw blade: a spinning disc with a motion smear, glowing when hot
 function drawBlade(g, x, y, r, spin, hot) {
   g.save(); g.translate(x, y);
   bloom(g, 0, 0, r * 2.2, '#ffb070', hot ? 0.35 : 0.12);
@@ -75,6 +78,7 @@ function drawBlade(g, x, y, r, spin, hot) {
   g.restore();
 }
 
+// machinery in front of the tiles: plates, decks, blades, levers, stalactites
 Art.mechFront = function (g, t, th) {
   const m = G.mech; if (!m) return;
   // crumbling plates
@@ -161,6 +165,7 @@ Art.drawGear = function (g, d, t, th) {
   g.beginPath(); g.arc(0, 0, r * 0.14, 0, 7); fs(g, mix(th.far, th.hi, 0.15), 'rgba(0,0,0,0.5)', 3);
   g.restore();
 };
+// background chimney of the foundry with a glowing mouth
 Art.drawChimney = function (g, d, t, th) {
   const x = d.x * TILE, base = d.y * TILE + TILE, h = (d.h || 8) * TILE, w = 46;
   g.fillStyle = mix(th.far, '#000000', 0.2); g.fillRect(x, base - h, w, h);

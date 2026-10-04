@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Cuts the owner's per-creature animation sheets (art/source/creatures_hd: each creature in three rows: idle + walk, attack, hurt +
-death) into frames and packs them: art/creatures/anim.webp + js/creature_anims_meta.js
-  CREATURE_ANIMS[kind] = { idle: [...], walk: [...], atk: [...], hurt: [...], death: [...] }, each frame [x, y, w, h, ax, ay]
-where (ax, ay) is the point of the frame that stands on the ground under the creature's body (its anchor).
-Frames are split at the thinnest columns near the equal divisions of a row (or at the cuts given in creature_anims.json); every
-separate piece of a row (claws, swooshes, debris) goes to the frame whose body it is nearest, so overlapping frames come apart cleanly.
-The ground line and the soft floor shadows under each row are removed."""
+"""Cuts the per-creature animation sheets (art/source/creatures_hd; each creature has three rows: idle + walk, attack,
+hurt + death) into frames, packed in art/creatures/anim.webp with js/creature_anims_meta.js.
+A frame is [x, y, w, h, ax, ay]; (ax, ay) is the point standing on the ground under the body. Rows are split at the thinnest
+columns near equal divisions (or at the cuts in creature_anims.json), loose pieces go to the nearest frame, and the ground
+line and floor shadow are removed."""
 import json, os, sys
 import numpy as np, cv2
 from scipy.ndimage import gaussian_filter1d
@@ -92,5 +90,5 @@ meta = {}
 for kind, anim in frames.items():
     meta[kind] = {nm: [pos[(kind, 'idle', j)] if (kind == 'flyer' and nm == 'walk') else pos[first[id(f)]] for j, f in enumerate(fr)] for nm, fr in anim.items()}
 xmeta = {name: pos[('_x', name, 0)][:4] for name in extras}
-open(os.path.join(ROOT, 'js', 'creature_anims_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_anims.py: the animation frames of the creatures drawn by the owner, in art/creatures/anim.webp\n// [x, y, w, h, ax, ay]: (ax, ay) is the ground point under the body. CREATURE_EXTRAS: their projectiles, drawn on their own, [x, y, w, h]\nconst CREATURE_ANIMS = " + json.dumps(meta, separators=(',', ':')) + ";\nconst CREATURE_EXTRAS = " + json.dumps(xmeta, separators=(',', ':')) + ";\n// how many frames of 'atk' are the wind-up, the strike and the recovery (creatures cut by roles)\nconst CREATURE_PARTS = " + json.dumps({k: v for k, v in parts.items() if v}, separators=(',', ':')) + ";\n")
+open(os.path.join(ROOT, 'js', 'creature_anims_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_anims.py: the animation frames of the creatures, in art/creatures/anim.webp\n// [x, y, w, h, ax, ay]: (ax, ay) is the ground point under the body. CREATURE_EXTRAS: their projectiles, drawn on their own, [x, y, w, h]\nconst CREATURE_ANIMS = " + json.dumps(meta, separators=(',', ':')) + ";\nconst CREATURE_EXTRAS = " + json.dumps(xmeta, separators=(',', ':')) + ";\n// how many frames of 'atk' are the wind-up, the strike and the recovery (creatures cut by roles)\nconst CREATURE_PARTS = " + json.dumps({k: v for k, v in parts.items() if v}, separators=(',', ':')) + ";\n")
 print(atlas.size, os.path.getsize(os.path.join(od, 'anim.webp')), 'bytes', {k: {n: len(v) for n, v in a.items()} for k, a in frames.items()})

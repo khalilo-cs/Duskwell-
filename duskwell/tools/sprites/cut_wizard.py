@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-"""Cuts the owner's wizard (art/source/npc_hd/sheet_wizard.png: the whole figure on top, its parts below) for the town's Elder: the
-standing figure, taken as drawn off the grey board with its ground shadow cut away (the game draws its own). Output:
-art/npc/wizard.webp (at PACK of the drawing) and js/wizard_meta.js: WIZARD = the size, where the feet stand, the staff's crystal, the
-lantern on the pack, and where the torn cloak starts (the part that is made to flutter). Points are in the picture's own pixels."""
+"""Cuts the wizard (art/source/npc_hd/sheet_wizard.png) for the town's Elder: the standing figure without its ground
+shadow, into art/npc/wizard.webp and js/wizard_meta.js (size, feet, crystal and lantern points, where the cloak starts)."""
 import json, os, sys
 import numpy as np, cv2
 from PIL import Image
@@ -29,7 +27,7 @@ def main():
     meta = {'w': q.width, 'h': q.height, 'feet': [round((BOOTS_X - org[0]) * PACK, 1), int(ys.max()) + 1],
             'crystal': pt(CRYSTAL), 'lantern': pt(LANTERN), 'tailX': round((TAIL_X - org[0]) * PACK, 1)}
     open(os.path.join(ROOT, 'js', 'wizard_meta.js'), 'w').write(
-        "'use strict';\n// made by tools/sprites/cut_wizard.py: the owner's wizard (the town's Elder) in art/npc/wizard.webp, facing left\n"
+        "'use strict';\n// made by tools/sprites/cut_wizard.py: the wizard (the town's Elder) in art/npc/wizard.webp, facing left\n"
         "// feet: the point on the ground the figure stands on; crystal, lantern: where its lights are; tailX: from where the cloak flutters\n"
         "const WIZARD = " + json.dumps(meta, separators=(',', ':')) + ";\n")
     print(q.size, os.path.getsize(os.path.join(od, 'wizard.webp')), 'bytes', meta)

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""Where the sword is in each frame of the drawn hero, so that another weapon can take its place.
-tools/sprites/hero_blades.json holds a rough line for each blade, given by hand: [grip x, grip y, tip x, tip y] in the frame's own
-pixels (art/source/hero_hd/frames/<frame>.png), the held blade first; a frame may hold two (one in each hand) or none.
-This snaps every rough line onto the drawing: the light, unsaturated pixels of the blade near the line are found and a line is
-fitted through them (its ends are where the blade's pixels end), keeping the grip at the hand. Result: hero_blades_fit.json.
+"""Finds the sword in each hero frame so that another weapon can take its place.
+hero_blades.json holds a hand-marked rough line per blade ([grip x, grip y, tip x, tip y] in the frame's pixels); this snaps
+every line onto the drawing and writes hero_blades_fit.json.
 usage: python3 tools/sprites/hero_blades.py [--show out.jpg frame ...]"""
 import json, os, sys
 import numpy as np, cv2

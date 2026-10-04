@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Cuts the owner's icon sheet (art/source/icons/weapons_cloaks_charms_ui.png) into the game's icon atlas: art/icons/icons.webp and
-js/icons_meta.js (ICON_RECTS: name -> [x, y, w, h]). The icons sit on a dark gradient, so every crop gets a soft edge instead of a hard
-outline; the game draws them over dark panels where that is invisible.
-Names: weapon_<id>, cloak_<id>, charm_<id>, mask_full, mask_empty, mask_broken, orb_empty, orb_full, geo, bench, lantern_off, lantern_on."""
+"""Cuts the icon sheet (art/source/icons/weapons_cloaks_charms_ui.png) into art/icons/icons.webp and js/icons_meta.js
+(ICON_RECTS: name -> [x, y, w, h]). Names: weapon_<id>, cloak_<id>, charm_<id>, mask_full / empty / broken, orb_empty / full,
+geo, bench, lantern_off / on. The crops get a soft edge: the game draws the icons over dark panels."""
 import json, os
 import numpy as np
 from PIL import Image
@@ -56,7 +55,7 @@ atlas = Image.new('RGBA', (W, y + row + 2), (0, 0, 0, 0))
 for n, p in pieces.items(): atlas.paste(p, tuple(pos[n][:2]))
 od = os.path.join(ROOT, 'art', 'icons'); os.makedirs(od, exist_ok=True)
 atlas.save(os.path.join(od, 'icons.webp'), quality=90, method=6)
-open(os.path.join(ROOT, 'js', 'icons_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_icons.py: the owner's icons in art/icons/icons.webp as [x, y, w, h]\nconst ICON_RECTS = " + json.dumps(pos, separators=(',', ':')) + ";\n")
+open(os.path.join(ROOT, 'js', 'icons_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_icons.py: the icons in art/icons/icons.webp as [x, y, w, h]\nconst ICON_RECTS = " + json.dumps(pos, separators=(',', ':')) + ";\n")
 print(len(pos), 'icons', atlas.size, os.path.getsize(os.path.join(od, 'icons.webp')), 'bytes')
 # a contact sheet for checking the crops
 S = Image.new('RGB', (1700, 1000), (14, 18, 28)); cx = cy = 0; rh = 0

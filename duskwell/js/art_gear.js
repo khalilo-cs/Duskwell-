@@ -3,7 +3,9 @@
 // nail arts, and the effects of the three arts (Moon Rend, Dusk Rush, Soul Nova). Weapons are drawn
 // along +x from the guard, like heroSword in art_sprites.js, which this file wraps.
 
+// vertical gradient from a list of colour stops
 const gradV = (g, y0, y1, stops) => { const gr = g.createLinearGradient(0, y0, 0, y1); stops.forEach((c, i) => gr.addColorStop(i / (stops.length - 1), c)); return gr; };
+// drawings of the weapons, each along +x from the guard
 const WEAPON_ART = {};
 
 // ---- Duskblade: a long blue steel blade, winged guard, glowing runes
@@ -148,6 +150,7 @@ WEAPON_ART.bonesaw = (g, len, f, plain, t) => {
 
 // the sword the hero wears is whatever is equipped
 const CARRY_K = { lance: 0.62, scythe: 0.6, rapier: 0.72, duskblade: 0.9 };
+// weapons other than the nail replace the hero's sword drawing
 const heroSwordBase = heroSword;
 heroSword = function (g, x, y, ang, len, plain) {
   const id = Gear.weapon();
@@ -166,6 +169,7 @@ Art.drawWeapon = function (g, id, x, y, ang, len, t) {
 
 // ---------------------------------------------------------------- icons
 const ICON_K = { nail: 0.62, duskblade: 0.56, lance: 0.5, fangs: 0.8, cleaver: 0.62, scythe: 0.46, rapier: 0.52, bonesaw: 0.62 };
+// icons of weapons, cloaks and nail arts for the shops and the equipment screen
 Art.weaponIcon = function (g, id, x, y, size, t) {
   const k = size / 26 * (ICON_K[id] || 0.6) * 2.0;
   g.save(); g.translate(x, y); g.rotate(-0.78); g.scale(k, k);
@@ -228,6 +232,7 @@ Art.artIcon = function (g, id, x, y, size, t) {
   }
   g.restore();
 };
+// lighten or darken a #hex colour by k
 function shade(hex, k) {
   const n = parseInt(hex.slice(1), 16), r = clamp(((n >> 16) & 255) * k, 0, 255), gg = clamp(((n >> 8) & 255) * k, 0, 255), b = clamp((n & 255) * k, 0, 255);
   return 'rgb(' + (r | 0) + ',' + (gg | 0) + ',' + (b | 0) + ')';
@@ -235,6 +240,7 @@ function shade(hex, k) {
 
 // ---------------------------------------------------------------- effects of the arts
 const baseFx = Art.drawFx;
+// effects of the nail arts: Rush cuts, dive burst, Soul Nova
 Art.drawFx = function (g, f) {
   const k = f.t / f.life, a = 1 - k;
   if (f.type === 'cut') {                 // one slash across an enemy during the Rush
@@ -267,6 +273,7 @@ Art.drawFx = function (g, f) {
 
 // the crescent that Moon Rend sends out
 const baseProj2 = Art.drawProj;
+// the crescent sent out by Moon Rend
 Art.drawProj = function (g, p, t) {
   if (p.kind === 'moon') {
     if (FxArt.moon(g, p)) return;
@@ -379,6 +386,7 @@ Art.frozenFx = function (g, e, t) {
 // sprite carries only the nail, so for any other weapon it is drawn over the sprite: on the back at rest, in the hand
 // when striking.
 const baseDrawPlayer = Art.drawPlayer;
+// add the cloak and the weapon's strike effects to the player drawing
 Art.drawPlayer = function (g, p, t) {
   const id = Gear.weapon(), drawnHero = !Skins.get('player') && HeroStyle.frames(), pixel = !Skins.get('player') && HeroStyle.sprite() && !p.dead && !drawnHero, other = id !== 'nail';
   const f = p.face, HS = 1.1;

@@ -1,11 +1,7 @@
 'use strict';
-// The creatures the owner drew frame by frame (art/creatures/anim.webp, cut by tools/sprites/cut_anims.py): idle, a walk cycle, an
-// attack (wind-up, strike, recovery), a hurt frame and a death. The frames are drawn as drawn; this file only decides which one to
-// show, from what the creature is really doing:
-//  - the walk advances with the ground actually covered, so the feet do not slide; standing still breathes on the two idle frames
-//  - the wind-up frames play over the creature's own anticipation, the strike frames while it attacks, the recovery right after
-//  - a wound shows the hurt frame for a moment; a death leaves the creature collapsing into dust where it fell (a "corpse" effect)
-// Every frame is placed by its ground point, so the creature stays planted while its pose changes.
+// Frame animations of the first six creatures (art/creatures/anim.webp): idle, walk, attack, hurt, death.
+// This file only picks the frame from what the creature is doing; the walk follows the ground covered,
+// the attack frames follow its attack states, and a death leaves a corpse effect.
 const AnimArt = (() => {
   const img = new Image(); img.src = 'art/creatures/anim.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
@@ -39,6 +35,7 @@ const AnimArt = (() => {
   const since = (at, t) => (at == null ? 1e9 : t - at);
   const move = (e, d, A, stride) => (e.isDummy ? (Math.abs(e.vx || 0) > 8 ? loop(A.walk, d.t, 8) : loop(A.idle, d.t, 2.2))
     : Math.abs(e.vx || 0) > 8 ? A.walk[Math.floor(d.dist / stride) % A.walk.length] : loop(A.idle, d.t, 2.2, (e.x || 0) * 0.01));
+  // other kinds drawn as this one
   const ALIAS = { brood_child: 'spider' };
   const scaleOf = (kind, e) => { const c = CFG[kind], A = CREATURE_ANIMS[kind], f = (A[c.ref] || A.idle)[0]; return Math.min(e.h * c.hm / f[3], e.w * c.wm / f[2]); };
   // the attack row: the wind-up (two frames when the row has five), the strike (two), the recovery (the last)
@@ -127,9 +124,10 @@ const AnimArt = (() => {
     const k = Math.max(0, tt) / DIE, i = tt < 0 ? 0 : Math.min(n - 1, Math.floor(k * 1.3 * n));
     frame(g, D[i], fx.x, y, fx.sc, fx.face, false, k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1);
   }
+  // a creature died: leave its death frames where it fell (after a drop to the floor if it was in the air)
   function onDead(e) {
     const kind = ALIAS[e.kind] || e.kind; if (e.isBoss || !CFG[kind] || !CREATURE_ANIMS[kind] || !ready()) return;
-    if (typeof Skins !== 'undefined' && Skins.get(e.kind)) return;                                    // the owner put their own picture on it
+    if (typeof Skins !== 'undefined' && Skins.get(e.kind)) return;                                    // a picture chosen in "Your images" replaces it
     const c = CFG[kind], sc = scaleOf(kind, e), A = CREATURE_ANIMS[kind], idle = (A[c.ref] || A.idle)[0];
     if (c.noCorpse) return;
     const y0 = c.fly ? e.cy + (idle[5] - idle[3] * 0.5) * sc : e.y + e.h + 1;
@@ -148,6 +146,7 @@ const AnimArt = (() => {
   }
   // more creatures (js/art_anims_more.js): their config, and other names that are drawn as them
   function add(kind, cfg, aliases) { CFG[kind] = cfg; wrap(kind); for (const a of aliases || []) { ALIAS[a] = kind; wrap(a); } }
+  // wrap every creature and add the corpse effect and the projectile art
   function install() {
     for (const k of [...Object.keys(CFG), ...Object.keys(ALIAS)]) wrap(k);
     const oldFx = Art.drawFx;

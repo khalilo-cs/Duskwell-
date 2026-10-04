@@ -1,23 +1,12 @@
 'use strict';
-// The Stone Guardian drawn from the owner's part sheet (art/bosses/guardian.webp, cut by tools/sprites/cut_boss.py).
-// A cut-out puppet: legs, skirt, chest, collar, head, shoulders, arms, the hammer and the cloak are separate pieces moved by a
-// small skeleton. The pieces are drawn exactly as drawn; only their placement and angle change.
-//
-// What makes the movement read as natural (all of it lives here, none of it changes the fight):
-//  - nothing jumps to a pose: every angle chases its target through a damped spring (anim.js), so each move eases in, overshoots a
-//    little and settles; heavy parts (the body) are slow and bouncy, light ones (the head, the cloak) lag behind and flutter
-//  - attacks follow the stage the fight logic reports (setAct): a slow anticipation, a held tremor, a fast strike, an impact hold,
-//    a slow recovery, the lengths taken from the real timings of the attack so what you see matches what the hitbox does
-//  - the legs are driven by distance travelled, so a planted foot never slides on the floor; the body rides on whichever leg is
-//    planted, rising over it and sinking between steps; a crouch spreads the legs (a sumo squat) instead of floating
-//  - the hammer is a pendulum on the fist: it lags the arm, swings past and settles
-//  - the cloak streams opposite to the movement; the head stays level while the body leans; turning pivots the body instead of flipping
-//  - it wakes from a crouch when the fight begins, roars at the second phase, and when it dies it kneels and the stones fall apart
-// Units below are pixels of the sheet; S shrinks them to the game.
+// The Stone Guardian drawn from its part sheet (art/bosses/guardian.webp): legs, skirt, chest, head, arms, hammer
+// and cloak are separate pieces on a small skeleton. Every angle chases its target through a damped spring
+// (anim.js); attacks follow the stage the fight logic reports (setAct); feet are driven by distance travelled.
 const GuardianArt = (() => {
   const img = new Image(); img.src = 'art/bosses/guardian.webp';
   const R = BOSS_PARTS.guardian;
   const ready = () => img.complete && img.naturalWidth > 0;
+  // screen px per sheet px
   const S = 0.46;                                   // game pixels per sheet pixel
   const HS = 1.1, HANDLE = 0.4;                     // the hammer head's scale, and how much the long handle is shortened
   const GRIP = [86, 150];                           // where the fist closes on the handle (hammer part pixels)
@@ -146,6 +135,7 @@ const GuardianArt = (() => {
     }
   }
 
+  // draw one part with its pivot at (ax, ay) placed at (x, y)
   function put(g, name, ax, ay, x, y, a, sx, sy, white) {
     const r = R[name]; g.save(); g.translate(x, y); if (a) g.rotate(a); if (sx || sy) g.scale(sx || 1, sy || 1);
     g.drawImage(img, r[0], r[1], r[2], r[3], -ax, -ay, r[2], r[3]);
@@ -165,6 +155,7 @@ const GuardianArt = (() => {
   }
   // when it dies the stones fall apart: each piece gets its own push, falls, spins and comes to rest on the ground
   const SCATTER = { head: [-40, -170, 0.9], core: [10, -120, -0.5], collar: [-30, -140, 0.6], shoulder_a: [-120, -110, -1.1], shoulder_b: [110, -100, 1.2], arm_a: [-110, -60, -0.9], arm_b: [100, -40, 1.0], leg_a: [-70, 10, 0.5], leg_b: [70, 10, -0.4], skirt: [0, -20, 0.3], hammer: [-130, -60, 1.5], chain: [-40, -10, 2], cloak: [120, -30, 0.7] };
+  // position of a part while it falls apart
   function scatter(name, k, floor) {
     const s = SCATTER[name] || [0, 0, 0]; if (k <= 0) return [0, 0, 0];
     const tt = k * 1.25, y = s[1] * tt * 0.6 + 380 * tt * tt;
@@ -266,6 +257,7 @@ const GuardianArt = (() => {
     if (white) { g.globalAlpha *= 0.85; g.filter = 'brightness(0) invert(1)'; g.drawImage(img, hm[0], hm[1], hm[2], HHEAD, ox, -gap - HHEAD * HS, w, HHEAD * HS); }
     g.restore();
   }
+  // shake and dust when a planted foot lands
   function footfall(b, L) {
     const x = b.cx + (b.face || 1) * (Math.sin(L.th) * LEG * S), y = b.y + b.h;
     G.burst(x, y - 2, 3, { color: '#8a94a0', speed: 70, life: 0.35, size: 3, vy: -40 });

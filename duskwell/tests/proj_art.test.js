@@ -1,7 +1,5 @@
-// The projectiles and explosions the owner drew (js/art_projectiles.js): in play each shot is drawn from its own frames (ice and glass
-// shards, the Grave King's bone, falling rocks, orbs, acid and lava globs, boss bombs, lightning pillars), a thing that dies leaves
-// its ending behind (the shard dissolves, the orb bursts, the rock lands in dust, the glob splashes), bombs burst in a drawn
-// explosion, colours the drawing lacks are made by turning its hue, and the shots that are not drawn here keep their old drawing.
+// Projectile and explosion art (js/art_projectiles.js): each shot is drawn from its frames, a dying shot leaves its ending,
+// bombs burst in the drawn explosion, missing colours are made by turning the hue, other shots keep their old drawing.
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };

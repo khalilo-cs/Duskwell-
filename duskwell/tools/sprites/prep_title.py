@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""The owner's Duskwell banner (art/source/title_hd/title_banner.png, 2172x724) made ready for the title screen: its alpha (it fades to
-nothing at the top and the bottom) is laid over the night colour the screen is filled with, so the picture is flat and its edges
-dissolve into the dark; the last 40 rows, where the generator left a band of coloured noise, are cut off. Output: art/title/banner.webp."""
+"""Prepares the Duskwell banner (art/source/title_hd/title_banner.png) for the title screen: its alpha is laid over the
+night colour the screen uses and the last 40 rows (colour noise) are cut. Output: art/title/banner.webp."""
 import os
 import numpy as np
 from PIL import Image

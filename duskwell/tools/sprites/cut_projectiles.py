@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Cuts the owner's projectile and explosion sheet (art/source/fx_hd/sheet_projectiles.png: eight rows of eight frames) into
-art/fx/proj.webp and js/proj_meta.js:
-  PROJ_FRAMES[row] = [[x, y, w, h, ax, ay], ...]   (ax, ay): the point of the frame that sits on the projectile / the impact
-Rows: ice (an ice shard forming, flying, dissolving), rock (a falling rock, its impact, the dust), void (a dark orb, its burst, the
-smoke), acid (a drop, its splash, the puddle), fire (a fireball in flight, then its explosion), bolt (a lightning strike), bone (a
-bone in flight, breaking apart), meteor (a meteor falling, then its explosion).
-The sheet is a grey board; the effects are glows and smoke over it, so they are cut softly: how far each pixel is from the grey
-around it is its opacity, and its colour is what is left when that grey is taken away. Frames overlap their neighbours' columns
-(an explosion is wider than a drop), so the columns are divided at the valleys of the picture."""
+"""Cuts the projectile and explosion sheet (art/source/fx_hd/sheet_projectiles.png, 8 rows of 8 frames) into
+art/fx/proj.webp and js/proj_meta.js. Rows: ice, rock, void, acid, fire, bolt, bone, meteor.
+The sheet is a grey board, so the frames are cut softly (opacity = distance from the grey, colour un-mixed from it) and the
+columns are divided at the valleys between frames."""
 import json, os, sys
 import numpy as np, cv2
 from scipy import ndimage as ndi
@@ -78,7 +73,7 @@ def main():
     atlas.save(os.path.join(od, 'proj.webp'), quality=90, method=6)
     meta = {name: [pos[(name, i)] for i in range(8)] for name in ROWS}
     open(os.path.join(ROOT, 'js', 'proj_meta.js'), 'w').write(
-        "'use strict';\n// made by tools/sprites/cut_projectiles.py: the owner's projectile and explosion frames in art/fx/proj.webp\n"
+        "'use strict';\n// made by tools/sprites/cut_projectiles.py: the projectile and explosion frames in art/fx/proj.webp\n"
         "// [x, y, w, h, ax, ay]: (ax, ay) is the point that sits on the projectile or on the impact\nconst PROJ_FRAMES = " + json.dumps(meta, separators=(',', ':')) + ";\n")
     print(atlas.size, os.path.getsize(os.path.join(od, 'proj.webp')), 'bytes')
 

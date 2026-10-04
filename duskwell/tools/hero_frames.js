@@ -1,4 +1,4 @@
-// Every frame of the hero the owner drew, as the game holds them (docs/gallery/hero_frames.webp). usage: node tools/hero_frames.js [out]
+// Every hero frame as the game holds it (docs/gallery/hero_frames.webp). usage: node tools/hero_frames.js [out]
 const { open } = require('../tests/lib');
 const fs = require('fs');
 (async () => {

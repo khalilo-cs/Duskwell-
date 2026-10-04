@@ -2,6 +2,7 @@
 // Physics, the player, regular enemies, projectiles and pickups.
 // Everything talks to the running game through the global G (set in game.js).
 
+// a room in play: the tile grid plus its gravity fields, wind zones and ice
 class Level {
   constructor(def) {
     this.def = def; this.id = def.id; this.w = def.w; this.h = def.h;
@@ -11,21 +12,27 @@ class Level {
     this.gravs = (def.gravs || []).map(z => ({ x: z.x * TILE, y: z.y * TILE, w: z.w * TILE, h: z.h * TILE, k: z.k }));
     this.winds = (def.winds || []).map(w => ({ x: w.x * TILE, y: w.y * TILE, w: w.w * TILE, h: w.h * TILE, wx: w.wx, wy: w.wy }));
   }
+  // gravity field / wind zone at a pixel, or null
   gravAt(px, py) { for (const z of this.gravs) if (px >= z.x && px < z.x + z.w && py >= z.y && py < z.y + z.h) return z; return null; }
   windAt(px, py) { for (const w of this.winds) if (px >= w.x && px < w.x + w.w && py >= w.y && py < w.y + w.h) return w; return null; }
+  // is this tile slippery ice
   isIce(tx, ty) { return this.ice.size > 0 && tx >= 0 && ty >= 0 && tx < this.w && ty < this.h && this.ice.has(ty * this.w + tx); }
+  // tile at tx, ty (outside the room counts as solid)
   get(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return T_SOLID;
     return this.t[ty * this.w + tx];
   }
+  // change a tile
   set(tx, ty, v) {
     if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) return;
     const rock = a => a === T_SOLID || a === T_BREAK || a === T_GATE || a === T_CRACK, old = this.t[ty * this.w + tx];
     this.t[ty * this.w + tx] = v;
     if (rock(old) !== rock(v)) Lumen.invalidate();          // the baked relief of the rock is out of date
   }
+  // tile queries: blocks the body, hurts, or can be stood on
   solid(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK || v === T_CRUMBLE; }
   hazard(tx, ty) { const v = this.get(tx, ty); return v === T_HAZARD || v === T_ACID; }
+  // the same queries by pixel position
   solidAtPx(x, y) { return this.solid(Math.floor(x / TILE), Math.floor(y / TILE)); }
   ground(tx, ty) { const v = this.get(tx, ty); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_ONEWAY || v === T_CRACK || v === T_BOUNCE || v === T_CRUMBLE; }
   // 2D raycast through the tile grid, sampled every 8px
@@ -72,12 +79,14 @@ function moveBody(b, dt, L) {
   }
 }
 
+// gravity, fastest fall and the extra weight when falling
 const GRAV = 2200, MAXFALL = 900, FALL_MULT = 1.25;
 // Comet Heart (super dash): seconds of charge, top speed, and the damage it does on contact
 const SD_CHARGE = 0.8, SD_SPEED = 1050, SD_DMG = 13;
 
 // ============================== PLAYER ==============================
 class Player {
+  // start values: size, health, soul, geo, abilities
   constructor() {
     this.w = 22; this.h = 38;
     this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false, wail: false };
@@ -99,22 +108,27 @@ class Player {
     this.sd = null; this.riding = null; this.turnT = 0; this.airT = 0; this.wailT = 0; this.wailTick = 0; this.wailTop = 0;
     this.rendT = 0; this.rendHold = false; this.rendReady = false; this.rushT = 0; this.rushCD = 0; this.rushTick = 0; this.novaT = 0; this.novaFired = false; this.dashStruck = new Set();
   }
+  // smaller box that enemies hurt
   hurtbox() { return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 8 }; }
 
+  // standing on ice
   onIce() { const L = G.level, ty = Math.floor((this.y + this.h + 2) / TILE); return L.isIce(Math.floor((this.x + 4) / TILE), ty) || L.isIce(Math.floor((this.x + this.w - 4) / TILE), ty); }
   // ---- numbers the charms change (see charms.js) ----
   spellCost() { return Charms.has('thrift') ? 24 : 33; }
+  // numbers that charms and gear change: heal time, damage, spell power, strike gap, reach
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1) * Gear.focusK(); }
   nailDamage() { return Math.max(1, Math.round(this.nail * Gear.dmgK() * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1))); }
   spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1)); }
   strikeGap() { const c = Gear.atkCD(); return Charms.has('swift') ? Math.min(0.21, c * 0.62) : c; }
   reachK() { return (Charms.has('reach') ? 1.35 : 1) * Gear.reachK(); }
 
+  // is there a wall on this side
   touchWall(dir) {
     const L = G.level, x = dir > 0 ? this.x + this.w + 1 : this.x - 1;
     return L.solidAtPx(x, this.y + 8) || L.solidAtPx(x, this.y + this.h - 8);
   }
 
+  // one step: input, walking, jumping, strikes, spells, abilities, physics
   update(dt) {
     const L = G.level;
     if (this.dead) return;
@@ -319,6 +333,7 @@ class Player {
     this.checkSpikes();
   }
 
+  // touching spikes or acid hurts and returns the player to safe ground
   checkSpikes() {
     const L = G.level;
     {
@@ -336,6 +351,7 @@ class Player {
     }
   }
 
+  // what the nail hits this frame: enemies, breakable walls, levers; pogo and soul gain
   attackHits() {
     const L = G.level;
     let hb;
@@ -403,6 +419,7 @@ class Player {
     G.ring(this.cx, this.cy, '#ffc070', 0.7);
     G.burst(this.cx, this.cy, 16, { color: '#ffc070', speed: 280, life: 0.4, size: 3, grav: 0 });
   }
+  // keep rushing, slash whatever is crossed
   updateRush(dt) {
     const f = this.face, reach = { x: f > 0 ? this.x - 10 : this.x - 56, y: this.y - 16, w: this.w + 66, h: this.h + 32 };
     this.invuln = Math.max(this.invuln, 0.15);
@@ -445,6 +462,7 @@ class Player {
     this.vx = 0; this.vy = 0; this.invuln = Math.max(this.invuln, 1.4);
     Sound.play('novaCharge'); G.shake(3, 0.5);
   }
+  // Soul Nova charge and blast
   updateNova(dt) {
     this.novaT -= dt; this.vx = 0; this.vy = -22;
     const el = 1.0 - this.novaT;
@@ -475,6 +493,7 @@ class Player {
     if (this.novaT <= 0) { this.novaT = 0; this.novaFired = false; this.invuln = Math.max(this.invuln, 0.6); this.vy = 0; }
   }
 
+  // soul bolt: spend soul and fire it
   castBolt() {
     this.soul -= this.spellCost(); this.castT = 0.25;
     Sound.play('cast');
@@ -489,6 +508,7 @@ class Player {
     Sound.play('cast'); G.shake(5, 0.3); G.ring(this.cx, this.cy, '#dff3ff', 0.4);
     G.burst(this.cx, this.cy, 14, { color: '#dff3ff', speed: 200, life: 0.5, size: 3, grav: -120 });
   }
+  // damage inside the column over time
   updateWail(dt) {
     const L = G.level;
     this.wailT -= dt; this.vx = 0; this.vy = 0;
@@ -505,10 +525,12 @@ class Player {
     }
     if (this.wailT <= 0) { this.wailT = 0; this.invuln = Math.max(this.invuln, 0.2); }
   }
+  // dive: plunge down from the air
   startDive() {
     this.soul -= this.spellCost(); this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
     Sound.play('cast'); G.burst(this.cx, this.cy, 12, { color: '#dff3ff', speed: 160, life: 0.4, size: 3 });
   }
+  // falling dive; breaks cracked floors and hits what is around on landing
   updateDive(dt) {
     this.vx = 0; this.vy = 1250;
     const prevBottom = this.y + this.h;
@@ -529,6 +551,7 @@ class Player {
     for (const d of [-1, 1]) G.projs.push(new Proj({ kind: 'shock', x: this.cx + d * 30, y: this.y + this.h, vx: d * 480, dmg: this.spellDmg(8), friendly: true, pierce: true, life: 0.45, color: '#dff3ff', passWalls: true }));
   }
 
+  // take damage from a source at srcX; false while invulnerable
   hurt(dmg, srcX) {
     if (this.invuln > 0 || this.dead || this.diving || G.state !== 'play') return false;
     if (Charms.absorb()) {                    // Shell Ward turns the blow aside, once
@@ -568,6 +591,7 @@ class Player {
       if (Math.hypot(e.cx - this.cx, e.cy - this.cy) < 170) { e.stun = Math.max(e.stun, 1.1); e.frozenT = 1.1; }
     }
   }
+  // fell on spikes: one mask and back to the last safe ground
   spikeHurt() {
     this.hp -= Charms.over() ? 2 : 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
     Sound.play('hurt'); G.hitstop(0.12); G.shake(8, 0.3);
@@ -633,6 +657,7 @@ class Player {
     this.checkSpikes();
     return true;
   }
+  // sit on a bench: rest, heal and save
   sit(bench) {
     this.sitting = bench; this.vx = 0; this.vy = 0; this.x = bench.px - this.w / 2; this.y = bench.py - this.h;
     this.hp = this.maxHp; this.soul = this.maxSoul;
@@ -642,10 +667,12 @@ class Player {
 
 // ============================== PROJECTILES ==============================
 class Proj {
+  // o: values that override the defaults
   constructor(o) {
     Object.assign(this, { vx: 0, vy: 0, r: 8, dmg: 1, grav: 0, life: 3, friendly: false, pierce: false, kind: 'orb', color: '#ff9bd6', passWalls: false, t: 0, hitSet: new Set() }, o);
     if (this.kind === 'shock') { this.w = this.w || 44; this.h = this.h || 34; }
   }
+  // hit box of the projectile (shape depends on its kind)
   rect() {
     if (this.kind === 'shock') return { x: this.x - this.w / 2, y: this.y - this.h, w: this.w, h: this.h };
     if (this.kind === 'beam') return { x: this.x - this.bw / 2, y: 0, w: this.bw, h: G.level.ph };
@@ -654,6 +681,7 @@ class Proj {
     if (this.kind === 'cloud') { const k = clamp(this.t / 0.25, 0.3, 1); return { x: this.x - this.w * k / 2, y: this.y - this.h * k / 2, w: this.w * k, h: this.h * k }; }
     return { x: this.x - this.r, y: this.y - this.r, w: this.r * 2, h: this.r * 2 };
   }
+  // move, expire, and hit the player or the enemies
   update(dt) {
     const L = G.level;
     this.t += dt; this.life -= dt;
@@ -729,6 +757,7 @@ class Geo {
     this.x = x; this.y = y; this.v = v; this.w = v >= 25 ? 14 : v >= 5 ? 11 : 8; this.h = this.w;
     this.vx = rand(-140, 140); this.vy = rand(-420, -220); this.age = 0; this.onGround = false; this.noOneway = false;
   }
+  // fall, bounce, get picked up
   update(dt) {
     this.age += dt;
     this.vy = Math.min(this.vy + GRAV * 0.8 * dt, 700);
@@ -749,11 +778,13 @@ class Geo {
   }
 }
 
+// an item lying in the world: ability, mask seed, charm or cache
 class Item {
   // kind: ability | seed | cache
   constructor(def) {
     this.def = def; this.x = def.x * TILE + TILE / 2; this.y = def.y * TILE + TILE / 2; this.t = 0; this.id = def.id; this.kind = def.kind;
   }
+  // pick up when the player touches it
   update(dt) {
     this.t += dt;
     const p = G.player;
@@ -765,7 +796,9 @@ class Item {
 // ============================== ENEMIES ==============================
 // Enemy brains mirror a PlayMaker FSM: each enemy runs one switch over this.currentState.
 const ST = { IDLE: 'idle', PATROL: 'patrol', CHASE: 'chase', ANTICIPATION: 'anticipation', ATTACK: 'attack', RECOIL: 'recoil' };
+// base enemy: health, state machine, knockback, hit flash and shared physics
 class Enemy {
+  // def: placement from the room, w / h: size
   constructor(def, w, h) {
     this.w = w; this.h = h;
     this.x = def.x * TILE + TILE / 2 - w / 2; this.y = def.y * TILE + TILE - h;
@@ -776,10 +809,14 @@ class Enemy {
   }
   get cx() { return this.x + this.w / 2; }
   get cy() { return this.y + this.h / 2; }
+  // hit box and the box the nail can hit
   hb() { return { x: this.x, y: this.y, w: this.w, h: this.h }; }
   body() { return this.hb(); }
+  // change state and restart its timer
   setState(s) { this.currentState = s; this.stateT = 0; }
+  // advance the clocks
   tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; }
+  // take a hit: damage, knockback, flash, souls for the player
   hurt(dmg, dir, how) {
     if (this.dead) return;
     if (how === 'burn') {                                     // a burn: no flinch, no stop, just the wound
@@ -798,6 +835,7 @@ class Enemy {
   // knockback pushes the enemy away from the strike and puts it in the Recoil state
   // the Dusk Cry holds enemies in its column instead of throwing them out of it
   onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
+  // die: drop geo, burst, count the kill
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15);
     if (Charms.has('grave') && !G.player.dead) { G.player.soul = Math.min(G.player.maxSoul, G.player.soul + 8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
@@ -819,14 +857,17 @@ class Enemy {
     const L = G.level, fx = Math.floor((this.cx + dir * (this.w / 2 + 6)) / TILE), fy = Math.floor((this.y + this.h + 4) / TILE);
     return !L.ground(fx, fy) || L.solid(fx, Math.floor((this.y + this.h - 4) / TILE));
   }
+  // gravity and tile collision for walkers
   physics(dt, grav) {
     if (grav !== false) this.vy = Math.min(this.vy + GRAV * dt, MAXFALL);
     moveBody(this, dt, G.level);
   }
 }
 
+// beetle that patrols along the ground and turns at edges and walls
 class Crawler extends Enemy {
   constructor(d) { super(d, 34, 22); this.hp = 10; this.geo = 2; this.speed = 52; this.blood = '#ffcf8a'; }
+  // walk back and forth, turn at edges and walls, bite
   update(dt) {
     this.tick(dt);
     switch (this.currentState) {
@@ -883,8 +924,10 @@ class Husk extends Enemy {
   }
 }
 
+// pale larva that hovers around its home and dives at the player
 class Flyer extends Enemy {
   constructor(d) { super(d, 30, 26); this.hp = 10; this.geo = 3; this.kb = 1.2; this.blood = '#e8f6ff'; this.ph = rand(0, 6); this.glowR = 110; }
+  // accelerate toward a point
   steer(tx, ty, sp, acc, dt) {
     const dx = tx - this.cx, dy = ty - this.cy, d = Math.hypot(dx, dy) || 1;
     this.vx = approach(this.vx, dx / d * sp, acc * dt); this.vy = approach(this.vy, dy / d * sp, acc * dt);
@@ -913,6 +956,7 @@ class Flyer extends Enemy {
   }
 }
 
+// waits, crouches, then leaps at the player
 class Hopper extends Enemy {
   constructor(d) { super(d, 30, 30); this.hp = 14; this.geo = 4; this.wait = rand(0.6, 1.6); this.blood = '#b8e08a'; }
   update(dt) {
@@ -940,6 +984,7 @@ class Hopper extends Enemy {
   }
 }
 
+// flower that turns to the player and lobs acid globs
 class Spitter extends Enemy {
   constructor(d) { super(d, 30, 36); this.hp = 12; this.geo = 4; this.cool = rand(0.8, 2); this.tele = 0; this.kb = 0; this.blood = '#9fdc7a'; }
   update(dt) {
@@ -955,6 +1000,7 @@ class Spitter extends Enemy {
     }
     this.physics(dt);
   }
+  // throw a glob at the player's predicted position
   fire() {
     const p = G.player, g = 900, T = clamp(Math.abs(p.cx - this.cx) / 360 + 0.45, 0.5, 1.1);
     const sx = this.cx, sy = this.y + 6;
@@ -964,6 +1010,7 @@ class Spitter extends Enemy {
   }
 }
 
+// crystal turret: charges, then fires a spread of shards
 class Shard extends Enemy {     // crystal turret
   constructor(d) { super(d, 30, 42); this.hp = 15; this.geo = 5; this.cool = rand(1, 2.4); this.tele = 0; this.kb = 0; this.blood = '#ff9bd6'; this.glowR = 150; }
   update(dt) {
@@ -985,6 +1032,7 @@ class Shard extends Enemy {     // crystal turret
   }
 }
 
+// armoured guard with the full state machine
 class Sentinel extends Enemy {   // Idle -> Patrol (waypoints) -> Chase -> Anticipation -> Attack, Recoil when struck
   constructor(d) {
     super(d, 40, 58); this.hp = 32; this.geo = 14; this.kb = 0.35; this.blood = '#d8c8a0';
@@ -1003,6 +1051,7 @@ class Sentinel extends Enemy {   // Idle -> Patrol (waypoints) -> Chase -> Antic
     if (this.currentState === ST.ANTICIPATION || this.currentState === ST.ATTACK) { this.vx += dir * 60; return; }   // armour holds mid-swing
     super.onHurt(dir, how);
   }
+  // state machine: idle, patrol, chase, anticipation, attack, recoil
   update(dt) {
     this.tick(dt);
     if (!this.wp && this.onGround) this.initWaypoints();
@@ -1048,6 +1097,7 @@ class Sentinel extends Enemy {   // Idle -> Patrol (waypoints) -> Chase -> Antic
   }
 }
 
+// the shade that keeps your geo after a death
 class ShadeEnemy extends Enemy {   // the shade that keeps your Geo after a death
   constructor(d, geo) { super(d, 34, 46); this.hp = 28; this.geo = 0; this.stored = geo; this.kb = 0.3; this.ghostly = false; this.blood = '#9db5d6'; this.home = { x: this.x + 17, y: this.y + 23 }; }
   update(dt) {
@@ -1070,6 +1120,7 @@ class ShadeEnemy extends Enemy {   // the shade that keeps your Geo after a deat
   }
 }
 
+// mosquito: hovers, locks on, then spears in a straight line
 class Diver extends Enemy {     // mosquito: hovers, locks on, then spears in a straight line
   constructor(d) { super(d, 28, 24); this.hp = 12; this.geo = 4; this.kb = 1; this.blood = '#ffb070'; this.glowR = 90; this.ph = rand(0, 6); this.cool = rand(0.5, 1.5); }
   update(dt) {
@@ -1103,6 +1154,7 @@ class Diver extends Enemy {     // mosquito: hovers, locks on, then spears in a 
   }
 }
 
+// hangs on a thread, drops on the player, then chases along the floor
 class Spider extends Enemy {    // hangs on a thread, drops on the player, then chases along the floor
   constructor(d) {
     super(d, 34, 24); this.hp = 14; this.geo = 5; this.kb = 0.8; this.blood = '#c8a8ff';
@@ -1145,6 +1197,7 @@ class Spider extends Enemy {    // hangs on a thread, drops on the player, then 
   }
 }
 
+// slow walker that breathes out a cloud of spores
 class Shroom extends Enemy {    // slow walker that breathes out a cloud of spores
   constructor(d) { super(d, 30, 36); this.hp = 16; this.geo = 5; this.kb = 0.6; this.blood = '#ffcf70'; this.cool = rand(0.5, 1.5); }
   update(dt) {
@@ -1168,6 +1221,7 @@ class Shroom extends Enemy {    // slow walker that breathes out a cloud of spor
   }
 }
 
+// drifting jellyfish that bursts into sparks when popped
 class Jelly extends Enemy {     // drifting jellyfish that bursts into sparks when popped
   constructor(d) { super(d, 30, 32); this.hp = 8; this.geo = 3; this.kb = 0.6; this.blood = '#ffc890'; this.glowR = 130; this.ph = rand(0, 6); }
   update(dt) {
@@ -1381,6 +1435,7 @@ class Bomber extends Enemy {
 // Blinker: a half-faded wraith. It fades out, appears beside the hero, slashes, and can be struck only while solid.
 class Blinker extends Enemy {
   constructor(d) { super(d, 30, 50); this.hp = 18; this.geo = 6; this.kb = 0.6; this.blood = '#bfe6ff'; this.alpha = 0.5; this.ghostly = true; this.glowR = 90; this.ph = rand(0, 6); this.melee = null; this.y -= 14; this.home = { x: this.cx, y: this.cy }; }
+  // find a free spot next to the player
   placeBeside() {
     const L = G.level, p = G.player;
     for (const side of [-p.face, p.face]) for (const dy of [-10, -24, 0]) {          // beside the hero, a little above the floor
@@ -1616,6 +1671,7 @@ class Moth extends Enemy {
 // Icicle: hangs from the ceiling, shakes when the hero passes under it, falls, shatters, and grows back.
 class Icicle extends Enemy {
   constructor(d) { super(d, 18, 44); this.y = d.y * TILE; this.hp = 5; this.geo = 0; this.kb = 0; this.type = d.type; this.blood = '#dff4ff'; this.ox = this.x; this.oy = this.y; this.gone = false; }
+  // break into pieces
   shatter() {
     G.burst(this.cx, this.cy, 14, { color: this.blood, speed: 240, life: 0.5, size: 3 }); Sound.play('break');
     this.gone = true; this.ghostly = true; this.vx = this.vy = 0; this.setState('gone');
@@ -1648,4 +1704,5 @@ class Icicle extends Enemy {
   body() { return this.gone ? { x: -999, y: -999, w: 1, h: 1 } : this.hb(); }
 }
 
+// enemy kind -> class (used when a room is built)
 const ENEMY_TYPES = { husk: Husk, crawler: Crawler, flyer: Flyer, hopper: Hopper, spitter: Spitter, shard: Shard, sentinel: Sentinel, diver: Diver, spider: Spider, shroom: Shroom, jelly: Jelly, warden: Warden, ram: Ram, mole: Burrower, lavaworm: Burrower, imp: Bomber, veil: Blinker, roller: Roller, slime: Slime, chainman: Chainman, moth: Moth, icicle: Icicle };

@@ -1,6 +1,5 @@
-// The six creatures the owner drew frame by frame (husk, crawler, flyer, hopper, spider, warden): in a real fight each one shows
-// its walk cycle, its wind-up, its strike and its recovery at the right moments, flinches when struck, and dies on its own death
-// frames (a flyer drops to the floor first), then the body is gone.
+// Frame animations of the first six creatures (husk, crawler, flyer, hopper, spider, warden): in a fight each one shows its walk,
+// wind-up, strike and recovery at the right moments, flinches when hit and dies on its own death frames.
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };

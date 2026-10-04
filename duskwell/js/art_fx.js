@@ -1,10 +1,10 @@
 'use strict';
-// The owner's effect frames (art/fx/fx.webp, cut by tools/sprites/cut_fx.py): Moon Rend's crescent growing as it flies, the Dusk Rush's
-// slashes, the Soul Nova's rings and spikes, the dive's burst of spikes and the Comet Heart's golden trail. Each draws in place of the
-// older code-drawn effect once the atlas is loaded (the functions return false until then, and the old drawing runs).
+// Effect frames of the nail arts (art/fx/fx.webp): Moon Rend crescent, Dusk Rush slashes, Soul Nova
+// rings, dive spikes and the comet trail. Each function returns false until the atlas loads, so the old drawing runs.
 const FxArt = (() => {
   const img = new Image(); img.src = 'art/fx/fx.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
+  // biggest value of column i over all frames of strip k
   const maxOf = (k, i) => Math.max(...FX_FRAMES[k].map(f => f[i]));
   // frame n of strip k, its anchor (ax, ay in 0..1 of the frame) at (x, y), scaled by s, mirrored by dir
   function frame(g, k, n, x, y, s, dir, ax, ay, alpha) {

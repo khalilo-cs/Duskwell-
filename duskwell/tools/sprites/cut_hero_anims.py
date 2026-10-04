@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
-"""Cuts the owner's hero animation sheet (art/source/hero_hd/sheet_hero_anims.png: idle 6, run 8, jump 6, two sword slashes of 5,
-hit 4, death 8, sitting on a bench 4; the run has a ninth, unnumbered drawing, kept) into art/hero/hero_frames.webp and js/hero_frames_meta.js:
-  HERO_FRAMES[anim] = [[x, y, w, h, ax, ay], ...]   (ax, ay): the point under the body that stands on the ground
-The sheet is a board with titles, frame numbers, floor lines and lines between the groups; only the drawings are kept:
-  - each group is taken between its title and its floor line, inside its own columns
-  - the floor line is removed where it is thin (under the feet the drawing is kept)
-  - the frames are split at the given columns, every loose piece (a sword trail, drops of blood) going to the nearest frame
-Jump frames are anchored at their own feet (the game lifts the hero itself); the rest stand on the floor line.
-Frames 3 and 4 of the bench share one bench in the drawing, so only frames 1 and 2 (standing by it, sitting on it) are kept.
-The second sheet (sheet_hero_moves.png, no titles or floor lines) adds the moves the first lacks: a slash upward (5), a stab
-downward in the air (4), clinging to a wall (2, the drawn wall streak left out), a dash (2), a double jump (4), healing (4), casting
-(4) and sitting alone (4). Frames in the air are anchored at the middle of the body (the game puts it at the hero's centre).
-A sword trail or a glow goes to the frame its middle lies in (on the first sheet: the frame its left end starts from).
-A second atlas, art/hero/hero_frames_bare.webp (the same layout), holds the frames without the drawn sword and without its trails, for
-the other weapons, which the game draws itself: the blade is found as long thin silver strips (the face, a round light shape, is not
-one), the trails as bright teal glow; both are taken out with their dark outline and the hole is filled from the drawing around it."""
+"""Cuts the hero animation sheets (art/source/hero_hd) into art/hero/hero_frames.webp and js/hero_frames_meta.js
+(HERO_FRAMES[anim] = [[x, y, w, h, ax, ay], ...]; (ax, ay) is the ground point under the body).
+Sheet 1 (sheet_hero_anims.png): idle, run, jump, two slashes, hit, death, bench. Sheet 2 (sheet_hero_moves.png): slash up,
+stab down, wall, dash, double jump, heal, cast, rest. Titles, numbers and floor lines are removed, frames are split at given
+columns and loose pieces (trails) go to the nearest frame. A second atlas, hero_frames_bare.webp, has the same frames without
+the drawn sword and its trails, because the game draws the other weapons itself."""
 import json, os, sys
 import numpy as np, cv2
 from scipy import ndimage as ndi
@@ -208,7 +198,7 @@ def main():
             bl = BLADES.get('%s_%d' % (name, j))
             if bl: blades['%s_%d' % (name, j)] = [[round(v * PACK, 1) for v in b[:4]] for b in bl]
     open(os.path.join(ROOT, 'js', 'hero_frames_meta.js'), 'w').write(
-        "'use strict';\n// made by tools/sprites/cut_hero_anims.py: the owner's hero frames in art/hero/hero_frames.webp\n"
+        "'use strict';\n// made by tools/sprites/cut_hero_anims.py: the hero frames in art/hero/hero_frames.webp\n"
         "// [x, y, w, h, ax, ay]: (ax, ay) is the point under the body that stands on the ground\nconst HERO_FRAMES = " + json.dumps(meta, separators=(',', ':')) + ";\n"
         "// where the drawn sword is in a frame: [[grip x, grip y, tip x, tip y], ...] from the frame's corner, the held blade first\n"
         "const HERO_BLADES = " + json.dumps(blades, separators=(',', ':')) + ";\n")

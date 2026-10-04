@@ -3,7 +3,9 @@
 
 // ---------------------------------------------------------------- the bestiary
 function bestiarySeen(i) { const b = BESTIARY[i]; return !!G.seen[(b.boss ? 'b:' : 'e:') + b.k]; }
+// how many entries have been met
 function bestiaryCount() { return BESTIARY.filter((b, i) => bestiarySeen(i)).length; }
+// bestiary input: back out, or move the selection
 function updateBestiary(dt) {
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'pause'; Input.consume('pause'); Input.consume('map'); Sound.play('select'); return; }
   const n = BESTIARY.length, move = d => { G.bestSel = (G.bestSel + d + n) % n; G.bestT = 0; Sound.play('select'); };
@@ -13,6 +15,7 @@ function updateBestiary(dt) {
   if (Input.pressed('down')) move(6);
   G.bestT += dt;
 }
+// bestiary screen: dots strip, portrait stage and the text panel
 function drawBestiary(g) {
   g.fillStyle = 'rgba(3,5,10,0.96)'; g.fillRect(0, 0, VW, VH);
   const n = BESTIARY.length, i = G.bestSel, b = BESTIARY[i], seen = bestiarySeen(i), ar = LANG.cur === 'ar';

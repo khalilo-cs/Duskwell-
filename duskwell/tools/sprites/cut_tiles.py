@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-"""Cuts the owner's crystal tile sheet (art/source/tiles_hd/sheet_crystal_tiles.png) into art/tiles/crystal.webp and js/tiles_meta.js
-(CRYSTAL_TILES: name -> [x, y, w, h] in the atlas, at PACK times the drawing's size).
-The sheet is a tileset for the Crystal Spires: four rock fills (square, with a dark rounded border), three floor slabs (the tan trim on
-top, brackets and a fringe of stalactites under it), two wall pieces, three ceilings with stalactites, four inner corners, three slopes,
-three one-way ledges, two rows of spikes and six pieces of scenery (an altar, a crystal cluster, two arches, a hall, a fallen pillar).
-Pieces are cut off the grey board with cut_world.cut (the rock is opaque; the board shows between the stalactites). The fills are
-cropped to the inside of their border so that they can be laid side by side. Cut pieces also go to art/source/tiles_hd/cut/."""
+"""Cuts the crystal tile sheet (art/source/tiles_hd/sheet_crystal_tiles.png) into art/tiles/crystal.webp and
+js/tiles_meta.js (CRYSTAL_TILES: name -> [x, y, w, h]). Pieces: 4 rock fills (cropped inside their border), 3 floor slabs,
+2 walls, 3 ceilings, 4 corners, 3 slopes, 3 ledges, 2 rows of spikes and 6 scenery pieces."""
 import json, os, sys
 import numpy as np, cv2
 from PIL import Image
@@ -50,7 +46,7 @@ def main():
     atlas.save(os.path.join(od, 'crystal.webp'), quality=90, method=6)
     meta = {n: pos[n] for n in sorted(pos)}
     open(os.path.join(ROOT, 'js', 'tiles_meta.js'), 'w').write(
-        "'use strict';\n// made by tools/sprites/cut_tiles.py: the owner's crystal tile pieces in art/tiles/crystal.webp\n"
+        "'use strict';\n// made by tools/sprites/cut_tiles.py: the crystal tile pieces in art/tiles/crystal.webp\n"
         "// [x, y, w, h], drawn at " + str(PACK) + " of their size on the sheet; CRYSTAL_ORIGIN: where each piece's corner was on the sheet\n"
         "const CRYSTAL_PACK = " + str(PACK) + ";\nconst CRYSTAL_TILES = " + json.dumps(meta, separators=(',', ':')) + ";\nconst CRYSTAL_ORIGIN = " + json.dumps({n: origin[n] for n in sorted(origin)}, separators=(',', ':')) + ";\n")
     print(len(pos), 'pieces', atlas.size, os.path.getsize(os.path.join(od, 'crystal.webp')), 'bytes')

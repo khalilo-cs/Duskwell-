@@ -23,6 +23,7 @@ function formD(g, build, box, base, o) {
   }
   g.beginPath(); build(g); g.strokeStyle = INK; g.lineWidth = o.lw || 2.8; g.lineJoin = 'round'; g.stroke();
 }
+// path builders for formD: an ellipse and a polygon from [x, y, ...]
 const ell = (cx, cy, rx, ry, rot) => g => g.ellipse(cx, cy, Math.max(0.1, rx), Math.max(0.1, ry), rot || 0, 0, Math.PI * 2);
 const pol = pts => g => { g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); };
 
@@ -37,6 +38,7 @@ function hatchD(g, box, n, ang, col, alpha, o) {
   }
   g.restore();
 }
+// add alpha to a #hex or rgb() colour
 function rgbaOf(c, a) { if (c[0] === '#') return rgba(c, a); const m = /^rgb\((.*)\)$/.exec(c); return m ? 'rgba(' + m[1] + ',' + a + ')' : c; }
 
 // rows of overlapping scales over a box (clipped by the caller)
@@ -50,6 +52,7 @@ function scalesD(g, box, size, col, hiCol) {
   g.restore();
 }
 
+// small rivet
 function rivetD(g, x, y, r) {
   r = r || 1.6; const gr = g.createRadialGradient(x - r * 0.4, y - r * 0.4, 0, x, y, r * 1.2);
   gr.addColorStop(0, '#f4f1ea'); gr.addColorStop(1, '#3a3a40'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
@@ -113,7 +116,9 @@ function maskD(g, x, y, rx, ry, o) {
 
 // ---------------------------------------------------------------- showing a creature large (bestiary, tests)
 Art.DUMMY = {};
+// kinds drawn around their centre instead of their feet
 const FLYING = new Set(['flyer', 'diver', 'jelly', 'moth', 'veil', 'wraith', 'queen', 'roc', 'shade', 'shard_fly']);
+// a stand-in enemy object (size, hp) so a portrait can be drawn without a room
 Art.creatureDummy = function (kind, boss) {
   const key = (boss ? 'b:' : 'e:') + kind;
   if (Art.DUMMY[key] !== undefined) return Art.DUMMY[key];

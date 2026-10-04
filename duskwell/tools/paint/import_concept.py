@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""Turns the owner's background concept sheet (art/source/backgrounds_concept/sheet_all15_areas.png: 15 areas, each a wide picture
-plus Sky/Far/Mid/Near strips) into the game's backdrop layers.
-The strips are only ~140x30 px and carry their own opaque sky, so they cannot serve as layers; the big picture of each area (about
-315x129 px) is what is used: cropped, upscaled with a sharpened bicubic, flattened into clean cel colours with firm edges, made to tile sideways, darkened
-a little so the play field stays readable, and saved as art/bg/<theme>/sky.webp (the opaque back layer, 2000x875 = 1600x700 logical).
-Row 5 of the sheet was squeezed vertically in the original image; it is stretched back.
+"""Turns the background concept sheet (art/source/backgrounds_concept/sheet_all15_areas.png) into the backdrop layers
+art/bg/<theme>/sky.webp. The big picture of each area is cropped, upscaled, flattened into clean colours, made to tile sideways
+and darkened a little so the play field stays readable (the small Sky / Far / Mid / Near strips are too small to use).
 usage: import_concept.py [theme ...]   (default: all)"""
 import os, sys
 import numpy as np

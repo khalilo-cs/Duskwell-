@@ -21,6 +21,7 @@ const easeInOut = u => u * u * (3 - 2 * u);
 class Crumble {
   constructor(x, y, w) { this.x = x; this.y = y; this.w = w; this.state = 'idle'; this.t = 0; this.fade = 1; this.chunks = []; }
   rect() { return { x: this.x * TILE, y: this.y * TILE, w: this.w * TILE, h: TILE }; }
+  // is the player standing on it
   carrying() {
     return P.onGround && !P.riding && Math.abs(P.y + P.h - this.y * TILE) < 1.5 &&
       P.x + P.w > this.x * TILE + 1 && P.x < (this.x + this.w) * TILE - 1;
@@ -41,6 +42,7 @@ class Crumble {
       if (!blocked) { this.state = 'idle'; this.t = 0; this.fade = 0; for (let i = 0; i < this.w; i++) G.level.set(this.x + i, this.y, T_CRUMBLE); }
     }
   }
+  // fall apart into chunks and open the tiles
   collapse() {
     this.state = 'gone'; this.t = 0;
     for (let i = 0; i < this.w; i++) {
@@ -61,6 +63,7 @@ class Mover {
     this.len = Math.max(1, Math.hypot(this.bx - this.ax, this.by - this.ay));
     this.s = 0; this.dir = 1; this.waitT = this.wait; this.x = this.ax; this.y = this.ay; this.dx = 0; this.dy = 0; this.t = 0;
   }
+  // true when it needs no lever, or the lever has been pulled
   powered() { return !this.needs || !!G.flags[this.needs]; }
   update(dt) {
     const ox = this.x, oy = this.y;
@@ -94,6 +97,7 @@ class Saw {
     }
     this.place();
   }
+  // put the platform at its place on the path
   place() {
     if (this.R) { this.x = this.cx + Math.cos(this.a) * this.R; this.y = this.cy + Math.sin(this.a) * this.R; return; }
     const k = easeInOut(this.u <= 1 ? this.u : 2 - this.u);
@@ -118,7 +122,9 @@ class Lever {
     this.x = o.x * TILE + 16; this.y = (o.y + 1) * TILE; this.flag = 'lever_' + o.id; this.gates = o.gates || [];
     this.on = !!G.flags[this.flag]; this.flip = this.on ? 1 : 0; this.opening = -1; this.rows = [];
   }
+  // box the nail can hit
   hb() { return { x: this.x - 16, y: this.y - 48, w: 32, h: 48 }; }
+  // struck by the nail: toggle and open or close the gates
   hit() {
     G.burst(this.x, this.y - 34, 8, { color: '#ffd8a0', speed: 200, life: 0.3, size: 2 });
     if (this.on) { Sound.play('clank'); return; }
@@ -151,6 +157,7 @@ class Drip {
   constructor(o) { this.hx = o.x * TILE + 16; this.hy = o.y * TILE; this.len = o.len || 44; this.reset(); this.grow = 1; }
   reset() { this.state = 'hang'; this.x = this.hx; this.y = this.hy; this.vy = 0; this.t = 0; }
   body() { return { x: this.x - 9, y: this.y, w: 18, h: this.len }; }
+  // start falling (with a creak)
   drop() { if (this.state === 'hang' || this.state === 'shake') { this.state = 'fall'; this.vy = 120; Sound.play('creak'); } }
   update(dt) {
     this.t += dt;
@@ -170,6 +177,7 @@ class Drip {
       if (L.solidAtPx(this.x, tip) || tip > L.ph) return this.shatter();
     } else if (this.state === 'gone' && this.t >= DRIP_REGROW) { this.state = 'grow'; this.t = 0; this.grow = 0; this.x = this.hx; this.y = this.hy; }
   }
+  // break on the floor
   shatter() {
     this.state = 'gone'; this.t = 0;
     Sound.play('break'); G.shake(4, 0.15);
@@ -179,6 +187,7 @@ class Drip {
 
 // ------------------------------------------------------------------ registry
 const Mech = {
+  // build the machines of a room when it is entered
   init(def) {
     const L = G.level, m = { crumbles: [], movers: [], saws: [], levers: [], drips: [] };
     G.mech = m;
@@ -249,6 +258,7 @@ const Mech = {
   },
   // pieces that must never be stood on as a safe respawn point
   unsafe(tx, ty) { return G.level.get(tx, ty) === T_CRUMBLE; },
+  // report the lit parts (lever lamps, saw sparks) to the lighting pass
   lights(add, th) {
     const m = G.mech; if (!m) return;
     for (const mv of m.movers) add(mv.x + mv.w / 2, mv.y + 22, 150, mv.powered() ? 0.8 : 0.35, th.glow);

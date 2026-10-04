@@ -1,20 +1,18 @@
 'use strict';
-// The Crystal Spires' tiles drawn from the owner's tileset (art/tiles/crystal.webp, cut by tools/sprites/cut_tiles.py). The sheet is a
-// set of pieces, not a grid, so the room's rock is laid from them the way a level artist would:
-//  - the rock itself: the dark fills, a 2x2-tile block at a time (chosen and mirrored per block), darker the deeper it lies
-//  - the top of every floor and ledge of rock wears the tan trim of the floor slabs (its ends rounded where the rock ends)
-//  - the underside of rock bears the fringe of stalactites of the ceiling pieces (and of the floor slabs' undersides)
-//  - the sides of the rock are inked; one-way plates are the three thin ledges, stretched to their length
-//  - scenery stands on the floors: crystal clusters, an altar, two arches (their insides lit), a ruined hall, a fallen pillar
-// Until the atlas is loaded, and in the other areas, the older tiles are drawn (see Art.tileHooks in art_world.js).
+// Crystal Spires tiles from art/tiles/crystal.webp, laid piece by piece: rock fill blocks, trim along the floors,
+// stalactite fringes under rock, ledges for one-way plates and scenery. Hooked in through Art.tileHooks (art_world.js).
 const CrystalTiles = (() => {
   const img = new Image();
   img.onload = () => { if (typeof G !== 'undefined') G.tileCanvas = null; };         // lay the rooms again, now from the pieces
   img.src = 'art/tiles/crystal.webp';
   const ready = () => typeof CRYSTAL_TILES !== 'undefined' && img.complete && img.naturalWidth > 0;
+  // screen px per atlas px
   const U = 0.914;                                         // screen px per atlas px (the atlas is half the sheet, drawn at 0.457)
+  // rectangle of a piece in the atlas
   const R = n => CRYSTAL_TILES[n];
+  // edge colour
   const INK = '#040a12';
+  // what was laid in the last room (read by the tests)
   const stats = { renders: 0, fills: 0, trims: 0, fringes: 0, ledges: 0, cracks: 0, placed: [] };      // what was laid in the last room (the tests read it)
   // a part of piece n (fractions of it) put at (dx, dy, dw, dh); flip mirrors it left to right
   function part(g, n, fx0, fy0, fx1, fy1, dx, dy, dw, dh, flip) {
@@ -72,6 +70,7 @@ const CrystalTiles = (() => {
   }
   // the trim: the top of the floor slab (its tan face and the heads of its brackets), the ends of the slab on the ends of a run
   const TRIM = 0.27;                                                // how much of the slab's height is the trim
+  // tan trim along the top of a run of rock; rounded ends where the rock ends
   function trim(g, x0, x1, y, capL, capR) {
     const r = R('floor_m'), end = 9 / r[2], h = r[3] * TRIM * U, ew = end * r[2] * U, top = y - 1.5;
     let a = x0, b = x1;
@@ -118,6 +117,7 @@ const CrystalTiles = (() => {
   // ---------------------------------------------------------------- scenery on the floors
   // [piece, fraction of the pieces drawn at U, tiles of free height it needs, glow]
   const PROPS = { crystal: ['prop_crystal', 1, 3, null], altar: ['prop_altar', 1, 4, null], arch_b: ['prop_arch_b', 1, 5, '#ffb060'], arch_a: ['prop_arch_a', 1, 5, '#ffb060'], pillar: ['prop_pillar', 1, 5, null], hall: ['prop_hall', 1, 5, '#ffb060'] };
+  // put scenery on the floors, clear of doors, benches and pickups
   function scenery(g, L, th, isS, seed) {
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
     const T = TILE, def = L.def, keep = [];                                // places where something else stands: doors, benches, stations, signs, NPCs, things to find, levers

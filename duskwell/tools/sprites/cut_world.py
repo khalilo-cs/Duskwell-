@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-"""Cuts the owner's world sheets (art/source/world_hd: objects, machinery, gates and hazards) into one atlas, art/world/world.webp, and
-js/world_meta.js (WORLD_RECTS: name -> [x, y, w, h] in the atlas, at PACK times the drawing's size).
-Every piece is taken as drawn. Two kinds of crop:
-  - solid objects: the background (flat light grey) is found and removed, the piece keeps a thin soft edge
-  - glowing things (a shining coin, the lit shrine, the open chest, the spinning saw): the glow is kept as a soft, see-through halo, by
-    measuring how far each pixel is from the grey behind it and taking that much of its colour
-A piece is everything inside its box that is not background, minus the parts listed in "off" (arrows and marks drawn on the sheet).
-The cut pieces are also written to art/source/world_hd/cut/ for checking."""
+"""Cuts the world sheets (art/source/world_hd: objects, machinery, gates and hazards) into art/world/world.webp and
+js/world_meta.js (WORLD_RECTS: name -> [x, y, w, h]). Solid objects get the grey board removed; glowing things are cut softly
+(opacity from the distance to the grey, colour un-mixed). The pieces are also saved in art/source/world_hd/cut/."""
 import json, os, sys
 import numpy as np, cv2
 from scipy import ndimage as ndi
@@ -147,7 +142,7 @@ def main():
     atlas.save(os.path.join(od, 'world.webp'), quality=90, method=6)
     meta = {n: pos[n] for n in sorted(pos)}
     open(os.path.join(ROOT, 'js', 'world_meta.js'), 'w').write(
-        "'use strict';\n// made by tools/sprites/cut_world.py: the owner's world pieces (objects, machinery, gates, hazards) in art/world/world.webp\n"
+        "'use strict';\n// made by tools/sprites/cut_world.py: the world pieces (objects, machinery, gates, hazards) in art/world/world.webp\n"
         "// as [x, y, w, h], drawn at " + str(PACK) + " of their size on the sheet; WORLD_ORIGIN: where each piece's corner was on its sheet\n"
         "const WORLD_PACK = " + str(PACK) + ";\nconst WORLD_RECTS = " + json.dumps(meta, separators=(',', ':')) + ";\nconst WORLD_ORIGIN = " + json.dumps({n: origin[n] for n in sorted(origin)}, separators=(',', ':')) + ";\n")
     json.dump(origin, open(os.path.join(out_dir, 'origins.json'), 'w'))

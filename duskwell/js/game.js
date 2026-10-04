@@ -1,9 +1,12 @@
 'use strict';
 // Game state, rooms, camera, menus, HUD and the main loop.
 const STEP = 1 / 60;
+// localStorage key of the save file
 const SAVE_KEY = 'duskwell_save_v1';
+// banner colour of each area
 const AREA_COLORS = { frost: '#bfe8ff', ember: '#ff8a4a', hushvale: '#ffd98a', crossroads: '#9cc4ff', mossgrove: '#9dff9a', crystal: '#ff9bd6', throne: '#e6f0ff', spore: '#ffb070', aqueduct: '#8fe0ff', webbed: '#c8a8ff', rustworks: '#ff9c5a', stormcrest: '#a8c0ff', mirror: '#e0d4ff', ossuary: '#efe4c8', lunar: '#cfd8ff' };
 
+// global game state, shared by every file
 const G = {
   state: 'title', canvas: null, g: null, k: 1, time: 0, deaths: 0, t: 0,
   level: null, player: new Player(), enemies: [], projs: [], geos: [], items: [], parts: [], fx: [],
@@ -13,6 +16,7 @@ const G = {
   areaBanner: null, menuSel: 0, menu: 'main', confirmNew: false, mapPulse: 0, tileCanvas: null, tileScale: 0, tileRoom: '',
   geoPulse: 0, ending: null, deathText: 0, lastArea: '', charmSel: 0, charmNote: null, shopTop: 0, shopId: 'general', gearTab: 0, gearSel: 0, gearT: 0, stations: [], look: 0, lookT: 0, lookDir: 0,
 };
+// shortcut to the player
 const P = G.player;
 
 // ---------------------------------------------------------------- effects API used by entities
@@ -24,17 +28,21 @@ G.burst = function (x, y, n, o) {
     G.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp + (o.vy || 0), life: (o.life || 0.5) * rand(0.6, 1), t: 0, size: (o.size || 3) * rand(0.6, 1.2), color: o.color || '#fff', grav: o.grav == null ? 300 : o.grav });
   }
 };
+// effect helpers: screen shake, hit stop, ring and slash marks
 G.shake = function (a, t) { if (a >= G.shakeA || G.shakeT <= 0) { G.shakeA = a; } G.shakeT = Math.max(G.shakeT, t); };
 G.hitstop = function (t) { G.hitstopT = Math.max(G.hitstopT, t); };
 G.ring = function (x, y, color, flat) { G.fx.push({ type: 'ring', x, y, t: 0, life: 0.5, color, flat }); };
 G.slashFx = function (x, y, dir) { G.fx.push({ type: 'slash', x, y, dir: dir || 1, t: 0, life: 0.16 }); };
+// scatter geo as coins of 25, 5 and 1
 G.dropGeo = function (x, y, total) {
   let n = 0;
   while (total >= 25 && n < 12) { G.geos.push(new Geo(x - 6, y - 6, 25)); total -= 25; n++; }
   while (total >= 5 && n < 16) { G.geos.push(new Geo(x - 4, y - 4, 5)); total -= 5; n++; }
   while (total > 0 && n < 20) { G.geos.push(new Geo(x - 3, y - 3, 1)); total--; n++; }
 };
+// remove every hostile projectile
 G.clearHostile = function () { G.projs = G.projs.filter(p => p.friendly); };
+// break a wall tile for good (remembered in the flags)
 G.breakTile = function (tx, ty) {
   const L = G.level;
   L.set(tx, ty, T_AIR); G.flags['brk_' + L.id + '_' + tx + '_' + ty] = true;
@@ -54,7 +62,9 @@ G.breakCrack = function (tx, ty) {
   }
   Sound.play('break'); G.shake(8, 0.3);
 };
+// how many guardian seals have been won
 function sealCount() { return SEAL_FLAGS.filter(f => G.flags[f]).length; }
+// small message at the bottom of the screen
 G.toastMsg = function (text, dur) { G.toast = { text, t: 0, dur: dur || 2.2 }; };
 
 // ---------------------------------------------------------------- saving
@@ -66,6 +76,7 @@ function saveGame() {
     }));
   } catch (e) { /* storage may be blocked */ }
 }
+// read the save, null if there is none or it is invalid
 function readSave() {
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 1 && WORLD.rooms[s.room] ? s : null; } catch (e) { return null; }
 }
@@ -132,16 +143,19 @@ function enterRoom(id, spawn) {
   if (def.area !== G.lastArea) { G.areaBanner = { key: 'area_' + def.area, t: 0, color: AREA_COLORS[def.area] }; G.lastArea = def.area; }
   G.tileCanvas = null;
 }
+// close an arena gate and shake the screen
 function closeGate(gt, silent) {
   const L = G.level;
   for (let y = gt.y; y < gt.y + gt.h; y++) for (let x = gt.x; x < gt.x + gt.w; x++) { L.set(x, y, T_GATE); G.gates.push({ x, y }); }
   if (!silent) { Sound.play('door'); G.shake(6, 0.4); G.burst((gt.x + gt.w / 2) * TILE, (gt.y + gt.h / 2) * TILE, 14, { color: '#8d97a3', speed: 160, life: 0.6, size: 4 }); }
 }
+// open every gate of the current arena
 function openGates() {
   const L = G.level;
   for (const gt of G.gates) { L.set(gt.x, gt.y, T_AIR); G.burst(gt.x * TILE + 16, gt.y * TILE + 16, 8, { color: '#8d97a3', speed: 160, life: 0.6, size: 4 }); }
   G.gates = []; Sound.play('door');
 }
+// put the camera on the player at once
 function snapCamera() {
   const c = cameraTarget(); G.cam.x = c.x; G.cam.y = c.y; G.camV = { x: 0, y: 0 };
 }
@@ -151,28 +165,34 @@ function cameraBounds() {
   const cxw = L.pw <= VW ? -(VW - L.pw) / 2 : null, cyh = L.ph <= VH ? -(VH - L.ph) / 2 : null;
   return { x0: cxw ?? 0, x1: cxw ?? L.pw - VW, y0: cyh ?? 0, y1: cyh ?? L.ph - VH };
 }
+// where the camera wants to be, kept inside the room
 function cameraTarget() {
   const b = cameraBounds();
   return { x: clamp(P.cx - VW / 2 + P.face * 36, b.x0, b.x1), y: clamp(P.cy - VH / 2 - 24 + G.look, b.y0, b.y1) };
 }
 
+// fade out, run fn, fade back in
 G.fadeTo = function (fn, out, hold, inn) {
   if (G.state === 'trans') return;
   G.trans = { t: 0, out: out == null ? 0.25 : out, hold: hold || 0, inn: inn == null ? 0.3 : inn, fn, done: false };
   G.afterTrans = 'play'; G.state = 'trans';
 };
+// fade and put the player back at x, y
 G.respawnFade = function (x, y) {
   G.fadeTo(() => {
     P.x = x - P.w / 2; P.y = y - P.h; P.vx = 0; P.vy = 0; P.invuln = 1.4; P.hurtT = 0; snapCamera();
   }, 0.2, 0.05, 0.25);
 };
+// player died: slow motion, burst, switch to the dying state
 G.onPlayerDeath = function () {
   G.slowmo = 1.2; G.shake(10, 0.6); G.flash = 0.5;
   G.burst(P.cx, P.cy, 30, { color: '#e9f3ff', speed: 260, life: 0.9, size: 4 });
   G.state = 'dying'; G.dyingT = 0;
   Sound.boss(false);
 };
+// the shade was beaten and the geo is back
 G.shadeRecovered = function (amount) { G.shade = null; G.toastMsg(tr('shadowKilled') + '  +' + amount, 3); Sound.play('heal'); };
+// pick up an item: cache, mask seed, nail fang, charm or ability
 G.collectItem = function (it) {
   const d = it.def;
   if (d.kind === 'cache') {
@@ -195,7 +215,9 @@ G.collectItem = function (it) {
   G.burst(it.x, it.y, 30, { color: '#e6f3ff', speed: 240, life: 1, size: 3, grav: -60 });
   G.state = 'banner';
 };
+// boss started dying: keep the health bar
 G.onBossDying = function (b) { G.bossBarShow = true; };
+// boss died: open the gates, give the reward, or start the ending
 G.onBossDeath = function (b) {
   const a = G.arena; if (!a) return;
   a.state = 'won'; G.flags[a.def.flag] = true; G.boss = null; G.bossBarShow = false;
@@ -207,6 +229,7 @@ G.onBossDeath = function (b) {
   if (a.def.ending) { G.ending = { t: 0 }; G.fadeTo(() => { G.state = 'ending'; G.afterTrans = 'ending'; Sound.setTheme('ending'); }, 2.2, 0.4, 1.5); saveGame(); }
 };
 
+// start a new game or load the save
 function startGame(useSave) {
   Object.assign(P, new Player());
   G.look = 0; G.lookT = 0; G.lookDir = 0;
@@ -231,6 +254,7 @@ function nearest(list, px, range) {
   for (const o of list) { const d = Math.abs(o.px - P.cx); if (d < bd && Math.abs(o.py - (P.y + P.h)) < 60) { best = o; bd = d; } }
   return best;
 }
+// up pressed: bench, station, npc or sign
 function interact() {
   const b = nearest(G.benches, P.cx, 54);
   if (b) { P.sit(b); G.bench = { room: G.level.id }; Sound.play('bench'); saveGame(); G.hasSave = true; G.toastMsg(tr('saved'), 1.6); G.burst(b.px, b.py - 40, 16, { color: '#cfe6ff', speed: 90, life: 0.9, size: 3, grav: -90 }); return true; }
@@ -259,11 +283,14 @@ function interact() {
 }
 // ---------------------------------------------------------------- lantern stations (fast travel)
 const STATION_FARE = 25;
+// a station works once it has been lit (the town's always does)
 const stationLit = room => room === 'town' || !!G.flags['station_' + room];
+// lit stations the player can travel to
 function stationList() {
   return WORLD.order.filter(id => WORLD.rooms[id].stations.length && stationLit(id) && id !== G.level.id)
     .map(id => ({ id, name: tr('area_' + WORLD.rooms[id].area), color: AREA_COLORS[WORLD.rooms[id].area] }));
 }
+// fast travel menu
 function updateTravel() {
   const list = stationList(), n = list.length + 1;
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); Input.consume('map'); return; }
@@ -286,6 +313,7 @@ function updateParticles(dt) {
   G.fx = G.fx.filter(f => f.t < f.life);
 }
 
+// one step of the world: player, enemies, projectiles, pickups, arena, camera
 function updatePlay(dt) {
   const L = G.level;
   if (Input.pressed('pause')) { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; Input.consume('pause'); return; }
@@ -388,6 +416,7 @@ function updatePlay(dt) {
   G.cam.x = clamp(G.cam.x, b.x0, b.x1); G.cam.y = clamp(G.cam.y, b.y0, b.y1);
 }
 
+// screen transition (fade out, switch, fade in)
 function updateTrans(dt) {
   const tr_ = G.trans; tr_.t += dt;
   if (tr_.t < tr_.out) G.fadeA = tr_.t / tr_.out;
@@ -400,6 +429,7 @@ function updateTrans(dt) {
   }
 }
 
+// death animation, then respawn at the bench
 function updateDying(dt) {
   G.dyingT += dt;
   if (G.dyingT > 1.3 && !G.trans) {
@@ -416,12 +446,14 @@ function updateDying(dt) {
   }
 }
 
+// move the selection with up / down; true when confirmed
 function menuNav(n) {
   if (Input.pressed('up')) { G.menuSel = (G.menuSel + n - 1) % n; Sound.play('select'); }
   if (Input.pressed('down')) { G.menuSel = (G.menuSel + 1) % n; Sound.play('select'); }
   return Input.pressed('confirm');
 }
 
+// title screen input
 function updateTitle() {
   const items = titleItems();
   if (G.confirmNew) {
@@ -438,6 +470,7 @@ function updateTitle() {
     else if (it === 'lang') { setLang(LANG.cur === 'ar' ? 'en' : 'ar'); }
   }
 }
+// entries of the title menu
 function titleItems() {
   const a = [];
   if (G.hasSave) a.push({ id: 'cont', label: tr('cont') });
@@ -445,16 +478,19 @@ function titleItems() {
   a.push({ id: 'lang', label: tr('lang') });
   return a;
 }
+// text of the graphics setting
 function gfxLabel() {
   const m = Lumen.mode(), ar = LANG.cur === 'ar';
   if (!Lumen.ready()) return ar ? 'قديمة (WebGL غير متاح)' : 'Classic (no WebGL)';
   return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
 }
+// entries of the pause menu
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
+// pause menu input
 function updatePause() {
   const items = pauseItems();
   if (Skins.isOpen()) return;
@@ -476,6 +512,7 @@ function updatePause() {
   }
 }
 
+// dialog: advance or close
 function updateDialog(dt) {
   const d = G.dialog; d.t += dt;
   if (Input.pressed('confirm') || Input.pressed('attack') || Input.pressed('up')) {
@@ -487,6 +524,7 @@ function updateDialog(dt) {
 }
 // ---------------------------------------------------------------- the charm screen
 const CHARM_COLS = 7;
+// charm screen input
 function updateCharms(dt) {
   const list = Charms.ownedList(), n = list.length;
   if (G.charmNote) { G.charmNote.t += dt; if (G.charmNote.t > 3) G.charmNote = null; }
@@ -508,11 +546,13 @@ function updateCharms(dt) {
     }
   }
 }
+// item banner: wait, then close
 function updateBanner(dt) {
   const b = G.banner; b.t += dt;
   if (b.t > 1.4 && (Input.pressed('confirm') || Input.pressed('attack')) || b.t > 7) { G.banner = null; G.state = 'play'; }
 }
 
+// one logic step, by state
 function update(dt) {
   G.t += dt;
   if (G.toast) { G.toast.t += dt; if (G.toast.t > G.toast.dur) G.toast = null; }
@@ -560,9 +600,12 @@ function wrapText(g, text, maxW) {
   if (cur) lines.push(cur);
   return lines;
 }
+// draw text with a soft dark shadow
 function textShadow(g, s, x, y, color, blur) { g.save(); g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = blur || 6; g.fillStyle = color || '#fff'; g.fillText(s, x, y); g.restore(); }
+// text direction for the current language
 function setDir(g) { g.direction = LANG.cur === 'ar' ? 'rtl' : 'ltr'; }
 
+// health mask icon
 function drawMaskIcon(g, x, y, full, pulse) {
   g.save(); g.translate(x, y);
   const s = 1 + pulse * 0.25;
@@ -573,6 +616,7 @@ function drawMaskIcon(g, x, y, full, pulse) {
   else { fs(g, 'rgba(10,14,22,0.6)', 'rgba(200,215,235,0.55)', 2); }
   g.restore();
 }
+// masks, soul orb, geo, boss bar, banners and messages
 function drawHUD(g) {
   // soul orb
   const ox = 52, oy = 54, r = 30, soul = P.soul / 99;
@@ -657,11 +701,13 @@ function drawHUD(g) {
   }
 }
 
+// dark rounded panel
 function drawPanel(g, x, y, w, h) {
   g.fillStyle = 'rgba(5,8,15,0.88)'; g.fillRect(x, y, w, h);
   g.strokeStyle = 'rgba(220,232,250,0.75)'; g.lineWidth = 2; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   g.strokeStyle = 'rgba(220,232,250,0.25)'; g.strokeRect(x + 6.5, y + 6.5, w - 13, h - 13);
 }
+// vertical menu with the selection arrows
 function drawMenu(g, items, sel, y0, step) {
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(28, '600');
   items.forEach((it, i) => {
@@ -678,6 +724,7 @@ function drawMenu(g, items, sel, y0, step) {
 
 // colour of the air, specular shine of the rock and how much the heat shimmers, per area
 const SHINE = { bone: 0.38, lunar: 0.8, storm: 0.55, mirror: 0.85, frost: 0.75, ember: 0.42, aqueduct: 0.5, crystal: 0.7, moss: 0.3, foundry: 0.38, throne: 0.34, webbed: 0.2 };
+// draw the room: background, tiles, objects, enemies, projectiles, effects and light
 function drawWorld(g) {
   const L = G.level, th = THEMES[L.def.theme], t = G.t;
   const lum = Lumen.usable() ? Lumen : null;                  // WebGL lighting, or the old 2D darkness map
@@ -810,6 +857,7 @@ function collectLights(cx, cy, skipPlayer) {
   return out;
 }
 
+// map screen
 function drawMap(g) {
   g.fillStyle = 'rgba(3,5,10,0.94)'; g.fillRect(0, 0, VW, VH);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('map'), VW / 2, 44, '#eef5ff');
@@ -837,8 +885,8 @@ function drawMap(g) {
   g.fillText(tr('area_' + G.level.def.area), VW / 2, VH - 26);
 }
 
-// the title screen with the owner's banner (js/art_title.js): the logo is in the picture, so the words are the Arabic name (in Arabic),
-// the tagline and the menu, below it
+// title screen over the banner (js/art_title.js): the logo is in the picture, so below it come the Arabic name (in Arabic),
+// the tagline and the menu
 function drawTitleBanner(g, t) {
   Art.drawAmbient(g, STEP, 'town', 0, 0, t);
   const ar = LANG.cur === 'ar';
@@ -911,6 +959,7 @@ function drawTitle(g) {
   g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.55)'; g.fillText(tr('ctl'), VW / 2, VH - 22);
 }
 
+// dialog box
 function drawDialog(g) {
   const d = G.dialog, a = clamp(d.t / 0.25, 0, 1);
   g.save(); g.globalAlpha = a; drawPanel(g, 70, 360, VW - 140, 150);
@@ -920,6 +969,7 @@ function drawDialog(g) {
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.beginPath(); const by = 492 + Math.sin(G.t * 5) * 2; g.moveTo(VW / 2 - 8, by - 6); g.lineTo(VW / 2 + 8, by - 6); g.lineTo(VW / 2, by + 3); g.fill();
   g.restore();
 }
+// charm screen
 function drawCharms(g) {
   g.fillStyle = 'rgba(3,5,10,0.95)'; g.fillRect(0, 0, VW, VH);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('charms'), VW / 2, 40, '#eef5ff');
@@ -956,6 +1006,7 @@ function drawCharms(g) {
     else { g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(P.sitting ? tr('charmsHint') : tr('charmsBench'), VW / 2, 494); }
   }
 }
+// fast travel screen
 function drawTravel(g) {
   const list = stationList();
   g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH);
@@ -971,6 +1022,7 @@ function drawTravel(g) {
   });
   drawMenu(g, [{ label: tr('leave') }], G.menuSel - list.length, 196 + list.length * 48 + 18, 48);
 }
+// banner shown after an item is found
 function drawBanner(g) {
   const b = G.banner, k = clamp(b.t / 0.5, 0, 1);
   g.fillStyle = 'rgba(0,0,0,' + 0.55 * k + ')'; g.fillRect(0, 0, VW, VH);
@@ -984,6 +1036,7 @@ function drawBanner(g) {
   if (b.t > 1.4) { g.font = font(18, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText('Z', VW / 2, 420); }
   g.restore();
 }
+// ending screen
 function drawEnding(g) {
   const t = G.ending.t;
   g.fillStyle = '#04060c'; g.fillRect(0, 0, VW, VH);
@@ -1002,6 +1055,7 @@ function drawEnding(g) {
   g.globalAlpha = 1;
 }
 
+// draw the current state
 function draw() {
   const g = G.g;
   g.setTransform(G.k, 0, 0, G.k, 0, 0);
@@ -1033,6 +1087,7 @@ function resize() {
   c.width = Math.max(320, Math.round(r.width * dpr)); c.height = Math.round(c.width * 9 / 16);
   G.k = c.width / VW; G.tileCanvas = null;
 }
+// start: input, sound, fixed-step loop
 function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
@@ -1066,10 +1121,12 @@ function syncAbilityButtons() {
   const b = document.querySelector('[data-act=superdash]');
   if (b) b.hidden = !P.ab.superdash;
 }
+// language of the touch button captions
 function refreshTouchLabels() {
   const caps = { cast: ['روح', 'Soul'], dash: ['اندفاع', 'Dash'], attack: ['ضرب', 'Strike'], jump: ['قفز', 'Jump'], superdash: ['شهاب', 'Comet'] };
   document.querySelectorAll('[data-cap]').forEach(el => { el.textContent = caps[el.dataset.cap][LANG.cur === 'ar' ? 0 : 1]; });
 }
 window.refreshTouchLabels = refreshTouchLabels;
+// handles used by the tests
 window.DW = { G, P, Charms, Gear, SHOPS, shopList, shopSold, shopLocked, buyItem, sealCount, Lumen, draw: () => draw(), enterRoom, startGame, WORLD, Input, step(n) { for (let i = 0; i < n; i++) { update(STEP); Input.endStep(); } } };
 window.addEventListener('DOMContentLoaded', boot);

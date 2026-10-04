@@ -1,4 +1,4 @@
-// Every piece of the owner's world sheets as the game holds it (docs/gallery/world_pieces.webp). usage: node tools/world_pieces.js [out]
+// Every world piece as the game holds it (docs/gallery/world_pieces.webp). usage: node tools/world_pieces.js [out]
 const { open } = require('../tests/lib');
 const fs = require('fs');
 (async () => {

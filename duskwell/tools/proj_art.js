@@ -1,4 +1,4 @@
-// Every frame of the projectiles and explosions the owner drew, as the game holds them, with a few of the hues made from them
+// Every projectile and explosion frame as the game holds it, with a few re-coloured rows
 // (docs/gallery/proj_frames.webp). usage: node tools/proj_art.js [out]
 const { open } = require('../tests/lib');
 const fs = require('fs');

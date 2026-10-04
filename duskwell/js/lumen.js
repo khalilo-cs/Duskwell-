@@ -11,10 +11,15 @@
 //   * then bloom, light shafts, a chromatic kick when the hero is hurt and heat haze in the foundry.
 // If WebGL2 is missing or fails, usable() is false and the old 2D lighting is used instead.
 const Lumen = (() => {
+  // most lights per frame, how many cast shadows, and the light buffer size relative to the screen
   const MAXL = 24, SHADOWED = 4, HALF = 0.5;
+  // gl state: quality 0 off, 1 lit, 2 lit + shadows
   let canvas = null, gl = null, ok = false, quality = 2, mode = 'auto';     // quality: 0 off, 1 lit, 2 lit + shadows
+  // the two 2D layers the game draws into, and their sizes
   let sceneC = null, sceneG = null, entC = null, entG = null, W = 0, H = 0, S = 1;
+  // shader programs, textures, framebuffers
   const P = {}, T = {}, F = {};                                // programs, textures, framebuffers
+  // full-screen quad and the room data (normal map is rebuilt when it changes)
   let quad = null, room = { level: null, dirty: false, pw: 1, ph: 1 };
   try { const q = localStorage.getItem('duskwell_gfx'); if (q === '0' || q === '1' || q === '2') { mode = +q; quality = +q; } } catch (e) { /* ignore */ }
   let slow = 0, frames = 0;
@@ -166,6 +171,7 @@ void main() {
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
     return s;
   }
+  // compile and link a program, with its uniform locations
   function program(frag, names) {
     const p = gl.createProgram();
     gl.attachShader(p, compile(gl.VERTEX_SHADER, VERT)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, frag));
@@ -174,18 +180,21 @@ void main() {
     const u = {}; for (const n of names) u[n] = gl.getUniformLocation(p, n);
     return { p, u };
   }
+  // empty texture with clamped edges
   function texture(filter) {
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return t;
   }
+  // texture plus framebuffer to render into
   function target(w, h) {
     const t = texture(gl.LINEAR); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
     return { t, f, w, h };
   }
+  // set up WebGL2, the shaders and the buffers; false if it cannot
   function init() {
     // opened straight from disk the painted backgrounds taint the canvas, and WebGL may not read it
     if (location.protocol === 'file:') return false;
@@ -280,11 +289,13 @@ void main() {
 
   // ------------------------------------------------------------------ drawing
   function bindTex(unit, tex) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); }
+  // bind a program and a target for the next draw
   function pass(prog, fbo, w, h) {
     gl.useProgram(prog.p);
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo ? fbo.f : null); gl.viewport(0, 0, w, h);
     return prog.u;
   }
+  // copy a 2D canvas into a texture
   function upload(t, src) {
     gl.bindTexture(gl.TEXTURE_2D, t);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
@@ -295,6 +306,7 @@ void main() {
   function render(o) {
     try { return renderNow(o); } catch (e) { console.error('Lumen: ' + e.message); ok = false; return null; }      // fall back to the 2D lighting for good
   }
+  // light the two layers: height and normals, point lights with shadows, bloom, final composite
   function renderNow(o) {
     const lights = o.lights.filter(l => l.x > -l.r && l.y > -l.r && l.x < VW + l.r && l.y < VH + l.r && l.a > 0).sort((a, b) => b.a * b.r - a.a * a.r).slice(0, MAXL);
     const Lu = new Float32Array(MAXL * 4), Lc = new Float32Array(MAXL * 3);

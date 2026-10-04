@@ -1,15 +1,7 @@
 'use strict';
-// The bosses drawn from the owner's assembled poses (art/bosses/poses.webp, cut by tools/sprites/cut_boss_poses.py): each boss has two
-// or three finished drawings (standing, attacking, hurt or enraged). The pictures are drawn exactly as drawn; what is added is motion
-// computed from what the boss is doing, in the same spirit as the Stone Guardian's puppet but for a whole drawing:
-//  - every value (lean, squash, lunge, hover) chases its target through a damped spring (anim.js), so nothing snaps: moves ease in,
-//    overshoot a little and settle, and a heavy boss is slower and bouncier than a light one
-//  - the telegraph is an anticipation: the body gathers (squashes, leans back, trembles) while the boss glows; the attack is the release:
-//    the attack drawing replaces the standing one with a lunge forward that decays through the spring
-//  - walking bobs with each step and leans into the direction of travel; flyers hover and tilt with their speed
-//  - a hit pushes the body back along the spring and flashes it white; stun and death use the hurt drawing; death sinks and fades
-//  - changing drawings cross-fades quickly, aligned on the feet (or the centre for flyers), so the silhouette never pops
-// The Stone Guardian has its own, jointed rig (art_boss_guardian.js).
+// Bosses drawn from their finished poses (art/bosses/poses.webp). The pictures are used as they are;
+// the motion comes from springs driven by what the boss does: telegraph squash, strike lunge, walk bob,
+// hover, hit shove and death sink. The Stone Guardian has its own jointed rig (art_boss_guardian.js).
 const BossPoses = (() => {
   const img = new Image(); img.src = 'art/bosses/poses.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
@@ -35,6 +27,7 @@ const BossPoses = (() => {
     king:        { idle: 0, atk: [0, 1], hurt: 0, face: 1, hm: 1.75, wm: 3.2, heavy: 0.9, glow: '#ffffff', intro: 1 },
   };
 
+  // state of one boss: its springs and which drawing is showing
   class Rig {
     constructor(c) {
       const k = c.heavy || 1, sp = (w, z) => new Spr(0, w * k, z);
@@ -45,6 +38,7 @@ const BossPoses = (() => {
     }
   }
 
+  // move the springs from what the boss is doing (telegraph, strike, walk, hover, hit, death)
   function update(b, c, r, t) {
     let dt = r.t == null ? 0 : t - r.t;
     if (dt < 0 || dt > 0.12) { dt = 0; r.fresh = true; }
@@ -84,6 +78,7 @@ const BossPoses = (() => {
     return dt;
   }
 
+  // draw the current pose, cross-fading from the last one, aligned on the feet
   function draw(g, b, key, t) {
     const c = CFG[key], poses = BOSS_POSES[key]; if (!c || !poses || !ready()) return false;
     const r = b._pr || (b._pr = new Rig(c)), dt = update(b, c, r, t), s = r.s;
@@ -113,6 +108,7 @@ const BossPoses = (() => {
     return true;
   }
 
+  // replace Art.boss[key] for every boss with poses
   function install() {
     for (const key of Object.keys(CFG)) {
       const old = Art.boss[key];

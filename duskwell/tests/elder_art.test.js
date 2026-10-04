@@ -1,6 +1,5 @@
-// The town's Elder is the owner's wizard (js/art_elder.js): drawn from the picture, turned toward the hero (the drawing looks left),
-// breathing, the glow of the staff's crystal and of the lantern on his pack, brighter while he talks, and the torn cloak that trails
-// behind him flutters (strip by strip, with no seam where it starts). Without the picture the older Elder is drawn.
+// The town's Elder (js/art_elder.js): faces the hero, glows, the cloak flutters without a seam, and the old Elder is
+// drawn when the picture is off.
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };

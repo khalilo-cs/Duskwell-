@@ -1,17 +1,14 @@
 'use strict';
-// The owner's drawings of projectiles and explosions (art/fx/proj.webp, cut by tools/sprites/cut_projectiles.py): eight frames each of
-//   ice (a shard forming, flying, dissolving)   rock (falling, the impact, the dust)   void (an orb, its burst, the smoke)
-//   acid (a drop, its splash, the puddle)       fire (a fireball, then its explosion)  bolt (a lightning strike)
-//   bone (a bone in flight, breaking apart)     meteor (falling, then its explosion)
-// Used where the game's own projectiles are: the ice and glass shards, the bone shards of the Grave King, falling rocks (a slag
-// rock falls as a meteor), every orb, the globs of acid and lava, the pillars of lightning, and the explosions of bombs. A thing
-// that dies leaves its ending frames behind it (G.fx 'projfx'). Colours that the drawing does not have are made from the nearest
-// one by turning its hue. Until the atlas is loaded, and for the shots not drawn here, the older drawing is used.
+// Projectiles and explosions from art/fx/proj.webp (8 rows of 8 frames: ice, rock, void, acid, fire, bolt, bone,
+// meteor). A dying shot leaves its ending frames behind (G.fx 'projfx'). Colours the art lacks are made by
+// turning its hue. Shots without art here keep the old drawing.
 const ProjArt = (() => {
   const img = new Image();
   img.src = 'art/fx/proj.webp';
   const ready = () => typeof PROJ_FRAMES !== 'undefined' && img.complete && img.naturalWidth > 0;
+  // how often each frame was drawn (read by the tests)
   const seen = {};                                               // how often each frame was drawn (the tests read it)
+  // mean hue, lightness and saturation of each row, to turn it toward another colour
   const HUE = { ice: 196, void: 269, acid: 75, fire: 21, bolt: 209, bone: 32, meteor: 23, rock: 32 };
   const LUM = { ice: 0.51, void: 0.36, acid: 0.38, fire: 0.44, bolt: 0.61, bone: 0.49, meteor: 0.49, rock: 0.53 };
   const SAT = { ice: 0.55, void: 0.5, acid: 0.55, fire: 0.6, bolt: 0.55, bone: 0.3, meteor: 0.55, rock: 0.3 };
@@ -44,6 +41,7 @@ const ProjArt = (() => {
     }
     return (plans[key] = out);
   }
+  // re-coloured frames, cached
   const variants = {};
   function variant(row, i, c) {
     const p = plan(row, c); if (!p) return null;
@@ -80,12 +78,15 @@ const ProjArt = (() => {
 
   // ---------------------------------------------------------------- what is drawn for each shot
   const heading = p => p.rot != null ? p.rot : Math.atan2(p.vy || 0, p.vx || 1);
+  // which palette (and so which row) a shot uses
   const isIce = p => p.pal && (p.pal === (typeof ICE !== 'undefined' ? ICE : null) || p.pal === (typeof GLASS !== 'undefined' ? GLASS : null));
   const isBone = p => p.boss && p.pal && p.pal === (typeof BONEP !== 'undefined' ? BONEP : null);       // (the skull bat's teeth are drawn from its own sheet)
   const isSlag = p => p.pal && !p.pal.spike;
+  // flight frames; a shot forms for the first moments
   const FLY = [2, 3, 4, 3];
   const flight = t => t < 0.05 ? 0 : t < 0.1 ? 1 : FLY[Math.floor(t * 14) % FLY.length];       // forming, then the full shard pulsing
 
+  // draw the shot if this file has art for it, false otherwise
   function drawShot(g, p, t) {
     const k = p.kind;
     if (k === 'shard' && (isIce(p) || isBone(p))) {
@@ -145,7 +146,9 @@ const ProjArt = (() => {
 
   // ---------------------------------------------------------------- the endings
   const groundY = (x, y) => { const L = G.level; let yy = y; for (let i = 0; i < 24 && L.solidAtPx(x, yy); i++) yy -= 2; return yy; };
+  // add an ending effect
   function fx(spec) { G.fx.push(Object.assign({ type: 'projfx', t: 0, k: 1, life: 0.3 }, spec)); }
+  // a shot died: leave its ending frames (dissolve, burst, dust, splash)
   function onDead(p) {
     if (!ready() || p.friendly) return;
     const k = p.kind, a = heading(p), old = p.life <= 0;
@@ -163,6 +166,7 @@ const ProjArt = (() => {
       fx({ row: 'acid', frames: [1, 2, 3, 4, 5, 6, 7], x: p.x, y: groundY(p.x, p.y + p.r * 0.6), k: p.r * 8.5 / 94, tint: lava ? '#ff8a3a' : null, life: 0.7 });
     }
   }
+  // draw an ending effect
   function drawFx(g, f) {
     if (!ready()) return;
     const n = f.frames.length, i = f.frames[Math.min(n - 1, Math.floor(f.t / f.life * n))], u = f.t / f.life;

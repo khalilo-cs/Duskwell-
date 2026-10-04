@@ -1,6 +1,6 @@
 'use strict';
-// The bestiary: every creature of Duskwell with a large portrait, what it is and how to deal with it. A creature is
-// entered when it first comes into view, and the list is kept with the save (G.seen).
+// Bestiary data: every creature and boss with a portrait and a short text.
+// An entry is unlocked when the creature first comes into view (G.seen).
 const BESTIARY = [
   // ---- creatures
   { k: 'husk', area: 'hushvale', ar: ['الهيكل', 'قشرة فارغة بقي فيها بصيص نور. يجول، ثم يطاردك إذا رآك ويقفز عليك من قرب. اضربه حين يهبط.'], en: ['Husk', 'An empty shell with a spark still in it. It wanders, hunts you on sight and leaps when you are close. Strike it as it lands.'], s: 1.25 },
@@ -50,7 +50,10 @@ const BESTIARY = [
   { k: 'stargazer', boss: true, area: 'lunar', ar: ['الراصد', 'فلكي طافٍ بثوب ليلي مرصّع بالنجوم وخوذة نحاسية بعدسة زجاجية ولحية من الضوء ومنظار طويل. يصوّب الأشعة وينزل النيازك ويدير النجوم ويفتح حقلاً من الجاذبية الضعيفة.'], en: ['The Stargazer', 'A floating astronomer in a night robe sewn with stars, a brass lens-helm, a beard of light and a long telescope. He aims rays, calls meteors, spins stars and opens a field of weak gravity.'] },
   { k: 'regent', boss: true, area: 'lunar', ar: ['وصيّ الكسوف', 'ملك أسود الثوب بقناع فضي وتاج من الأشعة وقرص معتم خلفه بهالة من الجمر. يرسل الهلال والبدر والكسوف ويغرق القاعة بالظلام ويخفض الجاذبية ثم يدير أشعته كمصباح كاشف.'], en: ['The Eclipse Regent', 'A king in black with a silver mask, a crown of rays and a dark disc behind him ringed with corona. He sends crescents, the full moon and the eclipse, drowns the hall in darkness, drops gravity, then sweeps his rays like a searchlight.'] },
 ];
+// lookup from "e:kind" / "b:boss" to the entry number
 const BESTIARY_INDEX = {}; BESTIARY.forEach((b, i) => { BESTIARY_INDEX[(b.boss ? 'b:' : 'e:') + b.k] = i; });
+// key of an enemy in the lookup (some kinds share an entry)
 function bestiaryKey(e) { if (e.isBoss) return 'b:' + e.bossKey; const k = e.kind === 'slimelet' ? 'slime' : e.kind === 'brood_child' ? 'spider' : e.kind; return BESTIARY_INDEX['e:' + k] !== undefined ? 'e:' + k : null; }
+// name and description in the current language
 const bestiaryName = b => b[LANG.cur === 'ar' ? 'ar' : 'en'][0];
 const bestiaryDesc = b => b[LANG.cur === 'ar' ? 'ar' : 'en'][1];

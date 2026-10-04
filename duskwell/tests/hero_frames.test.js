@@ -1,7 +1,5 @@
-// The hero the owner drew frame by frame (js/art_hero_frames.js) is the default look, and every frame shown matches what the hero
-// is doing: breathing at rest, the run cycle only while running, the jump by vertical speed, the two slashes alternating with their
-// trail (the game's own arc then stays away), the overhead cut and the tuck for strikes up and down, the flinch, the fall when dying,
-// and sitting on the bench drawn with it (the world's bench steps aside).
+// The frame-by-frame hero (js/art_hero_frames.js): the frame shown matches what the hero does (rest, run, jump, slashes,
+// up / down cuts, hit, death, bench), and weapons and cloaks show on it.
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };

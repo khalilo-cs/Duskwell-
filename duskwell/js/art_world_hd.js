@@ -1,17 +1,15 @@
 'use strict';
-// The owner's drawings of the world's objects and machinery (art/world/world.webp, cut by tools/sprites/cut_world.py), used as drawn:
-//  - geo (a coin that glints), the moon bench, the signpost (its lantern lights when the hero is near), the shrine of the fast-travel
-//    stations (dark until lit; when lit it wakes in stages and then glows), the chest of a geo cache (it opens when taken)
-//  - the saw blade, the lever, the stalactite (it falls and leaves a heap of rubble), the crumbling platform (it cracks, then
-//    breaks), the moving platform and its chain, the gates of the arenas and the levers, the breakable walls (they break piece by
-//    piece), the bouncing mushroom (it squashes under a landing), the spikes
-// Until the atlas is loaded, and for anything not drawn here, the older drawing is used.
+// Drawings of the world's objects and machinery (art/world/world.webp): geo, bench, sign, station shrine, chest,
+// saw, lever, stalactite, crumbling and moving platforms, gates, breakable walls, mushrooms and spikes.
+// The old drawings are used until the atlas loads.
 const WorldArt = (() => {
   const img = new Image();
   img.onload = () => { if (typeof G !== 'undefined') G.tileCanvas = null; };   // bake the spikes and mushrooms again, now with the drawings
   img.src = 'art/world/world.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
+  // rectangles of the pieces in the atlas
   const R = n => WORLD_RECTS[n];
+  // draw a rectangle of the atlas
   const raw = (g, r, dx, dy, dw, dh) => g.drawImage(img, r[0], r[1], r[2], r[3], dx, dy, dw, dh);
   // a part of a piece, given in the coordinates of the sheet it was drawn on
   const sub = (n, x0, y0, x1, y1) => { const r = R(n), o = WORLD_ORIGIN[n], k = WORLD_PACK; return [r[0] + (x0 - o[0]) * k, r[1] + (y0 - o[1]) * k, (x1 - x0) * k, (y1 - y0) * k]; };
@@ -31,6 +29,7 @@ const WorldArt = (() => {
 
   // ---------------------------------------------------------------- objects
   const oldGeo = Art.drawGeo, oldBench = Art.drawBench, oldSign = Art.drawSign, oldStation = Art.drawStation, oldItem = Art.drawItem;
+  // frames of the coin's glint
   const GLINT = [0, 0, 0, 1, 2, 1, 0, 0, 0, 0];
   Art.drawGeo = function (g, c, t) {
     if (!ready()) return oldGeo(g, c, t);
@@ -122,6 +121,7 @@ const WorldArt = (() => {
       fs(g, '#2c333d', INK, 2.5); g.restore();
     }
   }
+  // moving platform with its chain
   function mover(g, mv, t, th) {
     const w = mv.w + 12, sx = w / R('mover_deck')[2], sy = Math.min(sx, 0.62), r = R('mover_deck');
     g.save(); g.imageSmoothingEnabled = true; if (!mv.powered()) g.filter = 'brightness(0.65)';
@@ -129,17 +129,20 @@ const WorldArt = (() => {
     g.restore();
     if (mv.powered()) bloom(g, mv.x + mv.w / 2, mv.y + 18, 40, th.glow, 0.18 + 0.06 * Math.sin(t * 6 + mv.ax));
   }
+  // saw blade
   function saw(g, s) {
     const k = (s.r * 2.3) / R('saw_spin')[2];
     if (s.spark > 0) bloom(g, s.x, s.y, s.r * 2.4, '#ffb070', 0.35);
     put(g, 'saw_spin', s.x, s.y, k, 0.5, 0.5, { rot: s.spin });
   }
+  // lever, up or down
   function lever(g, l, t) {
     const k = fitH('lever_up', 66), down = l.flip >= 0.5;
     put(g, down ? 'lever_down' : 'lever_up', l.x, l.y + 2, k, 0.5, 1);
     const kx = down ? l.x + 36 : l.x + 10, ky = down ? l.y - 42 : l.y - 62;          // the crystal at the end of the handle
     bloom(g, kx, ky, 26, l.on ? '#9dffc8' : '#7ad8ff', 0.3 + 0.12 * Math.sin(t * 4));
   }
+  // stalactite
   function drip(g, d) {
     if (d.state === 'gone') return;
     const k = (d.len * 1.25) / R('drip_hang')[3] * (d.state === 'grow' ? d.grow : 1);
@@ -154,6 +157,7 @@ const WorldArt = (() => {
     for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) if (L.get(x, y) === T_BOUNCE && L.get(x - 1, y) !== T_BOUNCE) { let n = 1; while (L.get(x + n, y) === T_BOUNCE) n++; out.push({ x, y, n }); }
     L._shrooms = out; L._shroomsOf = L.t; return out;
   }
+  // bounce mushrooms (they squash when landed on)
   function shrooms(g, t) {
     const L = G.level, b = G.bounceAt;
     for (const s of shroomRuns(L)) {
@@ -216,6 +220,7 @@ const WorldArt = (() => {
     const dw = r[2] * k, dh = r[3] * k, ox = grp.x * TILE + (W - dw) / 2, oy = grp.y * TILE + (H - dh) / 2;
     return [r[0] + (x * TILE - ox) / k, r[1] + (y * TILE - oy) / k, TILE / k, TILE / k];
   }
+  // breakable walls and arena gates
   const oldBreak = Art.drawBreak, oldGate = Art.drawGate;
   Art.drawBreak = function (g, x, y, th, t) {
     if (!ready()) return oldBreak(g, x, y, th, t);

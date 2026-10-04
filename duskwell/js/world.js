@@ -1,6 +1,6 @@
 'use strict';
-// World data: rooms are built from tile rectangles. All coordinates are in tiles, y grows downward.
-// Entities are placed by the tile their feet stand in (flyers by their centre tile).
+// World data: rooms are built from tile rectangles (x, y in tiles, y grows downward).
+// Things stand in the tile their feet are in; flyers use their centre tile.
 const T_AIR = 0, T_SOLID = 1, T_ONEWAY = 2, T_HAZARD = 3, T_BREAK = 4, T_GATE = 5, T_BOUNCE = 6, T_CRACK = 7, T_ACID = 8, T_CRUMBLE = 9;
 // bosses whose seals open the throne gate
 const SEAL_FLAGS = ['boss_guardian', 'boss_spore', 'boss_weaver', 'boss_drowned', 'boss_wraith', 'boss_brood'];
@@ -14,12 +14,14 @@ class RoomBuilder {
     this.signs = []; this.winds = []; this.gravs = []; this.arena = null; this.start = null; this.sealGate = null; this.mech = []; this.leverGates = [];
     this.solid(0, 0, w, 1); this.solid(0, h - 1, w, 1); this.solid(0, 0, 1, h); this.solid(w - 1, 0, 1, h);
   }
+  // set a rectangle of tiles to one type (clipped to the room)
   fill(x, y, w, h, v) {
     for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) {
       if (i >= 0 && j >= 0 && i < this.w && j < this.h) this.t[j * this.w + i] = v;
     }
     return this;
   }
+  // shorthand for the tile types, all in tile coordinates
   solid(x, y, w, h) { return this.fill(x, y, w, h, T_SOLID); }
   air(x, y, w, h) { return this.fill(x, y, w, h, T_AIR); }
   plat(x, y, w) { return this.fill(x, y, w, 1, T_ONEWAY); }
@@ -35,6 +37,7 @@ class RoomBuilder {
   mover(x, y, w, tx, ty, o) { this.mech.push(Object.assign({ type: 'mover', x, y, w, to: { x: tx, y: ty } }, o || {})); return this; }
   saw(x, y, o) { this.mech.push(Object.assign({ type: 'saw', x, y }, o || {})); return this; }
   drip(x, y, o) { this.mech.push(Object.assign({ type: 'drip', x, y }, o || {})); return this; }
+  // things placed in the room: lever, door, enemy, item, npc, bench
   lever(id, x, y, gates) { this.mech.push({ type: 'lever', id, x, y, gates }); this.leverGates.push(...gates); return this; }
   door(id, x, y, w, h, to, toDoor) { this.doors.push({ id, x, y, w, h, to, toDoor }); return this; }
   enemy(type, x, y, o) { this.enemies.push(Object.assign({ type, x, y }, o || {})); return this; }
@@ -82,7 +85,9 @@ class RoomBuilder {
     for (const k of Object.keys(doors)) { const d = doors[k]; this.door(d.e[1], d.x0, d.y0, d.x1 - d.x0 + 1, d.y1 - d.y0 + 1, d.e[2], d.e[3]); }
     return this;
   }
+  // tile at x, y (outside the room counts as solid)
   at(x, y) { return (x < 0 || y < 0 || x >= this.w || y >= this.h) ? T_SOLID : this.t[y * this.w + x]; }
+  // cut the doors and close the lever gates, once the room is built
   finish() {
     // doors are cut last so they always open the frame
     for (const d of this.doors) this.air(d.x, d.y, d.w, d.h);
@@ -92,9 +97,12 @@ class RoomBuilder {
   }
 }
 
+// every room by id, and where a new game starts
 const WORLD = { rooms: {}, startRoom: 'town', startPos: { x: 9, y: 17 } };
+// create a room and register it
 function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.rooms[id] = r; return r; }
 
+// all the rooms of the first areas, one block per area
 (function buildWorld() {
   // ===================== HUSHVALE (hub) =====================
   const town = room('town', 64, 22, { area: 'hushvale', theme: 'town', map: { x: 0, y: 0 } });
@@ -122,6 +130,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   cx1.enemy('crawler', 2, 8).enemy('crawler', 14, 12).enemy('flyer', 22, 25).enemy('crawler', 34, 14)
     .enemy('crawler', 13, 29).enemy('crawler', 32, 29).enemy('flyer', 12, 18).enemy('crawler', 22, 39).enemy('crawler', 29, 39);
 
+  // cx2: 72x24; crawler x4, flyer x2, sentinel, husk x2, warden; bench; station; items: seed, cache, charm; doors to cx1, cx3, cx4
   const cx2 = room('cx2', 72, 24, { area: 'crossroads', theme: 'cave', map: { x: 10, y: 6 } });
   cx2.solid(0, 20, 72, 4);
   cx2.air(27, 20, 4, 4).hazard(27, 23, 4, 1);
@@ -138,6 +147,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     .enemy('flyer', 58, 9).enemy('sentinel', 62, 19).enemy('crawler', 14, 19);
   cx2.decor('pillar', 12, 19, { h: 12 }).decor('pillar', 48, 19, { h: 10 });
 
+  // cx3: 40x22; boss arena (guardian); doors to cx2, mg1
   const cx3 = room('cx3', 40, 22, { area: 'crossroads', theme: 'cave', map: { x: 19, y: 6 } });
   cx3.solid(0, 18, 40, 4);
   cx3.plat(5, 15, 5).plat(30, 15, 5);
@@ -165,6 +175,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   mg1.enemy('hopper', 12, 19).enemy('hopper', 22, 19).enemy('spitter', 18, 16).enemy('crawler', 38, 19)
     .enemy('crawler', 42, 19).enemy('flyer', 40, 10).enemy('hopper', 60, 19).enemy('hopper', 66, 19).enemy('flyer', 62, 11);
 
+  // mg2: 36x40; hopper x3, crawler x2, flyer x2, spitter, jelly, husk; bench; station; doors to mg4, mg1, mg3
   const mg2 = room('mg2', 36, 40, { area: 'mossgrove', theme: 'moss', map: { x: 33, y: 4 } });
   mg2.solid(0, 37, 36, 3);
   mg2.plat(3, 34, 7).plat(8, 31, 6).plat(13, 28, 6).plat(18, 25, 6).plat(23, 22, 6).plat(28, 19, 6)
@@ -178,6 +189,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   mg2.enemy('hopper', 11, 30).enemy('crawler', 15, 27).enemy('flyer', 20, 18).enemy('hopper', 25, 21)
     .enemy('spitter', 32, 28).enemy('crawler', 24, 15).enemy('flyer', 10, 8).enemy('hopper', 18, 12).enemy('jelly', 7, 19);
 
+  // mg3: 40x22; boss arena (weaver); doors to mg2, cs1
   const mg3 = room('mg3', 40, 22, { area: 'mossgrove', theme: 'moss', map: { x: 38, y: 2 } });
   mg3.solid(0, 18, 40, 4);
   mg3.plat(5, 15, 5).plat(30, 15, 5);
@@ -202,6 +214,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   cs1.bench(4, 40);
   cs1.enemy('flyer', 12, 24).enemy('flyer', 13, 10).enemy('shard', 10, 5).enemy('crawler', 7, 40);
 
+  // cs2: 72x26; shard x4, flyer x4, crawler x2, husk; bench; station; doors to cs1, cs3
   const cs2 = room('cs2', 72, 26, { area: 'crystal', theme: 'crystal', map: { x: 47, y: -3 } });
   cs2.solid(0, 23, 72, 3);
   cs2.air(20, 23, 7, 3).hazard(20, 25, 7, 1);
@@ -215,6 +228,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   cs2.enemy('shard', 10, 22).enemy('flyer', 14, 12).enemy('flyer', 33, 4).enemy('shard', 42, 22).enemy('shard', 47, 22)
     .enemy('flyer', 48, 12).enemy('crawler', 40, 22).enemy('flyer', 62, 14).enemy('shard', 64, 22).enemy('crawler', 16, 22);
 
+  // cs3: 40x24; boss arena (wraith); doors to cs2, ht1
   const cs3 = room('cs3', 40, 24, { area: 'crystal', theme: 'crystal', map: { x: 56, y: -3 } });
   cs3.solid(0, 20, 40, 4);
   cs3.plat(5, 17, 5).plat(30, 17, 5);
@@ -243,6 +257,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
     .enemy('shard', 57, 26).enemy('flyer', 48, 14).enemy('flyer', 60, 12).enemy('shard', 70, 26);
   ht1.decor('pillar', 16, 26, { h: 20 }).decor('pillar', 48, 26, { h: 20 }).decor('pillar', 72, 26, { h: 20 });
 
+  // ht2: 44x26; boss arena (king); doors to ht3
   const ht2 = room('ht2', 44, 26, { area: 'throne', theme: 'throne', map: { x: 76, y: -4 } });
   ht2.solid(0, 23, 44, 3);
   ht2.plat(5, 20, 5).plat(34, 20, 5).plat(12, 17, 5).plat(27, 17, 5);
@@ -267,6 +282,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   cx4.enemy('crawler', 6, 27).enemy('crawler', 11, 18).enemy('diver', 30, 12).enemy('diver', 24, 20).enemy('spider', 32, 5).enemy('crawler', 36, 30).enemy('crawler', 38, 16);
   cx4.decor('light', 38, 14, { r: 200 });
 
+  // cx5: 48x20; sentinel x2, diver x2, crawler, husk; items: seed, cache, charm; doors to cx4, fd1
   const cx5 = room('cx5', 48, 20, { area: 'crossroads', theme: 'cave', map: { x: 9, y: 11 } });
   cx5.solid(0, 17, 48, 3);
   cx5.solid(10, 12, 3, 5);                                    // five tiles high: double jump
@@ -293,6 +309,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   sp1.enemy('shroom', 23, 22).enemy('shroom', 36, 22).enemy('shroom', 52, 22).enemy('diver', 46, 9).enemy('diver', 57, 12).enemy('jelly', 30, 14);
   sp1.decor('light', 29, 18, { r: 180 }).decor('light', 50, 16, { r: 200 });
 
+  // sp2: 34x44; diver x2, shroom x2, jelly; bench; doors to sp1, sp3
   const sp2 = room('sp2', 34, 44, { area: 'spore', theme: 'spore', map: { x: 29, y: 10 } });
   sp2.solid(0, 41, 34, 3);
   sp2.bounce(6, 39, 3).plat(10, 33, 5).bounce(17, 32, 3).plat(21, 26, 5).bounce(26, 25, 3).plat(20, 19, 5).bounce(15, 18, 3).plat(9, 12, 5).bounce(14, 11, 3);
@@ -302,6 +319,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   sp2.bench(27, 5);
   sp2.enemy('diver', 24, 34).enemy('shroom', 23, 25).enemy('diver', 8, 22).enemy('shroom', 11, 11).enemy('jelly', 26, 12);
 
+  // sp3: 60x24; diver x2, shroom, jelly, husk; bench; doors to sp2, sp4
   const sp3 = room('sp3', 60, 24, { area: 'spore', theme: 'spore', map: { x: 34, y: 11 } });
   sp3.solid(0, 22, 60, 2);
   sp3.acid(14, 22, 32, 1);
@@ -313,6 +331,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   sp3.enemy('diver', 25, 9).enemy('diver', 38, 7).enemy('shroom', 49, 21).enemy('jelly', 31, 12);
   sp3.decor('light', 30, 16, { r: 260, c: '#9dff6a' });
 
+  // sp4: 40x22; boss arena (spore); doors to sp3
   const sp4 = room('sp4', 40, 22, { area: 'spore', theme: 'spore', map: { x: 42, y: 11 } });
   sp4.solid(0, 18, 40, 4);
   sp4.plat(5, 15, 5).plat(30, 15, 5);
@@ -346,6 +365,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   mg5.bench(5, 41);
   mg5.enemy('jelly', 11, 16).enemy('jelly', 12, 32);
 
+  // aq1: 64x24; jelly x2, diver, spider, crawler, sentinel, husk, ram; doors to mg5, aq2
   const aq1 = room('aq1', 64, 24, { area: 'aqueduct', theme: 'aqueduct', map: { x: 13, y: 0 } });
   aq1.solid(0, 22, 64, 2);
   aq1.acid(40, 22, 5, 1).acid(14, 22, 4, 1);
@@ -355,6 +375,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   aq1.enemy('jelly', 30, 9).enemy('diver', 50, 7).enemy('spider', 25, 17).enemy('crawler', 34, 21).enemy('sentinel', 54, 21).enemy('jelly', 10, 12);
   aq1.decor('light', 42, 19, { r: 200, c: '#9dff6a' });
 
+  // aq2: 40x34; diver x2, jelly, spitter; doors to aq1, aq3
   const aq2 = room('aq2', 40, 34, { area: 'aqueduct', theme: 'aqueduct', map: { x: 8, y: -1 } });
   aq2.solid(0, 32, 40, 2);
   aq2.solid(12, 6, 2, 23).solid(18, 9, 2, 20).solid(1, 6, 11, 1);
@@ -363,6 +384,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   aq2.door('w', 0, 3, 1, 3, 'aq3', 'e');
   aq2.enemy('diver', 26, 20).enemy('diver', 32, 10).enemy('jelly', 26, 14).enemy('spitter', 30, 31);
 
+  // aq3: 60x22; sentinel x2, diver, jelly, spider, husk, warden; bench; station; items: cache, charm; doors to aq2, aq4
   const aq3 = room('aq3', 60, 22, { area: 'aqueduct', theme: 'aqueduct', map: { x: 0, y: -4 } });
   aq3.solid(0, 20, 60, 2);
   aq3.acid(18, 20, 4, 1).acid(34, 20, 5, 1);
@@ -375,6 +397,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   aq3.item('cache_aq3', 5, 19, 'cache', { amount: 90 });
   aq3.enemy('sentinel', 44, 19).enemy('sentinel', 28, 19).enemy('diver', 36, 8).enemy('jelly', 20, 10).enemy('spider', 27, 15);
 
+  // aq4: 44x24; boss arena (drowned); doors to aq3
   const aq4 = room('aq4', 44, 24, { area: 'aqueduct', theme: 'aqueduct', map: { x: -6, y: -4 } });
   aq4.solid(0, 20, 44, 4);
   aq4.plat(6, 16, 5).plat(33, 16, 5);
@@ -409,6 +432,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   wd1.bench(30, 40);
   wd1.enemy('spider', 10, 25).enemy('spider', 30, 26).enemy('crawler', 14, 40).enemy('spider', 18, 28);
 
+  // wd2: 64x26; spider x3, diver, crawler, sentinel, husk, warden, ram; bench; station; doors to wd1, wd3
   const wd2 = room('wd2', 64, 26, { area: 'webbed', theme: 'webbed', map: { x: 36, y: 18 } });
   wd2.solid(0, 23, 64, 3);
   wd2.air(20, 23, 4, 3).hazard(20, 25, 4, 1).air(40, 23, 6, 3).hazard(40, 25, 6, 1);
@@ -418,6 +442,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   wd2.bench(58, 22);
   wd2.enemy('spider', 24, 17).enemy('spider', 38, 17).enemy('diver', 46, 14).enemy('crawler', 14, 22).enemy('sentinel', 32, 22).enemy('spider', 6, 10);
 
+  // wd3: 40x30; spider x2, diver x2, crawler; doors to wd2, wd4
   const wd3 = room('wd3', 40, 30, { area: 'webbed', theme: 'webbed', map: { x: 31, y: 17 } });
   wd3.solid(0, 28, 40, 2);
   wd3.plat(30, 25, 5).plat(25, 22, 5).plat(30, 19, 5).plat(25, 16, 5).plat(20, 13, 5).plat(15, 10, 5);
@@ -426,6 +451,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   wd3.door('w', 0, 5, 1, 3, 'wd4', 'e');
   wd3.enemy('spider', 8, 14).enemy('diver', 12, 20).enemy('spider', 33, 8).enemy('crawler', 20, 27).enemy('diver', 34, 14);
 
+  // wd4: 44x24; boss arena (brood); doors to wd3
   const wd4 = room('wd4', 44, 24, { area: 'webbed', theme: 'webbed', map: { x: 25, y: 18 } });
   wd4.solid(0, 20, 44, 4);
   wd4.plat(6, 16, 5).plat(33, 16, 5);

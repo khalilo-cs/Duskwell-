@@ -26,6 +26,7 @@ const HeroStyle = (() => {
   };
 })();
 
+// the slash sprite, drawn over the hero when attacking
 const SLASH_IMG = new Image(); SLASH_IMG.src = SLASH_SRC;
 
 // which animation and pose the hero is in this frame

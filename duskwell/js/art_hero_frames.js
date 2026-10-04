@@ -1,22 +1,19 @@
 'use strict';
-// The hero the owner drew frame by frame (art/hero/hero_frames.webp, cut by tools/sprites/cut_hero_anims.py): breathing at rest,
-// a run of nine strides, a jump, two sword slashes, a flinch, a death, and sitting down on a bench. The frames are used as drawn;
-// this file picks one from what the hero is really doing:
-//  - the run advances with the ground covered, so the feet do not slide; at rest the six breathing frames loop
-//  - in the air the frame follows the real vertical speed (rising, the tuck at the top, falling), and a hard landing shows the last
-//  - a sideways strike plays one of the two drawn slashes (they alternate, as the strikes do), the trail drawn with it
-//  - strikes up and down have their own drawn cuts (from the second sheet), as do the dash, the second jump's spin, clinging to a
-//    wall, healing, casting and resting on the bench
-//  - a wound plays the flinch; dying plays the fall to the ground
-// The game's other looks (the jointed puppet, the pixel heroes, the inked one) stay in the pause menu.
+// The hero drawn frame by frame (art/hero/hero_frames.webp). pick() chooses the frame from the player's state:
+// idle, run by distance, jump by vertical speed, two slashes, up / down cuts, dash, wall, heal, cast, rest, hit,
+// death. Other weapons and cloaks are applied on top (hero_frames_bare.webp is the sheet without the sword).
 const HeroFrames = (() => {
   const img = new Image(); img.src = 'art/hero/hero_frames.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
+  // frame lists from hero_frames_meta.js
   const F = () => HERO_FRAMES;
   const H = 62;                                                       // drawn height of the hero at rest (its box is 38 tall)
+  // screen px per sheet px
   const scale = () => H / F().idle[0][3];
+  // frame of a list by progress, and a looping frame by time
   const seq = (list, k) => list[Math.max(0, Math.min(list.length - 1, Math.floor(k * list.length)))];
   const loop = (list, t, fps) => list[Math.floor(t * fps) % list.length];
+  // what pick() remembers between frames: distance run, strike timing, last hits
   const S = { dist: 0, x: null, atkLen: 0.16, atkPrev: 0, atkAt: -9, atkAlt: 0, atkDir: 'side', hits: null, sitAt: null, sitBench: null, t: 0 };
 
   // the frame for the hero this moment (and whether the slash trail is in it, so the game does not draw its own)
@@ -68,13 +65,17 @@ const HeroFrames = (() => {
   // line the drawn sword had (HERO_BLADES). The cloth of the cloak takes the colour of the equipped cloak.
   const bare = new Image(); bare.src = 'art/hero/hero_frames_bare.webp';
   const KEY = new Map();                                              // frame rectangle -> its name ('run_3'), for HERO_BLADES
+  // name of a frame, e.g. 'slash1_3'
   const keyOf = f => { if (!KEY.size) for (const a in F()) F()[a].forEach((r, i) => KEY.set(r, a + '_' + i)); return KEY.get(f); };
+  // length of each weapon relative to the drawn sword
   const WLEN = { duskblade: 1.08, lance: 1.45, fangs: 0.72, cleaver: 1.0, scythe: 1.25, rapier: 1.18, bonesaw: 1.0 };
+  // equipped weapon and cloak
   const weapon = () => (typeof Gear !== 'undefined' ? Gear.weapon() : 'nail');
   const cloakId = () => (typeof Gear !== 'undefined' ? Gear.cloak() : 'drifter');
   // the cloak's colour on the cloth: the drawing's teal (hue 170..215) is moved to the cloak's hue, saturation and lightness;
   // the glowing trail and the eyes (bright) and the gold, the leather and the mask (other hues) stay
   const tinted2 = {};
+  // colour helpers for re-colouring the cloth
   function hslOf(hex) {
     const c = parseInt(hex.slice(1), 16), r = ((c >> 16) & 255) / 255, g = ((c >> 8) & 255) / 255, b = (c & 255) / 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
@@ -82,6 +83,7 @@ const HeroFrames = (() => {
     if (d > 0) { s2 = d / (1 - Math.abs(2 * l - 1)); h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
     return [h, s2, l];
   }
+  // turn the teal cloth to the equipped cloak's colour
   function recolour(src, id) {
     const key = (src === bare ? 'b:' : 'd:') + id;
     if (tinted2[key]) return tinted2[key];
@@ -105,6 +107,7 @@ const HeroFrames = (() => {
     c.putImageData(data, 0, 0);
     return (tinted2[key] = cv);
   }
+  // the picture to draw from: plain, bare or re-coloured
   function source(useBare) {
     const src = useBare && bare.complete && bare.naturalWidth ? bare : img, id = cloakId();
     return id === 'drifter' || typeof Gear === 'undefined' ? src : recolour(src, id);
@@ -127,6 +130,7 @@ const HeroFrames = (() => {
   }
   // a tinted copy, for the afterimages of a dash
   let scratch = null;
+  // draw a frame in a flat colour (afterimages)
   function tinted(g, f, x, y, face, alpha, tint) {
     const k = scale(), ds = Math.max(1, Math.abs(g.getTransform().a)), w = Math.ceil(f[2] * k * ds) + 2, h = Math.ceil(f[3] * k * ds) + 2;
     if (!scratch) scratch = document.createElement('canvas');
@@ -155,6 +159,7 @@ const HeroFrames = (() => {
   };
 })();
 
+// hooks used by the player drawing: the hero, its afterimages and the death
 Art.drawFramesHero = function (g, p, t, alpha) {
   if (!HeroStyle.frames()) return null;
   return HeroFrames.draw(g, p, t, alpha);

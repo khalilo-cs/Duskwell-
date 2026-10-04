@@ -1,11 +1,11 @@
 'use strict';
-// Hero v2: a cut-out puppet built from the owner's drawn parts (art/hero/hero2.webp, packed by tools/sprites/pack_hero2.py).
-// Head, torso, two arms, two legs of two bones each, the sword and the long cloak are separate pieces moved by a
-// small skeleton, so every pose is computed from the real state of the player instead of being a fixed frame.
-// Angles are canvas rotations (clockwise positive); the hero is built facing +x and mirrored for the other side.
+// Hero v2: a cut-out puppet from art/hero/hero2.webp. Head, torso, arms, legs, sword and cloak are separate
+// pieces moved by a small skeleton from the player's state. Angles are canvas rotations; the hero faces +x.
 const Puppet = (() => {
+  // screen px per atlas px
   const S = 0.5;                                    // logical pixels per atlas pixel
   const img = new Image(); img.src = 'art/hero/hero2.webp';
+  // part rectangles in the atlas
   const R = HERO2_META.parts;
   // pivots and end points inside each part, in atlas pixels
   const PV = {
@@ -19,12 +19,14 @@ const Puppet = (() => {
   const LEGK = 1.22;                                // the legs are drawn a little longer than the sheet so they show under the long cloak
   const SWORD_TILT = 0.49;                          // the blade in the picture points up-right by this much
   const ready = () => img.complete && img.naturalWidth > 0;
+  // rotate a point; add a scaled vector to a point
   const rot = (x, y, a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
   const add = (p, v) => [p[0] + v[0] * S, p[1] + v[1] * S];
 
   // cloak colours: the teal of the drawing is re-hued for the equipped cloak, only on the cloth pieces
   const variants = {};
   const CLOTH = ['torso', 'head_hooded', 'cloak_side', 'cloak_back'];
+  // colour helpers for re-tinting the cloth
   function hsl(hex) {
     const c = parseInt(hex.slice(1), 16), r = ((c >> 16) & 255) / 255, g = ((c >> 8) & 255) / 255, b = (c & 255) / 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
@@ -36,6 +38,7 @@ const Puppet = (() => {
     }
     return [h, s, l];
   }
+  // the atlas, re-coloured for the equipped cloak (cached)
   function atlas() {
     const id = typeof Gear !== 'undefined' ? Gear.cloak() : 'drifter';
     if (id === 'drifter') return img;
@@ -70,6 +73,7 @@ const Puppet = (() => {
 
   // ---------------------------------------------------------------- poses
   const ease = k => k * k * (3 - 2 * k);
+  // joint angles for the hero's state at time t
   function poseOf(s, t) {
     const o = { hipY: 0, lean: 0, head: 0, armA: 0.25, armB: 0.1, tA: 0, kA: 0.12, tB: 0, kB: 0.12, sw: 1.05, cl: 0.1, wave: 0.6, lift: 0, sx: 1, sy: 1, dx: 0, grounded: true, bob: 0, swordOut: true };
     const sp = Math.abs(s.vx), br = Math.sin(t * 2.3);
@@ -179,6 +183,7 @@ const Puppet = (() => {
   }
   // an offscreen sheet for translucent or tinted draws, so overlapping parts do not show through each other
   let scratch = null;
+  // draw into a scratch canvas first, for tint or transparency
   function viaScratch(g, x, y, s, t, k, alpha, tint) {
     const ds = Math.max(1, Math.abs(g.getTransform().a)), W = 200, H = 200, ox = 100, oy = 160;
     if (!scratch) scratch = document.createElement('canvas');
@@ -215,6 +220,7 @@ const Puppet = (() => {
   };
 })();
 
+// the puppet hero
 Art.drawPuppetHero = function (g, p, t, alpha) {
   if (!HeroStyle.puppet()) return false;
   Puppet.draw(g, p, t, alpha); return true;

@@ -2,7 +2,8 @@
 // World drawing: palettes, pre-rendered tile layers, painted parallax backgrounds,
 // living background creatures (bubbles, jellyfish, fireflies, leaves), dark foreground framing.
 const Art = {};
-Art.tileHooks = {};          // theme -> { ready(), solid(g, L, th, isS, seed), plats(g, L, th), scenery(g, L, th, isS, seed) }: a theme drawn from the owner's pieces
+Art.tileHooks = {};          // theme -> { ready(), solid(g, L, th, isS, seed), plats(g, L, th), scenery(g, L, th, isS, seed) }: a theme drawn from a tileset
+// colours and details of each area: sky, three depth layers, tile, highlight, fog and glow
 const THEMES = {
   town:    { sky: ['#1a0908', '#5c1f12', '#b4521e'], far: '#4a1c10', mid: '#2e110b', near: '#1a0907', tile: '#2a1510', hi: '#f0a060', edge: '#070203', fog: '#ff9a4a', part: '#ffb36b', glow: '#ffc27a', leaf: ['#e8742a', '#c9471e', '#f4a640', '#9e2f18'], name: 'town' },
   cave:    { sky: ['#04070e', '#0c1a2e', '#1c3656'], far: '#15283f', mid: '#0e1b2c', near: '#081120', tile: '#131c2a', hi: '#8fb4de', edge: '#020407', fog: '#4f7cb0', part: '#8fd8ff', glow: '#8fd8ff', name: 'cave' },
@@ -66,16 +67,18 @@ Art.drawGravs = function (g, L, t, cx, cy) {
   }
 };
 
+// draw the whole tile layer of a room once (rock, edges, ledges, spikes, door fog)
 Art.renderLevel = function (L, s) {
   const th = THEMES[L.def.theme];
   const c = document.createElement('canvas');
   c.width = Math.ceil(L.pw * s); c.height = Math.ceil(L.ph * s);
   const g = c.getContext('2d');
   g.scale(s, s);
+  // is the tile rock (for edges)
   const isS = (x, y) => { const v = L.get(x, y); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK; };
   const seed = L.id.length * 77;
   const rim = mix(th.tile, th.hi, 0.2), rimHi = mix(th.tile, th.hi, 0.62);
-  // a theme drawn from the owner's pieces (js/art_tiles.js) lays its own rock, edges, ledges and scenery
+  // a theme drawn from a tileset (js/art_tiles.js) lays its own rock, edges, ledges and scenery
   const hook = Art.tileHooks && Art.tileHooks[L.def.theme], mine = !!(hook && hook.ready());
   const mineSolid = mine && hook.solid(g, L, th, isS, seed), minePlats = mine && hook.plats(g, L, th);
 
@@ -174,6 +177,7 @@ Art.renderLevel = function (L, s) {
   return c;
 };
 
+// per-area decoration on the top and bottom edges of rock
 function themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS) {
   const n = th.name;
   if (eT) {
@@ -252,6 +256,7 @@ function themeDetail(g, th, L, x, y, px, py, v, eT, eB, isS) {
     }
   }
 }
+// bounce mushroom cap
 function drawShroomCap(g, th, px, py, w, v) {
   const cx = px + w / 2;
   // stem
@@ -265,6 +270,7 @@ function drawShroomCap(g, th, px, py, w, v) {
   g.fillStyle = '#fff1d8'; for (let i = 0; i < Math.max(2, w / 22); i++) { ellipse(g, px + 8 + hash2(i, px, 7) * (w - 16), py - 8 + hash2(i, px, 9) * 10, 3 + hash2(i, px, 3) * 3, 2.2 + hash2(i, px, 5) * 2); g.fill(); }
   g.fillStyle = 'rgba(255,255,255,0.25)'; ellipse(g, cx - w * 0.2, py - 10, w * 0.18, 3, -0.2); g.fill();
 }
+// spikes in the colour of the area
 function drawSpikes(g, th, px, py, v) {
   const n = th.name, cols = { foundry: '#b8b0a8', cave: '#e4ebf2', moss: '#2c7d4a', crystal: '#e8a8ff', throne: '#eef4ff', town: '#4a2414' };
   for (let i = 0; i < 4; i++) {
@@ -279,8 +285,10 @@ function drawSpikes(g, th, px, py, v) {
 // Every layer has a depth z behind the play plane (negative = in front). Its screen speed is
 // CAM_DIST / (CAM_DIST + z): the ratio a perspective camera at distance CAM_DIST would produce.
 const LAYER_PERIOD = 2200, CAM_DIST = 10;
+// parallax: layers further away move less
 const depthFactor = z => CAM_DIST / (CAM_DIST + z);
 const LAYER_Z = [70, 28, 11], CRITTER_Z = [12, 26], FOG_Z = [8, -1.3], FORE_Z = -2, VERTICAL_PARALLAX = 0.18;
+// random shapes of the three background layers of an area
 function makeLayers(th) {
   const rnd = mulberry32(th.name.length * 9973 + th.name.charCodeAt(0) * 131);
   const layers = [[], [], []];
@@ -295,6 +303,7 @@ function makeLayers(th) {
   for (let i = 0; i < 16; i++) th.critters.push({ x: rnd() * LAYER_PERIOD, y: 60 + rnd() * 380, r: 8 + rnd() * 26, p: rnd() * 7, jelly: rnd() < 0.3, par: depthFactor(lerp(CRITTER_Z[0], CRITTER_Z[1], rnd())) });
   return layers;
 }
+// one background shape (stalactite, vine, crystal, pillar ...) by area
 function drawShape(g, th, li, o) {
   const n = th.name, col = [th.far, th.mid, th.near][li], s = o.s;
   g.fillStyle = col;
@@ -395,6 +404,7 @@ function drawShape(g, th, li, o) {
     }
   }
 }
+// background creatures: bubbles, jellyfish, fireflies, leaves
 function drawCritters(g, th, camX, camY, t) {
   if (!['moss', 'cave', 'aqueduct', 'spore'].includes(th.name)) return;
   for (const c of th.critters) {
@@ -427,11 +437,13 @@ function drawCritters(g, th, camX, camY, t) {
 // mid and near layers, each tiling every PAINT_P logical px). Until an area's set has loaded,
 // or if it cannot load, the procedural layers below are drawn instead.
 const PAINT_P = 1600, PAINT_H = 700, PAINT_TOP = -40, SKY_Z = 160, PAINT_KEEP = 3;
-// The sky layer of these areas is the owner's concept picture (tools/paint/import_concept.py): a whole scene, so the painted
-// silhouette layers over it are thinned (alpha per layer: sky, far, mid, near) to let it show while the play field stays readable.
+// the sky of these areas is a whole concept picture (tools/paint/import_concept.py); the silhouette layers over it are
+// thinned (alpha per layer: sky, far, mid, near) so it shows and the play field stays readable
 const CONCEPT_ALPHA = { default: [1, 0, 0.2, 0.35] };
 for (const k of ['town', 'cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
+// painted backgrounds loaded so far
 const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
+// start loading the painted layers of an area
 Art.loadPainted = function (theme) {
   if (!THEMES[theme]) return;
   if (painted.has(theme)) { const p = painted.get(theme); painted.delete(theme); painted.set(theme, p); return; }
@@ -448,6 +460,7 @@ Art.loadPainted = function (theme) {
 };
 // whether an area's painted layers have all arrived (tests wait on it before measuring the picture)
 Art.paintedReady = theme => painted.has(theme) && painted.get(theme).ready;
+// draw the four painted layers with parallax
 function drawPainted(g, th, p, camX, camY, t) {
   for (let li = 0; li < 4; li++) {
     const f = depthFactor(li ? LAYER_Z[li - 1] : SKY_Z);
@@ -464,6 +477,7 @@ function drawPainted(g, th, p, camX, camY, t) {
     }
   }
 }
+// light rays through the air
 function drawRays(g, th, camX) {
   const n = th.name;
   if (n === 'throne' || n === 'cave' || n === 'title') return;
@@ -484,6 +498,7 @@ Art.drawTitleBackdrop = function (g, camX, t) {
   drawPainted(g, th, p, camX, 0, t);
   return true;
 };
+// background of a room: painted layers, or the code-drawn fallback
 Art.drawBackground = function (g, L, camX, camY, t) {
   const th = THEMES[L.def.theme];
   if (!th.critters) makeLayers(th);
@@ -585,10 +600,12 @@ Art.drawForeground = function (g, theme, camX, camY, t) {
 
 // ---------- ambient particles (screen space) ----------
 Art.motes = [];
+// floating motes and leaves in front of everything
 Art.ambientInit = function () {
   Art.motes = [];
   for (let i = 0; i < 50; i++) Art.motes.push({ x: Math.random() * VW, y: Math.random() * VH, z: 0.3 + Math.random() * 0.9, p: Math.random() * 7, s: 1 + Math.random() * 2.2, rot: Math.random() * 6, kind: Math.random() });
 };
+// move and draw the ambient motes
 Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (const m of Art.motes) {
@@ -650,6 +667,7 @@ Art.drawDecor = function (g, d, t, th) {
   }
 };
 
+// breakable wall, cracked floor, acid / lava, seal door, gate (old drawings)
 Art.drawBreak = function (g, x, y, th, t) {
   const px = x * TILE, py = y * TILE, v = hash2(x, y, 99);
   g.fillStyle = mix(th.tile, th.hi, 0.14); g.fillRect(px, py, TILE, TILE);
@@ -718,7 +736,9 @@ Art.drawGate = function (g, x, y, th, t) {
 
 // ---------- lighting (a darkness map with lights cut out of it) and drifting fog ----------
 let lightCanvas = null;
+// how dark each area is outside the lights
 const DARKNESS = { bone: 0.58, lunar: 0.4, storm: 0.42, mirror: 0.62, frost: 0.3, ember: 0.52, foundry: 0.48, town: 0.22, cave: 0.55, moss: 0.42, crystal: 0.45, throne: 0.58, spore: 0.45, aqueduct: 0.5, webbed: 0.72 };
+// 2D lighting: a darkness map lit by the scene's lights (used when WebGL lighting is off)
 Art.drawLighting = function (g, k, theme, lights) {
   const w = Math.max(64, Math.ceil(VW * k * 0.5)), h = Math.max(36, Math.ceil(VH * k * 0.5));
   if (!lightCanvas || lightCanvas.width !== w || lightCanvas.height !== h) { lightCanvas = document.createElement('canvas'); lightCanvas.width = w; lightCanvas.height = h; }
@@ -744,6 +764,7 @@ Art.drawLighting = function (g, k, theme, lights) {
   }
   g.globalCompositeOperation = o;
 };
+// slow fog layers
 Art.drawFog = function (g, theme, camX, camY, t) {
   const th = THEMES[theme];
   for (let i = 0; i < 7; i++) {

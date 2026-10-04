@@ -2,6 +2,7 @@
 // Keyboard, touch buttons and gamepad, merged into one set of named actions.
 // pressed() is an edge that stays true until a simulation step consumes it.
 const Input = (() => {
+  // key code -> action name (several keys can share one action)
   const KEYS = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
@@ -14,9 +15,12 @@ const Input = (() => {
     Escape: 'pause', KeyP: 'pause',
     Enter: 'confirm', KeyN: 'mute',
   };
+  // per source: what is held; q: pressed this step; rel: released this step
   const held = {}, touch = {}, pad = {}, padPrev = {}, q = {}, rel = {};
+  // which key codes are down right now
   const heldCount = {};
 
+  // set one source's state and record the press / release edges
   function setHeld(src, act, on) {
     const was = isHeld(act);
     src[act] = on;
@@ -24,8 +28,10 @@ const Input = (() => {
     if (now && !was) q[act] = true;
     if (!now && was) rel[act] = true;
   }
+  // an action is held if any source holds it
   function isHeld(a) { return !!(held[a] || touch[a] || pad[a]); }
 
+  // key down: ignore auto-repeat
   window.addEventListener('keydown', e => {
     const a = KEYS[e.code];
     if (!a) return;
@@ -36,6 +42,7 @@ const Input = (() => {
     // Z and Space also confirm menus
     if (a === 'jump') q.confirm = true;
   });
+  // key up
   window.addEventListener('keyup', e => {
     const a = KEYS[e.code];
     if (!a) return;
@@ -44,6 +51,7 @@ const Input = (() => {
     const still = Object.keys(KEYS).some(c => KEYS[c] === a && heldCount[c]);
     if (!still) setHeld(held, a, false);
   });
+  // losing focus releases everything
   window.addEventListener('blur', () => {
     for (const k in held) held[k] = false;
     for (const k in touch) touch[k] = false;
@@ -78,6 +86,7 @@ const Input = (() => {
     });
   }
 
+  // read the first connected gamepad (buttons and left stick)
   function pollPad() {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     const g = pads && Array.from(pads).find(p => p && p.connected);
@@ -98,6 +107,7 @@ const Input = (() => {
     }
   }
 
+  // what the rest of the game uses
   return {
     init() { bindTouch(); },
     poll: pollPad,

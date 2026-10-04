@@ -1,6 +1,5 @@
-// The title screen is the owner's Duskwell banner (js/art_title.js): the picture is drawn (it drifts a little), the logo is in the
-// picture so the code does not write the name over it (in Arabic the Arabic name stands under the logo), the tagline and the menu
-// are below it, the "new game?" question still opens as a panel, and without the picture the older title screen comes back.
+// Title screen (js/art_title.js): the banner is drawn and drifts, the name is not written over the logo, the menu and the
+// 'new game?' panel still work, and the old title screen comes back if the picture fails.
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };

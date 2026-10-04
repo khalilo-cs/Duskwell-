@@ -4,7 +4,9 @@
 // a whole sheet), drag a box over the part you want, and assign it to a character.
 // Crops are kept only in this browser (localStorage); nothing is uploaded or shipped with the game.
 const Skins = (() => {
+  // storage key and the biggest image side kept (px)
   const KEY = 'duskwell_skins_v1', MAX = 256;
+  // characters that can wear a picture: [id, Arabic name, English name]
   const SLOTS = [
     ['player', 'البطل', 'Hero'],
     ['husk', 'الهيكل', 'Husk'], ['crawler', 'الزاحف', 'Crawler'], ['flyer', 'الطائر', 'Flyer'], ['hopper', 'القافز', 'Hopper'],
@@ -46,6 +48,7 @@ const Skins = (() => {
 
   // ---------------------------------------------------------------- the panel
   let root = null, sheet = null, sel = null, cur = 'player', drag = null, view = null;
+  // styles of the panel
   function css() {
     if (document.getElementById('skin-css')) return;
     const st = document.createElement('style'); st.id = 'skin-css';
@@ -65,6 +68,7 @@ const Skins = (() => {
 #skins input[type=file]{display:none}`;
     document.head.appendChild(st);
   }
+  // build and show the picture panel
   function open(onClose) {
     css();
     root = document.createElement('div'); root.id = 'skins'; root.dir = ar() ? 'rtl' : 'ltr';
@@ -95,7 +99,9 @@ const Skins = (() => {
     root.addEventListener('keydown', e => e.stopPropagation());
     renderSlots(); paint();
   }
+  // remove the panel
   function close() { if (root) root.remove(); root = null; }
+  // list of characters, each with its picture
   function renderSlots() {
     if (!root) return;
     const box = root.querySelector('.slots'); box.innerHTML = '';
@@ -106,6 +112,7 @@ const Skins = (() => {
       box.appendChild(d);
     }
   }
+  // draw the loaded image and the crop box
   function paint() {
     if (!root) return;
     const cv = root.querySelector('canvas'), g = cv.getContext('2d');
@@ -125,6 +132,7 @@ const Skins = (() => {
     if (!save()) G.toastMsg(T('لا توجد مساحة كافية في المتصفح لحفظ الصورة.', 'Not enough browser storage to keep this picture.'), 3);
     renderSlots();
   }
+  // take a picture off a character
   function remove(slot) { delete data[slot]; delete imgs[slot]; save(); }
   return { get, draw, open, close, isOpen: () => !!root };
 })();

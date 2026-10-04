@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Cuts the assembled poses of every boss (the big drawings at the bottom of each boss's cell on the part sheets) listed in
-boss_poses.json into one atlas: art/bosses/poses.webp + js/boss_poses_meta.js (BOSS_POSES: key -> [[x, y, w, h], ...], idle first).
-Each pose is the biggest connected piece inside its rectangle, background removed, floor shadow peeled off."""
+"""Cuts the assembled pose of every boss (listed in boss_poses.json) into art/bosses/poses.webp and
+js/boss_poses_meta.js (BOSS_POSES: key -> [[x, y, w, h], ...], idle first). Each pose is the biggest connected piece in its
+rectangle, with the background removed and the floor shadow peeled off."""
 import json, os, sys
 import numpy as np, cv2
 from scipy import ndimage as ndi

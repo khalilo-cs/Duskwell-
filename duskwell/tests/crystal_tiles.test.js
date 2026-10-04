@@ -1,7 +1,5 @@
-// The Crystal Spires drawn from the owner's tileset (js/art_tiles.js): the rooms of that theme lay their rock from the owner's fills
-// (not the old procedural tiles), wear the tan trim on top and stalactite fringes below, have the drawn ledges for one-way plates,
-// and scenery on their floors that never stands on a door, a bench or a thing to find; the other areas keep their own tiles, and
-// without the atlas the old tiles are drawn.
+// Crystal Spires tiles (js/art_tiles.js): rooms are laid from the tileset, with trim, fringes, ledges and scenery that keeps clear
+// of doors, benches and pickups. Other areas keep their tiles, and without the atlas the old tiles are drawn.
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };
@@ -24,7 +22,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   for (const id of ['cs1', 'cs2', 'cs3', 'cs4']) {
     out[id] = await ev(id => { enter(id); const b = stats().renders; const { L } = layer(); const s = stats(); return { laid: s.renders - b, fills: s.fills, trims: s.trims, fringes: s.fringes, ledges: s.ledges, props: s.placed.map(p => p.kind) }; }, id);
   }
-  ok('the four rooms of the Crystal Spires are laid from the owner\'s pieces', Object.values(out).every(o => o.laid === 1 && o.fills > 200 && o.trims >= 1), out);
+  ok('the four rooms of the Crystal Spires are laid from the tileset', Object.values(out).every(o => o.laid === 1 && o.fills > 200 && o.trims >= 1), out);
   ok('rock has its trim on top, stalactite fringes below, and the plates are the drawn ledges', out.cs1.fringes >= 1 && out.cs2.ledges >= 2 && out.cs3.ledges >= 4, out);
   r = await ev(() => { enter('cx1'); const b = stats().renders; layer(); return stats().renders - b; });
   ok('the other areas keep their own tiles (the hook is for the crystal theme only)', r === 0, r);
@@ -69,7 +67,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   });
   ok('scenery stands on floor in free air, clear of doors, benches and things to find; arenas have crystals only', r.total >= 3 && r.bad.length === 0, r);
 
-  // the floors that only a dive breaks: the owner\'s rock with glowing cracks; other areas keep their drawing
+  // the floors that only a dive breaks: the same rock with glowing cracks; other areas keep their drawing
   r = await ev(() => {
     const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const b = stats().cracks;
     Art.drawCrack(g, 0, 0, THEMES.crystal, 0); const a = stats().cracks; Art.drawCrack(g, 0, 0, THEMES.cave, 0);

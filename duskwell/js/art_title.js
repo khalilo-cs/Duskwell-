@@ -1,19 +1,17 @@
 'use strict';
-// The title screen's picture: the owner's Duskwell banner (art/title/banner.webp, made from art/source/title_hd/title_banner.png by
-// tools/sprites/prep_title.py), the moonlit kingdom with the wanderer on the rock and the logo in front of the moon. The picture is
-// wider than the screen (three to one), so it is shown at a size where the wanderer, on the left, and the whole logo, in the middle,
-// are both in view, and it drifts a little from side to side; the moon's light breathes behind the logo. Below it the night
-// colour takes over (the picture's own bottom dissolves into it), which is where the menu stands. Until the picture is loaded the
-// screen stays dark and the picture fades in; if it cannot be loaded at all, the older title screen is used.
+// Title screen picture: the banner (art/title/banner.webp) shown so the logo and the wanderer are both in view,
+// drifting slowly, with the moon's glow breathing. The menu stands on the dark ground below it.
 const TitleArt = (() => {
   const img = new Image(); let failed = false, since = 0;
   img.onerror = () => { failed = true; };
   img.onload = () => { since = performance.now(); };
   img.src = 'art/title/banner.webp';
+  // screen fill, picture scale, left edge cut, how far it is raised, picture height
   const NIGHT = '#05080f', S = 0.68, X0 = 190, Y0 = -18, H = 684;     // the screen fill, the picture's scale, where its left edge is cut, how far it is raised, its height (px of the file)
   const ready = () => img.complete && img.naturalWidth > 0;
   // where things are on the screen (the menu and the texts are placed from these)
   const LAYOUT = { logoBottom: 338, moon: [563, 100] };
+  // draw the title picture; false if it failed to load (the old title is drawn then)
   function draw(g, t) {
     if (failed) return false;
     g.fillStyle = NIGHT; g.fillRect(0, 0, VW, VH);

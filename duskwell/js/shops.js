@@ -5,6 +5,7 @@
 // a condition holds (req), and the lock text says what it is.
 const sx = (ar, en) => (LANG.cur === 'ar' ? ar : en);
 
+// items of the general merchant: upgrades and a few charms
 const SHOP_ITEMS = [
   { id: 'buy_mask', name: 'itemMask', desc: 'itemMaskD', price: 150, icon: 'mask', apply() { P.maxHp++; P.hp = P.maxHp; } },
   { id: 'buy_nail', name: 'itemNail', desc: 'itemNailD', price: 250, icon: 'nail', apply() { P.nail += 4; } },
@@ -18,11 +19,14 @@ const SHOP_ITEMS = [
   { id: 'buy_boots', charm: 'boots', price: 100, apply() { Charms.give('boots'); } },
   { id: 'buy_magnet', charm: 'magnet', price: 90, apply() { Charms.give('magnet'); } },
 ];
+// shop entry for a weapon, cloak or art
 const gearItem = (kind, id, price, extra) => Object.assign({ id: kind + '_' + id, gear: [kind, id], price }, extra || {});
+// conditions that keep an item locked, with the text that says why
 const needDash = { req: () => !!P.ab.dash, lock: ['يحتاج اندفاع الظل', 'Needs the Shadow Dash'] };
 const needSeals = n => ({ req: () => sealCount() >= n, lock: ['يحتاج ' + n + ' أختام من الحرّاس', 'Needs ' + n + ' guardian seals'] });
 const needBoss = (flag, ar, en) => ({ req: () => !!G.flags[flag], lock: ['يحتاج هزيمة ' + ar, 'Defeat ' + en + ' first'] });
 
+// shop id -> title, greeting, npc and items
 const SHOPS = {
   general: { title: ['التاجر الغريب', 'The Strange Merchant'], greet: 'merchant', npc: 'merchant', items: SHOP_ITEMS },
   smith: {
@@ -69,6 +73,7 @@ SHOPS.lunar = {
   items: [gearItem('weapon', 'rapier', 2400)],
 };
 
+// lookups for the shop that is open
 const shopDef = () => SHOPS[G.shopId] || SHOPS.general;
 const shopList = () => shopDef().items.filter(it => !it.needs || G.flags[it.needs]);
 const shopTitle = () => sx(...shopDef().title);
@@ -79,6 +84,7 @@ const shopSold = it => (it.gear ? Gear.owns(...it.gear) : !!G.flags[it.id]);
 const shopLocked = it => !!(it.req && !it.req());
 const lockText = it => sx(...it.lock);
 
+// give the item (gear is equipped at once) and apply it
 function buyItem(it) {
   if (it.gear) {
     const [kind, id] = it.gear;
@@ -88,6 +94,7 @@ function buyItem(it) {
     Sound.play('equip');
   } else { G.flags[it.id] = true; it.apply(); G.toastMsg(shopName(it), 1.8); }
 }
+// shop input: move, scroll, buy, leave
 function updateShop() {
   const list = shopList(), n = list.length + 1, VIS = 4;
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); return; }
@@ -113,6 +120,7 @@ function shopIcon(g, kind, x, y) {
   else if (kind === 'notch') { ellipse(g, 0, 0, 13, 13); fs(g, '#0d1322', INK, 3); g.strokeStyle = '#7fe3d9'; g.lineWidth = 2.5; ellipse(g, 0, 0, 9, 9); g.stroke(); g.fillStyle = '#7fe3d9'; ellipse(g, 0, 0, 3.5, 3.5); g.fill(); }
   g.restore();
 }
+// icon of a piece of gear, dimmed when it cannot be had
 function gearIcon(g, gear, x, y, size, t, dim) {
   g.save(); if (dim) g.globalAlpha = 0.45;
   if (gear[0] === 'weapon') Art.weaponIcon(g, gear[1], x, y, size, t);
@@ -131,6 +139,7 @@ function drawGearDetail(g, kind, id, y0, h, extra) {
   setDir(g); g.font = font(15, '600'); g.fillStyle = '#9fe0d8'; if (st) g.fillText(st, VW / 2, y0 + 98);
   if (extra) { g.fillStyle = '#9db5d6'; g.fillText(extra, VW / 2, y0 + 120); }
 }
+// shop screen: list with a scroll, the selected item and its price
 function drawShop(g) {
   const list = shopList(), VIS = 4, ROW = 56, Y0 = 126, t = G.t, n = list.length + 1;
   g.fillStyle = 'rgba(0,0,0,0.62)'; g.fillRect(0, 0, VW, VH);
@@ -178,10 +187,12 @@ function drawShop(g) {
 // ---------------------------------------------------------------- the equipment screen (pause menu)
 const GEAR_TABS = ['weapon', 'cloak', 'art'];
 const gearTabName = k => ({ weapon: sx('الأسلحة', 'Blades'), cloak: sx('العباءات', 'Cloaks'), art: sx('فنون النصل', 'Nail arts') }[k]);
+// rows of the current tab (arts are all listed, the rest only when owned)
 function gearRows() {
   const kind = GEAR_TABS[G.gearTab];
   return Gear.ORDER[kind].filter(id => kind === 'art' || Gear.owns(kind, id)).map(id => ({ kind, id }));
 }
+// equipment screen input
 function updateGear(dt) {
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'pause'; Input.consume('pause'); Input.consume('map'); Sound.play('select'); return; }
   G.gearT = (G.gearT || 0) + dt;

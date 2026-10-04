@@ -1,7 +1,6 @@
 'use strict';
-// The owner's icons (art/icons/icons.webp, cut by tools/sprites/cut_icons.py): the weapons and cloaks of the equipment screen and the
-// shops, the 21 charm medallions, the health masks, the soul orb, the geo, the bench and the lantern of the travel stations.
-// Each is drawn as it was drawn; where an icon is missing the older code-drawn version takes over, so nothing disappears.
+// Icons from art/icons/icons.webp: weapons and cloaks, charm medallions, health masks, soul orb, geo,
+// bench and station lantern. A missing icon falls back to the code-drawn one.
 const IconArt = (() => {
   const img = new Image(); img.src = 'art/icons/icons.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
@@ -57,8 +56,8 @@ const IconArt = (() => {
   };
 })();
 
-// The weapons in the hand (and on the back): the owner's drawings, placed so the grip is the origin and the line from grip to tip lies
-// along +x, as the code-drawn weapons were. Grip and tip are points in the icon (icon pixels); the older drawing takes over until the atlas loads.
+// weapons in the hand (and on the back): the icon is placed so the grip is the origin and the grip-to-tip line lies along +x,
+// like the code-drawn weapons. Grip and tip are points in the icon (icon pixels); the old drawing is used until the atlas loads.
 (function () {
   const AX = { scythe: [[70, 215], [380, 45]], lance: [[60, 190], [168, 12]], cleaver: [[45, 215], [160, 40]], rapier: [[80, 215], [90, 15]], bonesaw: [[30, 175], [175, 45]], fangs: [[110, 95], [140, 230]], duskblade: [[20, 35], [150, 230]] };
   for (const id of Object.keys(AX)) {

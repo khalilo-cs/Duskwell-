@@ -6,8 +6,11 @@
 // a specular glint from every nearby lamp, lantern or spell, and a cool rim light from behind. The
 // lit frame is scaled up with crisp nearest-neighbour pixels. Contact shadows sit under the feet.
 const Pixel = (() => {
+  // screen px per sprite px
   const SCALE = 3;
+  // loaded sprite sheets by name
   const sheets = {};
+  // scene lights and ambient colour (set every frame)
   let lights = [], ambient = [0.5, 0.52, 0.6];
   let work = null, wg = null;                 // scratch canvas a frame is lit into
   let flat = false, shadowG = null;           // Lumen mode: no lighting here, shadows go to another context
@@ -65,6 +68,7 @@ const Pixel = (() => {
 
   // ---------------------------------------------------------------- scene lights (world space)
   function hexRGB(c) { if (!c) return [1, 0.95, 0.85]; const v = parseInt(c.slice(1), 16); return [(v >> 16 & 255) / 255, (v >> 8 & 255) / 255, (v & 255) / 255]; }
+  // set the lights (screen space) and the ambient colour of the area
   function setScene(list, camX, camY, theme) {
     lights = list.map(l => ({ x: l.x + camX, y: l.y + camY, r: l.r, a: l.a, c: hexRGB(l.c) }));
     const th = THEMES[theme] || THEMES.cave;
@@ -174,6 +178,7 @@ const Pixel = (() => {
     g.fillStyle = gr; g.beginPath(); g.arc(cx, gy, rw, 0, 7); g.fill(); g.restore();
   }
 
+  // frame number of an animation at time t
   function frameOf(name, anim, t) {
     const s = sheets[name]; if (!s) return 0;
     const f = s.meta.anims[anim] || s.meta.anims.idle, fps = (s.meta.fps && s.meta.fps[anim]) || 8;

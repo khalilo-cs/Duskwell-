@@ -1,6 +1,5 @@
-// The owner's drawings of the world's objects and machinery (js/art_world_hd.js): every room draws with them, and the moving
-// parts behave: a stalactite leaves rubble, a geo cache is a chest that opens when taken, a broken wall drops its pieces, a mushroom
-// squashes under a landing, a shrine wakes when its station is lit.
+// World object art (js/art_world_hd.js): every room draws with it and the moving parts still behave (stalactite rubble,
+// geo cache chest, breaking walls, mushroom squash, station shrine).
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };

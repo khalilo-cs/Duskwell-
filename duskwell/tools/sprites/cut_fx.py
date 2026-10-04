@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Cuts the owner's nail-art effect strips (art/source/effects/strips_moon_rend_dash_nova_dive_comet.png: Moon Rend, Dusk Rush, Soul Nova,
-the dive burst, the comet trail; each a row of frames on a flat grey) into art/fx/fx.webp + js/fx_meta.js (FX_FRAMES: name -> [[x, y, w, h], ...]).
-Frame borders are the valleys between the frames' light mass (fx_cuts.json). Transparency comes from the difference to the local
-background, and the colour is un-premultiplied so a glow does not carry a grey halo."""
+"""Cuts the nail-art effect strips (art/source/effects: Moon Rend, Dusk Rush, Soul Nova, dive, comet) into art/fx/fx.webp
+and js/fx_meta.js (FX_FRAMES: name -> [[x, y, w, h], ...]). Frame borders come from fx_cuts.json; transparency comes from the
+difference to the local background and the colour is un-premultiplied, so a glow has no grey halo."""
 import json, os
 import numpy as np, cv2
 from scipy.signal import find_peaks

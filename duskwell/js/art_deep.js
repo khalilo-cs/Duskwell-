@@ -4,6 +4,7 @@
 
 FLYING.add('skullbat'); FLYING.add('orrery'); FLYING.add('censer');
 
+// bone colour
 const BONEC = '#e8dcc0';
 // a long bone: a shaft with a knob at both ends; from (x0, y0) to (x1, y1)
 function boneD(g, x0, y0, x1, y1, w, o) {
@@ -272,6 +273,7 @@ function ribsD(g, cx, cy, rx, ry, n, w, fl, face) {
     if (!fl) { g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = w * 0.3; g.beginPath(); g.ellipse(cx, y - w * 0.2, r, ry * 0.3, 0, a0 + 0.2, a1 - 0.5); g.stroke(); }
   }
 }
+// a row of n vertebrae along a line from (x0, y0) to (x1, y1)
 function vertebraeD(g, x0, y0, x1, y1, n, r, fl) {
   for (let i = 0; i < n; i++) { const u = i / (n - 1), x = lerp(x0, x1, u), y = lerp(y0, y1, u); formD(g, ell(x, y, r * (1.2 - u * 0.3), r * 0.62), [x, y, r, r * 0.6], '#dcd0b2', { flash: fl, spec: 0.3, lw: 1.8 }); if (!fl) { g.fillStyle = INK; g.fillRect(x - 1.2, y + r * 0.5, 2.4, 1.6); } }
 }

@@ -5,21 +5,29 @@
 // when index.html is opened straight from disk) the score falls back to a plain <audio> element,
 // and failing that to the old procedural ambience, so the game always has music.
 const Sound = (() => {
+  // web audio nodes: master -> effects bus, recorded music bus, synth fallback bus
   let ctx = null, master = null, sfxBus = null, musicBus = null, fileBus = null, delay = null;
+  // current state: mute, area theme, boss music, fallback score timer
   let muted = false, theme = 'title', bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
 
+  // root note (Hz) of the synth fallback for each area
   const ROOT = { ending: 73.4, bone: 65.4, lunar: 82.4, storm: 87.3, mirror: 69.3, frost: 98.0, ember: 58.3, foundry: 77.8, title: 73.4, town: 110, cave: 73.4, moss: 87.3, crystal: 82.4, throne: 65.4, spore: 92.5, aqueduct: 69.3, webbed: 61.7 };
+  // scale steps used by the fallback score
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
+  // area theme -> music file
   const TRACK = { ending: 'ending', title: 'overture', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
   // which battle theme each boss fights to (a boss key, or true for the last one); anything else gets the common one
   const BOSS_TRACKS = { king: 'king', bonewright: 'boss_bone', marrow: 'boss_bone', stargazer: 'boss_moon', regent: 'boss_moon' };
   const bossTrackOf = which => (which === true ? 'king' : (typeof which === 'string' && BOSS_TRACKS[which]) || 'boss');
+  // folders of the recorded music and effects
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
   const AMB_THEME = { town: 'forest', moss: 'forest' };           // area -> ambience loop (audio/sfx/amb_*.mp3)
+  // volumes
   const MUSIC_VOL = 0.8;
   const MASTER_VOL = 0.55;
 
+  // create the audio graph (needs a user gesture), then start the score and the effects
   function init() {
     if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -190,6 +198,7 @@ const Sound = (() => {
     },
   };
 
+  // one synthesised note: type, frequency slide, length, volume
   function tone(o) {
     if (!ctx || muted) return;
     const t0 = ctx.currentTime + (o.delay || 0);
@@ -205,6 +214,7 @@ const Sound = (() => {
     osc.start(t0); osc.stop(t0 + o.d + 0.05);
   }
   let noiseBuf = null;
+  // filtered noise burst (hits, whooshes, rumbles)
   function noise(o) {
     if (!ctx || muted) return;
     if (!noiseBuf) {
@@ -226,6 +236,7 @@ const Sound = (() => {
     src.start(t0, Math.random()); src.stop(t0 + o.d + 0.05);
   }
 
+  // synthesised sound effects by name
   const FX = {
     jump() { tone({ f: 300, f2: 560, d: 0.13, v: 0.12 }); },
     djump() { tone({ f: 420, f2: 900, d: 0.16, v: 0.13, type: 'triangle' }); noise({ f: 3000, f2: 800, d: 0.12, v: 0.06, type: 'highpass' }); },
@@ -271,11 +282,13 @@ const Sound = (() => {
     sdlaunch() { noise({ f: 300, f2: 3000, d: 0.35, v: 0.22, type: 'bandpass', q: 0.8 }); tone({ f: 110, f2: 55, d: 0.4, v: 0.22, type: 'sawtooth' }); },
   };
 
+  // one note of the fallback score
   function note(semi, dur, vol, oct) {
     const root = ROOT[theme] || 110;
     tone({ f: root * Math.pow(2, (semi + (oct || 0) * 12) / 12), d: dur, v: vol, a: 0.03, bus: musicBus, type: 'sine' });
     tone({ f: root * Math.pow(2, (semi + (oct || 0) * 12) / 12), d: dur, v: vol * 0.5, a: 0.03, bus: delay, type: 'sine' });
   }
+  // fallback score: slow pads and sparse notes, a pulse in boss fights
   function startMusic() {
     if (timer) clearInterval(timer);
     timer = setInterval(() => {
@@ -296,6 +309,7 @@ const Sound = (() => {
     }, bossMode ? 260 : 820);
   }
 
+  // what the rest of the game calls
   return {
     init,
     play(name) { try { const r = Rec.play(name); if (r !== 'replace' && FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },

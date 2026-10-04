@@ -1,16 +1,12 @@
 'use strict';
-// The other twenty creatures the owner drew frame by frame (the same atlas as js/art_anims.js, cut by tools/sprites/cut_anims.py from
-// the rows and roles in tools/sprites/creature_anims.json). Each one has a brain: from the state its code is in (entities.js,
-// enemies_deep.js) it picks the drawn frame, so the drawing follows what the creature really does:
-//  - wind-ups play over the anticipation the code waits through, strikes while the blow is live, the recovery after it
-//  - leaps and dives use the frames for going up and coming down by the creature's real speed
-//  - special states have their own frames: the mole and the lava worm under the floor, the heap as a pile, rising, a lone skull and
-//    knitting back, the roller's ball (turning as it rolls), the ram dazed after a wall, the veil fading and coming back, the icicle
-//    trembling, falling and shattering where it lands
-// The live parts stay live: the chain bearer's ball (drawn from the sheet) on its chain, the orrery's three orbs, the censer's chain.
+// Frame animations for the other twenty creatures (same atlas as art_anims.js). Each has a small brain that
+// maps its state to a frame (wind-up, strike, leap, buried, pile, curled ball ...). Live parts such as the chain
+// ball, the orrery orbs and the censer chain are still drawn in code.
 (() => {
   const { seq, loop, since, move } = AnimArt.H, img = AnimArt.img;
+  // extra pictures from the atlas (their projectiles)
   const X = () => (typeof CREATURE_EXTRAS !== 'undefined' ? CREATURE_EXTRAS : {});
+  // short names: state, time in state, hurt frame
   const st = e => e.currentState, T = e => e.stateT || 0;
   const hurt = (d, A) => (d.hurtT > 0 ? A.hurt[0] : null);
   // a sprite from the extras, centred at (x, y), h px tall, turned by rot
@@ -29,6 +25,7 @@
     let r = want - base; while (r > Math.PI) r -= Math.PI * 2; while (r < -Math.PI) r += Math.PI * 2;
     return Math.max(-0.9, Math.min(0.9, r));
   };
+  // is the player within R of the creature
   const near = (e, R) => { const p = G.player; return p && !p.dead && !e.isDummy && Math.hypot(p.cx - e.cx, p.cy - e.cy) < R; };
 
   // ---------------------------------------------------------------- walkers that wind up and strike
@@ -122,6 +119,7 @@
       return rise ? loop(A.idle, t, 3, (e.x || 0) * 0.01) : move(e, d, A, 8);
     };
   }
+  // no shadow while buried
   const buriedShadow = e => !e.buried;
   AnimArt.add('mole', { hm: 1.72, wm: 2.5, brain: burrower(false), shadow: buriedShadow });
   AnimArt.add('lavaworm', { hm: 2.05, wm: 2.4, brain: burrower(true), shadow: buriedShadow });

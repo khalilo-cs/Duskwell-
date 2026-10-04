@@ -1,16 +1,20 @@
 'use strict';
-// Characters, projectiles, pickups and effects. Hand-inked look: heavy black outlines,
-// pale masks with large hollow eyes, segmented shells. Origin is at the feet (centre for flyers).
+// Characters, projectiles, pickups and effects, in a heavy-ink style: black outlines,
+// pale masks with big hollow eyes, segmented shells. Origin is at the feet (centre for flyers).
 
+// canvas shortcuts: ellipse path, polygon path from [x, y, ...], fill and stroke
 function ellipse(g, x, y, rx, ry, rot) { g.beginPath(); g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot || 0, 0, Math.PI * 2); }
 function poly(g, pts) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); }
 function fs(g, fill, stroke, lw) { if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2.5; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); } }
+// soft radial glow
 function glow(g, x, y, r, color, a) {
   const gr = g.createRadialGradient(x, y, 0, x, y, r);
   gr.addColorStop(0, rgba(color, a)); gr.addColorStop(1, rgba(color, 0));
   g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
 }
+// the same glow, added to what is below it
 function bloom(g, x, y, r, color, a) { const o = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter'; glow(g, x, y, r, color, a); g.globalCompositeOperation = o; }
+// ink black and bone white used everywhere
 const INK = '#050608';
 const BONE = '#f3f5f7';
 
@@ -76,6 +80,7 @@ function heroSword(g, x, y, ang, len, plain) {
 // charge, sdGo, turn, landT, hurt, sit, dive; o.scale enlarges the whole figure (title screen).
 // A tint draws a flat silhouette (dash ghosts, the shade).
 const HERO_SCALE = 1.1;
+// the hero (the Wanderer): squash, lean, cloak, scarf and sword from the player's state
 function wanderer(g, fx, fy, face, o, alpha, tint) {
   g.save(); g.translate(fx, fy); g.globalAlpha = alpha;
   let sx = 1, sy = 1, lean = 0, ox = 0;
@@ -205,6 +210,7 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   }
   g.restore();
 }
+// the player: afterimages, comet charge and streak, dive trail, healing glow, then the chosen hero look
 Art.drawPlayer = function (g, p, t) {
   const pixelGhosts = !Skins.get('player') && (Art.drawFramesGhosts(g, p, t) || Art.drawPuppetGhosts(g, p, t) || Art.drawPixelGhosts(g, p, t));
   for (const gh of pixelGhosts ? [] : p.ghost) {
@@ -274,10 +280,12 @@ Art.drawPlayer = function (g, p, t) {
 
 // ---------------------------------------------------------------- enemies
 const F = (e, c) => (e.flash > 0 ? '#ffffff' : c);
+// per-kind drawing functions are added to Art.enemy and Art.boss by the other art files
 Art.enemy = {};
 
 // ---------------------------------------------------------------- bosses
 Art.boss = {};
+// glow while a boss telegraphs an attack
 function telGlow(g, b, color, x, y, r) { if (b.tele > 0) bloom(g, x, y, r, color, 0.22 + 0.25 * Math.abs(Math.sin(b.t * 12))); }
 
 // ---------------------------------------------------------------- projectiles, pickups, props
@@ -345,6 +353,7 @@ Art.drawProj = function (g, p, t) {
     }
   }
 };
+// pickups and props: geo, items, benches, people, signs (each one below)
 Art.drawGeo = function (g, c, t) {
   const x = c.x + c.w / 2, y = c.y + c.h / 2, s = c.w * 0.8 * (0.75 + 0.25 * Math.abs(Math.cos(t * 6 + c.x)));
   bloom(g, x, y, c.w * 2.2, '#ffe9a0', 0.3);

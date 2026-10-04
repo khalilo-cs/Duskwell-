@@ -1,5 +1,5 @@
 'use strict';
-// made by tools/sprites/cut_tiles.py: the owner's crystal tile pieces in art/tiles/crystal.webp
+// made by tools/sprites/cut_tiles.py: crystal tile pieces in art/tiles/crystal.webp
 // [x, y, w, h], drawn at 0.5 of their size on the sheet; CRYSTAL_ORIGIN: where each piece's corner was on the sheet
 const CRYSTAL_PACK = 0.5;
 const CRYSTAL_TILES = {"ceil_l":[1445,2,129,82],"ceil_m":[2,136,134,74],"ceil_r":[1576,2,138,82],"corner_0":[624,2,88,88],"corner_1":[714,2,82,88],"corner_2":[983,2,86,87],"corner_3":[798,2,87,88],"fill_0":[203,136,68,68],"fill_1":[273,136,68,68],"fill_2":[343,136,68,68],"fill_3":[773,136,70,52],"floor_l":[1872,2,140,79],"floor_m":[637,136,134,56],"floor_r":[1716,2,154,80],"ledge_0":[845,136,114,50],"ledge_1":[961,136,113,50],"ledge_2":[1076,136,128,50],"prop_altar":[549,2,73,90],"prop_arch_a":[201,2,114,125],"prop_arch_b":[460,2,87,108],"prop_crystal":[138,136,63,72],"prop_hall":[2,2,197,132],"prop_pillar":[317,2,141,124],"slope_a":[887,2,94,88],"slope_b":[1071,2,108,87],"slope_c":[1181,2,90,87],"spikes_crystal":[413,136,109,58],"spikes_skull":[524,136,111,58],"wall_l":[1273,2,84,83],"wall_r":[1359,2,84,83]};

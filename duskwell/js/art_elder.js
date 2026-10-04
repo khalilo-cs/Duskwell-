@@ -1,14 +1,13 @@
 'use strict';
-// The Elder of Hushvale drawn as the owner's wizard (art/npc/wizard.webp, cut by tools/sprites/cut_wizard.py from the standing figure
-// of the wizard sheet): the figure is taken as drawn, turned to face the hero (the drawing looks left), breathing, with the glow of
-// the staff's crystal and of the lantern on his pack breathing too (brighter while he talks), and the torn cloak that trails behind him
-// fluttering: it is drawn in thin vertical strips, each lifted by a wave that runs along it and grows toward the tip, so there is no seam.
-// Until the picture is loaded the older Elder is drawn.
+// The town's Elder drawn from art/npc/wizard.webp: faces the hero, breathes, crystal and lantern glow, and the torn
+// cloak is drawn in strips with a travelling wave. The old Elder is used until the picture loads.
 const ElderArt = (() => {
   const img = new Image(); img.src = 'art/npc/wizard.webp';
+  // state.off turns the picture off (the tests use it)
   const state = { off: false };
   const ready = () => !state.off && typeof WIZARD !== 'undefined' && img.complete && img.naturalWidth > 0;
   const H = 108;                                                  // his height on the screen, hat and staff included (the hero is about 64)
+  // draw at the npc's feet: facing the hero, breathing, glows, cloak strips with a wave
   function draw(g, n, t) {
     if (!ready()) return false;
     const W = WIZARD, k = H / W.h, face = G.player && G.player.cx > n.px ? 1 : -1;            // the drawing looks left

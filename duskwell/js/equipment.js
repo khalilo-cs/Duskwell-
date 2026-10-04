@@ -1,8 +1,6 @@
 'use strict';
-// Equipment: the blade in the hand, the cloak on the shoulders, and the nail arts the Wanderer has
-// learned. Weapons and cloaks are bought from the smith, the outfitter and the travelling traders
-// (see SHOPS in game.js); the arts are taught by the smith. The Player reads the numbers through
-// Gear.* (entities.js) and the art in art_gear.js draws what is equipped. Everything is saved.
+// Equipment: the weapon in the hand, the cloak and the nail arts. Bought from the smith, the
+// outfitter and the traders; the player reads the numbers through Gear.*. Saved with the game.
 const Gear = (() => {
   // dmg: multiplies the nail's damage; reach: multiplies the strike's length; cd: seconds between
   // strikes; h: height of the strike box; kb: knockback dealt; soul: extra soul per hit
@@ -35,32 +33,41 @@ const Gear = (() => {
     rush: { color: '#ffc070', ar: 'اندفاع الغسق', en: 'Dusk Rush', dAr: 'اضغط الضربة وأنت مندفع: تشقّ طريقك بنصلك مرات متتالية وأنت محصّن.', dEn: 'Strike while dashing: you carve through foes again and again, untouchable all the while.' },
     nova: { color: '#9cf0ff', ar: 'نجم الروح', en: 'Soul Nova', dAr: 'بروح ممتلئة (66) اضغط الضربة والتعويذة معاً: انفجار يمحو ما حولك ويبدّد كل المقذوفات.', dEn: 'With 66 soul, press strike and spell together: a blast that tears everything near and wipes every projectile away.' },
   };
+  // soul cost of Soul Nova, charge time of Moon Rend, length of Dusk Rush (seconds)
   const NOVA_COST = 66, REND_CHARGE = 0.62, RUSH_TIME = 0.3;
 
+  // own: what has been bought, cur: what is equipped
   let own = { w: { nail: true }, c: { drifter: true }, a: {} }, cur = { w: 'nail', c: 'drifter' };
+  // helpers to look things up by kind (weapon / cloak / art)
   const lang = () => (LANG.cur === 'ar' ? 'ar' : 'en');
   const TABLE = { weapon: WEAPONS, cloak: CLOAKS, art: ARTS };
   const KEY = { weapon: 'w', cloak: 'c', art: 'a' };
 
+  // text and data of an item for the current language
   const def = (kind, id) => TABLE[kind][id];
   const name = (kind, id) => TABLE[kind][id][lang()];
   const desc = (kind, id) => TABLE[kind][id][lang() === 'ar' ? 'dAr' : 'dEn'];
   const owns = (kind, id) => !!own[KEY[kind]][id];
+  // add an item to what is owned
   const give = (kind, id) => {
     if (!TABLE[kind][id] || own[KEY[kind]][id]) return false;
     own[KEY[kind]][id] = true; return true;
   };
+  // put on an owned weapon or cloak (arts are not equipped)
   const equip = (kind, id) => {
     if (kind === 'art' || !owns(kind, id)) return false;
     cur[KEY[kind]] = id; return true;
   };
   const ownedList = kind => Object.keys(TABLE[kind]).filter(id => owns(kind, id));
 
+  // the equipped weapon and cloak; k() reads a cloak multiplier, 1 when it has none
   const wep = () => WEAPONS[cur.w];
   const clk = () => CLOAKS[cur.c];
   const k = (o, f) => (o[f] === undefined ? 1 : o[f]);
 
+  // new game: back to the nail and the drifter's cloak
   function reset() { own = { w: { nail: true }, c: { drifter: true }, a: {} }; cur = { w: 'nail', c: 'drifter' }; }
+  // save file data
   const save = () => ({ w: Object.keys(own.w), c: Object.keys(own.c), a: Object.keys(own.a), cw: cur.w, cc: cur.c });
   function load(d) {
     reset();
@@ -72,6 +79,7 @@ const Gear = (() => {
     if (own.c[d.cc]) cur.c = d.cc;
   }
 
+  // public api
   return {
     WEAPONS, CLOAKS, ARTS, NOVA_COST, REND_CHARGE, RUSH_TIME, ORDER: { weapon: Object.keys(WEAPONS), cloak: Object.keys(CLOAKS), art: Object.keys(ARTS) },
     def, name, desc, owns, give, equip, ownedList, reset, save, load,

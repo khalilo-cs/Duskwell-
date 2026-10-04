@@ -1,0 +1,23 @@
+# One-off: clears the old workflow runs from the Actions tab.
+name: Tidy runs
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/tidy-runs.yml']
+permissions:
+  actions: write
+  contents: read
+jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for i in 1 2 3; do
+            ids=$(gh run list --limit 200 --json databaseId,status --jq '.[] | select(.status=="completed") | .databaseId')
+            [ -z "$ids" ] && break
+            for id in $ids; do gh run delete "$id" || true; done
+          done
+          gh run list --limit 50

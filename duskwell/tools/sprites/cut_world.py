@@ -70,11 +70,11 @@ def cut(name, sheet, box, o, img, bg):
     near = d < 22
     lab, k = ndi.label(near); sizes = ndi.sum(near, lab, range(1, k + 1))
     edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
-    big = {i + 1 for i, v in enumerate(sizes) if v >= 100}
+    big = {i + 1 for i, v in enumerate(sizes) if v >= o.get('pocket', 100)}
     fg = ~np.isin(lab, list(edge | big)); fg = ndi.binary_opening(fg, iterations=1)
     holes = ndi.binary_fill_holes(fg) & ~fg; hl, hn = ndi.label(holes)
     for i, v in enumerate(ndi.sum(holes, hl, range(1, hn + 1)), 1):
-        if v < 200: fg |= hl == i
+        if v < o.get('holefill', 200): fg |= hl == i
     for (a, bb, c, e) in o.get('off', []):
         fg[max(0, bb - y0):max(0, e - y0), max(0, a - x0):max(0, c - x0)] = False
     # drop specks that touch the box edge (they belong to a neighbour) and tiny ones

@@ -2,6 +2,7 @@
 // World drawing: palettes, pre-rendered tile layers, painted parallax backgrounds,
 // living background creatures (bubbles, jellyfish, fireflies, leaves), dark foreground framing.
 const Art = {};
+Art.tileHooks = {};          // theme -> { ready(), solid(g, L, th, isS, seed), plats(g, L, th), scenery(g, L, th, isS, seed) }: a theme drawn from the owner's pieces
 const THEMES = {
   town:    { sky: ['#1a0908', '#5c1f12', '#b4521e'], far: '#4a1c10', mid: '#2e110b', near: '#1a0907', tile: '#2a1510', hi: '#f0a060', edge: '#070203', fog: '#ff9a4a', part: '#ffb36b', glow: '#ffc27a', leaf: ['#e8742a', '#c9471e', '#f4a640', '#9e2f18'], name: 'town' },
   cave:    { sky: ['#04070e', '#0c1a2e', '#1c3656'], far: '#15283f', mid: '#0e1b2c', near: '#081120', tile: '#131c2a', hi: '#8fb4de', edge: '#020407', fog: '#4f7cb0', part: '#8fd8ff', glow: '#8fd8ff', name: 'cave' },
@@ -74,8 +75,11 @@ Art.renderLevel = function (L, s) {
   const isS = (x, y) => { const v = L.get(x, y); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK; };
   const seed = L.id.length * 77;
   const rim = mix(th.tile, th.hi, 0.2), rimHi = mix(th.tile, th.hi, 0.62);
+  // a theme drawn from the owner's pieces (js/art_tiles.js) lays its own rock, edges, ledges and scenery
+  const hook = Art.tileHooks && Art.tileHooks[L.def.theme], mine = !!(hook && hook.ready());
+  const mineSolid = mine && hook.solid(g, L, th, isS, seed), minePlats = mine && hook.plats(g, L, th);
 
-  for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+  if (!mineSolid) for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     if (L.get(x, y) !== T_SOLID) continue;
     let air = 0;
     for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (!isS(x + i, y + j)) air++;
@@ -89,7 +93,7 @@ Art.renderLevel = function (L, s) {
     }
   }
 
-  for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+  if (!mineSolid) for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     if (L.get(x, y) !== T_SOLID) continue;
     const px = x * TILE, py = y * TILE, v = hash2(x, y, seed + 9);
     const eT = !isS(x, y - 1), eB = !isS(x, y + 1), eL = !isS(x - 1, y), eR = !isS(x + 1, y);
@@ -140,6 +144,7 @@ Art.renderLevel = function (L, s) {
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     const t = L.get(x, y), px = x * TILE, py = y * TILE, v = hash2(x, y, seed + 3);
     if (t === T_ONEWAY) {
+      if (minePlats) continue;
       g.fillStyle = th.edge; g.fillRect(px, py - 2, TILE, 13);
       g.fillStyle = mix(th.tile, th.hi, 0.3); g.fillRect(px, py, TILE, 8);
       g.fillStyle = mix(th.tile, th.hi, 0.72); g.fillRect(px, py, TILE, 2.5);
@@ -153,6 +158,8 @@ Art.renderLevel = function (L, s) {
       drawShroomCap(g, th, px, py, n * TILE, v);
     }
   }
+
+  if (mine && hook.scenery) hook.scenery(g, L, th, isS, seed);
 
   for (const d of L.def.doors) {
     const dx = d.x * TILE, dy = d.y * TILE, dw = d.w * TILE, dh = d.h * TILE;

@@ -616,6 +616,52 @@ function drawMaskIcon(g, x, y, full, pulse) {
   else { fs(g, 'rgba(10,14,22,0.6)', 'rgba(200,215,235,0.55)', 2); }
   g.restore();
 }
+// a small dark plate behind an icon
+function gearPlate(g, cx, cy, S, rim) {
+  g.fillStyle = 'rgba(6,10,18,0.6)'; g.strokeStyle = rim || 'rgba(190,205,230,0.5)'; g.lineWidth = 1.5;
+  g.beginPath(); g.roundRect(cx - S / 2, cy - S / 2, S, S, 7); g.fill(); g.stroke();
+}
+// the equipped weapon and cloak, then the worn charms, as a row of plates starting at (x, y)
+function drawGearStrip(g, x, y) {
+  const S = 36, gap = 6; let cx = x + S / 2;
+  g.save();
+  gearPlate(g, cx, y, S, Gear.def('cloak', Gear.cloak()).trim);
+  gearPlate(g, cx + S + gap, y, S, 'rgba(235,240,250,0.7)');
+  const wid = Gear.weapon(), cid = Gear.cloak();
+  if (!IconArt.draw(g, 'cloak_' + cid, cx, y, S - 4)) Art.cloakIcon(g, cid, cx, y + 4, 12, G.t);
+  if (!IconArt.draw(g, 'weapon_' + wid, cx + S + gap, y, S - 2)) Art.weaponIcon(g, wid, cx + S + gap, y, 12, G.t);
+  cx += 2 * (S + gap) + 4;
+  for (const id of Charms.ORDER) {
+    if (!Charms.has(id)) continue;
+    Art.drawCharm(g, id, cx, y, 14, { worn: true });
+    cx += 35;
+  }
+  g.restore();
+}
+// pause screen: a card with what the hero carries (weapon and cloak with their numbers, then the worn charms)
+function drawGearCard(g) {
+  const x = 700, y = 140, w = 244, ar = LANG.cur === 'ar';
+  g.save();
+  g.fillStyle = 'rgba(8,12,22,0.75)'; g.strokeStyle = 'rgba(190,205,230,0.45)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y, w, 330, 10); g.fill(); g.stroke();
+  setDir(g); g.textBaseline = 'middle'; g.textAlign = 'center'; g.font = font(19, '700'); g.fillStyle = '#e4eefc';
+  g.fillText(sx('المعدات', 'Equipment'), x + w / 2, y + 24);
+  [['weapon', Gear.weapon()], ['cloak', Gear.cloak()]].forEach(([kind, id], i) => {
+    const cy = y + 86 + i * 92, ix = ar ? x + w - 38 : x + 38, tx = ar ? x + w - 80 : x + 80;
+    gearPlate(g, ix, cy, 58, kind === 'cloak' ? Gear.def('cloak', id).trim : 'rgba(235,240,250,0.7)');
+    if (!IconArt.draw(g, kind + '_' + id, ix, cy, 52)) { if (kind === 'weapon') Art.weaponIcon(g, id, ix, cy, 18, G.t); else Art.cloakIcon(g, id, ix, cy + 6, 18, G.t); }
+    g.textAlign = ar ? 'right' : 'left'; g.font = font(16, '700'); g.fillStyle = '#f2f7ff';
+    g.fillText(Gear.name(kind, id), tx, cy - 20);
+    g.font = font(12, '500'); g.fillStyle = '#a9bdd6';
+    Gear.stats(kind, id).split('   ').filter(Boolean).slice(0, 3).forEach((line, k) => g.fillText(line, tx, cy - 2 + k * 15));
+  });
+  g.textAlign = 'center'; g.font = font(15, '600'); g.fillStyle = '#9db5d6';
+  g.fillText(sx('التمائم', 'Charms') + '  ' + Charms.used() + ' / ' + Charms.notches(), x + w / 2, y + 224);
+  const worn = Charms.ORDER.filter(id => Charms.has(id));
+  if (!worn.length) { g.font = font(13, '500'); g.fillText(sx('لا شيء مرتدى', 'Nothing worn'), x + w / 2, y + 262); }
+  worn.forEach((id, i) => Art.drawCharm(g, id, x + w / 2 + (i - (worn.length - 1) / 2) * 38, y + 266, 15, { worn: true }));
+  g.restore();
+}
 // masks, soul orb, geo, boss bar, banners and messages
 function drawHUD(g) {
   // soul orb
@@ -648,6 +694,8 @@ function drawHUD(g) {
   if (IconArt.ready()) IconArt.draw(g, 'geo', gx, gy, 24 + gp * 4); else { poly(g, [gx, gy - 8 - gp * 2, gx + 8, gy, gx, gy + 8 + gp * 2, gx - 8, gy]); fs(g, '#ffe9a0', INK, 2); }
   g.font = font(22, '700'); g.textAlign = 'left'; g.textBaseline = 'middle'; g.direction = 'ltr';
   textShadow(g, String(P.geo), gx + 16, gy + 1, gp > 0 ? '#fff6c8' : '#ffe9a0');
+  // equipment: weapon, cloak and worn charms
+  drawGearStrip(g, 36, 128);
   // boss bar
   const b = G.boss;
   if (b && b.state !== 'intro' && G.bossBarShow) {
@@ -1068,7 +1116,7 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 112, 36); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 112, 36); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);

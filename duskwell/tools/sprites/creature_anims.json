@@ -1,11 +1,251 @@
 {
- "note": "rows: [y0, y1, frame count]; the three rows of each creature are idle+walk, attack, hurt+death",
+ "note": "rows: [y0, y1, frame count]; the three rows of each creature are idle+walk, attack, hurt+death. off: parts of a sheet left out of the frames (a projectile drawn in flight); extras: such parts cut on their own (CREATURE_EXTRAS); anchor_base: creatures rooted to the ground, anchored under their base rather than their body",
  "sheets": {
-  "art/source/creatures_hd/sheet_husk_crawler.png": {"husk": [[8,246,6],[247,482,4],[488,715,5]], "crawler": [[741,881,6],[897,1050,4],[1059,1228,5]]},
-  "art/source/creatures_hd/sheet_flyer_hopper.png": {"flyer": [[6,224,6],[225,408,4],[412,582,5]], "hopper": [[607,811,6],[811,1004,5],[1004,1225,5]]},
-  "art/source/creatures_hd/sheet_spider_warden.png": {"spider": [[2,158,6],[159,329,5],[329,480,5]], "warden": [[493,670,6],[672,840,5],[840,1006,5]]}
+  "art/source/creatures_hd/sheet_husk_crawler.png": {
+   "husk": [
+    [
+     8,
+     246,
+     6
+    ],
+    [
+     247,
+     482,
+     4
+    ],
+    [
+     488,
+     715,
+     5
+    ]
+   ],
+   "crawler": [
+    [
+     741,
+     881,
+     6
+    ],
+    [
+     897,
+     1050,
+     4
+    ],
+    [
+     1059,
+     1228,
+     5
+    ]
+   ]
+  },
+  "art/source/creatures_hd/sheet_flyer_hopper.png": {
+   "flyer": [
+    [
+     6,
+     224,
+     6
+    ],
+    [
+     225,
+     408,
+     4
+    ],
+    [
+     412,
+     582,
+     5
+    ]
+   ],
+   "hopper": [
+    [
+     607,
+     811,
+     6
+    ],
+    [
+     811,
+     1004,
+     5
+    ],
+    [
+     1004,
+     1225,
+     5
+    ]
+   ]
+  },
+  "art/source/creatures_hd/sheet_spider_warden.png": {
+   "spider": [
+    [
+     2,
+     158,
+     6
+    ],
+    [
+     159,
+     329,
+     5
+    ],
+    [
+     329,
+     480,
+     5
+    ]
+   ],
+   "warden": [
+    [
+     493,
+     670,
+     6
+    ],
+    [
+     672,
+     840,
+     5
+    ],
+    [
+     840,
+     1006,
+     5
+    ]
+   ]
+  },
+  "art/source/creatures_hd/sheet_spitter_shroom.png": {
+   "spitter": [
+    [
+     11,
+     217,
+     6
+    ],
+    [
+     225,
+     429,
+     5
+    ],
+    [
+     439,
+     622,
+     4
+    ]
+   ],
+   "shroom": [
+    [
+     650,
+     836,
+     6
+    ],
+    [
+     852,
+     1043,
+     5
+    ],
+    [
+     1047,
+     1230,
+     5
+    ]
+   ]
+  }
  },
  "cuts": {
-  "flyer:1": [287, 668, 1025]
- }
+  "flyer:1": [
+   287,
+   668,
+   1025
+  ],
+  "spitter:1": [
+   218,
+   431,
+   648,
+   975
+  ],
+  "spitter:2": [
+   222,
+   432,
+   660
+  ],
+  "shroom:1": [
+   216,
+   418,
+   643,
+   1020
+  ],
+  "shroom:2": [
+   220,
+   445,
+   680,
+   945
+  ]
+ },
+ "off": {
+  "art/source/creatures_hd/sheet_spitter_shroom.png": [
+   [
+    905,
+    225,
+    1045,
+    429
+   ],
+   [
+    1000,
+    439,
+    1254,
+    622
+   ],
+   [
+    800,
+    852,
+    1040,
+    1043
+   ]
+  ]
+ },
+ "extras": {
+  "spit_0": [
+   "art/source/creatures_hd/sheet_spitter_shroom.png",
+   [
+    1005,
+    480,
+    1100,
+    580
+   ]
+  ],
+  "spit_1": [
+   "art/source/creatures_hd/sheet_spitter_shroom.png",
+   [
+    1100,
+    480,
+    1178,
+    580
+   ]
+  ],
+  "spit_2": [
+   "art/source/creatures_hd/sheet_spitter_shroom.png",
+   [
+    1178,
+    480,
+    1250,
+    580
+   ]
+  ],
+  "spit_fly": [
+   "art/source/creatures_hd/sheet_spitter_shroom.png",
+   [
+    905,
+    240,
+    1060,
+    345
+   ]
+  ],
+  "spores": [
+   "art/source/creatures_hd/sheet_spitter_shroom.png",
+   [
+    790,
+    862,
+    1048,
+    1040
+   ]
+  ]
+ },
+ "anchor_base": [
+  "spitter"
+ ]
 }

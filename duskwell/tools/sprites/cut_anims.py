@@ -17,7 +17,7 @@ from cutsheet import segment
 cfg = json.load(open(os.path.join(HERE, 'creature_anims.json')))
 SPLIT = {1: lambda n: (n // 2, n - n // 2)}
 
-def frames_of_row(im, fg, y0, y1, N, cuts=None):
+def frames_of_row(im, fg, y0, y1, N, cuts=None, base=False):
     band = fg[y0:y1].copy(); sub = im[y0:y1]
     H, W = band.shape
     hsv = cv2.cvtColor(sub, cv2.COLOR_BGR2HSV)
@@ -80,7 +80,7 @@ def frames_of_row(im, fg, y0, y1, N, cuts=None):
         x0, x1, yy0, yy1 = xs2.min(), xs2.max() + 1, ys.min(), ys.max() + 1
         rgba = np.dstack([sub[yy0:yy1, x0:x1], (alpha[yy0:yy1, x0:x1] * m[yy0:yy1, x0:x1] * 255).astype(np.uint8)])
         # anchor: under the middle of the torso (the upper part of the body), on the ground line
-        bys, bxs = np.where(bm[:max(1, gl - int((gl - ys.min()) * 0.35))])
+        bys, bxs = np.where(bm[max(0, gl - int((gl - ys.min()) * 0.18)):gl + 1] if base else bm[:max(1, gl - int((gl - ys.min()) * 0.35))])
         ax = (np.median(bxs) if len(bxs) else (x0 + x1) / 2) - x0
         out.append((rgba, float(ax), float(gl - yy0)))
     return out
@@ -88,8 +88,9 @@ def frames_of_row(im, fg, y0, y1, N, cuts=None):
 frames = {}
 for path, mons in cfg['sheets'].items():
     im = cv2.imread(os.path.join(ROOT, path)); fg = segment(im, 20)
+    for (a, b, c, d) in cfg.get('off', {}).get(path, []): fg[b:d, a:c] = False
     for kind, rows in mons.items():
-        rs = [frames_of_row(im, fg, y0, y1, n, cfg['cuts'].get('%s:%d' % (kind, r))) for r, (y0, y1, n) in enumerate(rows)]
+        rs = [frames_of_row(im, fg, y0, y1, n, cfg['cuts'].get('%s:%d' % (kind, r)), kind in cfg.get('anchor_base', [])) for r, (y0, y1, n) in enumerate(rows)]
         r1, r2, r3 = rs
         if kind == 'flyer': anim = {'idle': r1, 'walk': r1}
         else: anim = {'idle': r1[:2], 'walk': r1[2:]}
@@ -100,6 +101,15 @@ for path, mons in cfg['sheets'].items():
             for j, (rgba, ax, ay) in enumerate(fr): cv2.imwrite(os.path.join(d, '%s_%d.png' % (nm, j)), rgba)
 PACK = 0.5                                                                    # frames are stored at half size: still about twice what the game shows
 flat = []
+from cut_world import background, cut as cut_soft
+extras = {}
+for name, (path, box) in cfg.get('extras', {}).items():
+    im = cv2.imread(os.path.join(ROOT, path))
+    p, org = cut_soft(name, None, tuple(box), {'soft': True}, im, background(im))
+    rgba = cv2.cvtColor(np.array(p), cv2.COLOR_RGBA2BGRA)
+    cv2.imwrite(os.path.join(ROOT, 'art', 'source', 'creatures_hd', name + '.png'), rgba)
+    h, w = rgba.shape[:2]; extras[name] = cv2.resize(rgba, (max(1, round(w * PACK)), max(1, round(h * PACK))), interpolation=cv2.INTER_AREA)
+for name, rgba in extras.items(): flat.append(('_x', name, 0, (rgba, rgba.shape[1] / 2, rgba.shape[0] / 2)))
 for kind, anim in frames.items():
     for nm, fr in anim.items():
         if kind == 'flyer' and nm == 'walk': continue
@@ -119,5 +129,6 @@ od = os.path.join(ROOT, 'art', 'creatures'); atlas.save(os.path.join(od, 'anim.w
 meta = {}
 for kind, anim in frames.items():
     meta[kind] = {nm: [pos[(kind, 'idle' if (kind == 'flyer' and nm == 'walk') else nm, j)] for j in range(len(fr))] for nm, fr in anim.items()}
-open(os.path.join(ROOT, 'js', 'creature_anims_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_anims.py: the animation frames of the creatures drawn by the owner, in art/creatures/anim.webp\n// [x, y, w, h, ax, ay]: (ax, ay) is the ground point under the body\nconst CREATURE_ANIMS = " + json.dumps(meta, separators=(',', ':')) + ";\n")
+xmeta = {name: pos[('_x', name, 0)][:4] for name in extras}
+open(os.path.join(ROOT, 'js', 'creature_anims_meta.js'), 'w').write("'use strict';\n// made by tools/sprites/cut_anims.py: the animation frames of the creatures drawn by the owner, in art/creatures/anim.webp\n// [x, y, w, h, ax, ay]: (ax, ay) is the ground point under the body. CREATURE_EXTRAS: their projectiles, drawn on their own, [x, y, w, h]\nconst CREATURE_ANIMS = " + json.dumps(meta, separators=(',', ':')) + ";\nconst CREATURE_EXTRAS = " + json.dumps(xmeta, separators=(',', ':')) + ";\n")
 print(atlas.size, os.path.getsize(os.path.join(od, 'anim.webp')), 'bytes', {k: {n: len(v) for n, v in a.items()} for k, a in frames.items()})

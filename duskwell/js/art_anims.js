@@ -18,7 +18,27 @@ const AnimArt = (() => {
     hopper: { hm: 1.75, wm: 3.0, stride: 9, wind: 0.28, leap: true },
     spider: { hm: 2.15, wm: 2.7, stride: 8, wind: 0.3, leap: true },
     warden: { hm: 1.5, wm: 3.0, stride: 8, wind: 0.55, bash: 0.3 },
+    // from here on each creature has its own brain(e, t, d, A): the frame for what its code is doing (see the helpers below)
+    spitter: { hm: 2.1, wm: 3.4, brain(e, t, d, A) {                 // rooted: it sways; gathers its spit while e.tele counts down, then spits
+      if (d.tele > 0 && !(e.tele > 0)) d.fired = t; d.tele = e.tele;
+      if (d.hurtT > 0) return A.hurt[0];
+      if (e.tele > 0) return seq(A.atk.slice(0, 3), 1 - e.tele / 0.45);
+      const s = since(d.fired, t); if (s < 0.25) return A.atk[3]; if (s < 0.5) return A.atk[4];
+      return loop(A.idle.concat(A.walk), t, 6, (e.x || 0) * 0.013);
+    } },
+    shroom: { hm: 1.85, wm: 2.9, stride: 8, brain(e, t, d, A) {      // swells through its anticipation, breathes its spores after it
+      if (d.hurtT > 0) return A.hurt[0];
+      if (e.currentState === 'anticipation') return seq(A.atk.slice(0, 3), (e.stateT || 0) / 0.5);
+      const s = since(d.fired, t); if (s < 0.4) return A.atk[3]; if (s < 0.65) return A.atk[4];
+      return move(e, d, A, 8);
+    } },
   };
+  // helpers for the brains: a frame along a list by progress k (0..1), a looping list, the time since an event, walking or standing
+  const seq = (list, k) => list[Math.max(0, Math.min(list.length - 1, Math.floor(k * list.length)))];
+  const loop = (list, t, fps, ph) => list[Math.floor(t * fps + (ph || 0)) % list.length];
+  const since = (at, t) => (at == null ? 1e9 : t - at);
+  const move = (e, d, A, stride) => (e.isDummy ? (Math.abs(e.vx || 0) > 8 ? loop(A.walk, d.t, 8) : loop(A.idle, d.t, 2.2))
+    : Math.abs(e.vx || 0) > 8 ? A.walk[Math.floor(d.dist / stride) % A.walk.length] : loop(A.idle, d.t, 2.2, (e.x || 0) * 0.01));
   const ALIAS = { brood_child: 'spider' };
   const scaleOf = (kind, e) => { const c = CFG[kind], f = CREATURE_ANIMS[kind].idle[0]; return Math.min(e.h * c.hm / f[3], e.w * c.wm / f[2]); };
   // the attack row: the wind-up (two frames when the row has five), the strike (two), the recovery (the last)
@@ -61,8 +81,11 @@ const AnimArt = (() => {
     const dt = Math.max(0, Math.min(0.1, t - d.t)); d.t = t;
     d.dist += Math.abs(e.cx - d.x); d.x = e.cx;
     if (e.flash > 0.05 && !e.isDummy) { d.hurtT = 0.18; d.leapT = null; } else d.hurtT -= dt;
-    if (e.currentState !== d.st) { if (d.st === 'anticipation' && c.leap) d.leapT = t; d.st = e.currentState; }   // it has just left the ground to strike
-    const f = d.f = pick(kind, e, t), sc = scaleOf(kind, e), idle = CREATURE_ANIMS[kind].idle[0];
+    if (e.currentState !== d.st) {                                    // a change of state: leaving the wind-up means the blow (or the leap) has come
+      if (d.st === 'anticipation' && e.currentState !== 'recoil') { d.fired = t; if (c.leap) d.leapT = t; }
+      d.prevSt = d.st; d.st = e.currentState; d.stAt = t;
+    }
+    const f = d.f = c.brain ? c.brain(e, t, d, CREATURE_ANIMS[kind]) : pick(kind, e, t), sc = scaleOf(kind, e), idle = CREATURE_ANIMS[kind].idle[0];
     const gy = c.fly ? e.cy + (idle[5] - idle[3] * 0.5) * sc : e.y + e.h + 1;
     if (!c.fly && !e.isDummy && !e.hanging) Pixel.shadow(g, e.cx, e.y + e.h, Math.min(e.w * 1.1, idle[2] * sc * 0.4));
     if (kind === 'spider' && e.hanging) {                                                         // the thread it hangs from
@@ -102,6 +125,25 @@ const AnimArt = (() => {
     }
     const oldFx = Art.drawFx;
     Art.drawFx = function (g, f) { if (f.type === 'corpse') return corpse(g, f); return oldFx(g, f); };
+    // their projectiles: the spitter's glob (it rolls through three frames along its flight), the shroom's cloud of spores
+    const oldProj = Art.drawProj;
+    Art.drawProj = function (g, p, t) {
+      const X = typeof CREATURE_EXTRAS !== 'undefined' ? CREATURE_EXTRAS : {};
+      if (ready() && p.kind === 'glob' && X.spit_0) {
+        const r = X['spit_' + (Math.floor(p.t * 12) % 3)], k = (p.r * 2.9) / r[3];
+        g.save(); g.translate(p.x, p.y); g.rotate(Math.atan2(p.vy || 0, p.vx || 1)); g.imageSmoothingEnabled = true;
+        bloom(g, 0, 0, p.r * 3, '#b6ef6a', 0.25);
+        g.drawImage(img, r[0], r[1], r[2], r[3], -r[2] * k * 0.62, -r[3] * k / 2, r[2] * k, r[3] * k);
+        g.restore(); return;
+      }
+      if (ready() && p.kind === 'cloud' && X.spores) {
+        const r = X.spores, k = clamp(p.t / 0.25, 0.3, 1), a = clamp(p.life / 0.4, 0, 1) * 0.9, w = p.w * 1.35 * k, h = p.h * 1.4 * k;
+        g.save(); g.translate(p.x, p.y); if ((p.vx || 0) < 0) g.scale(-1, 1); g.globalAlpha *= a; g.imageSmoothingEnabled = true;
+        g.drawImage(img, r[0], r[1], r[2], r[3], -w / 2, -h / 2, w, h);
+        g.restore(); return;
+      }
+      return oldProj(g, p, t);
+    };
   }
   install();
   // which part of the sheet a frame comes from ('walk', 'atk'...) and its number there: for the tests

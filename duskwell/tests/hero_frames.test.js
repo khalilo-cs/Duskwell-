@@ -103,6 +103,26 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   });
   ok('dying: the hero falls through the death frames', r.frames.length >= 6, r);
 
+  // the equipment shows on the drawn hero: any weapon but the Dusk Nail is drawn in the hand (on the frame without the drawn sword),
+  // in every pose that holds a sword; the cloth takes the cloak's colour
+  r = await ev(() => {
+    const out = {}, gear = DW.Gear, oldW = gear.weapon, oldC = gear.cloak, c = document.createElement('canvas').getContext('2d');
+    const held = Object.keys(HERO_BLADES);
+    for (const w of gear.ORDER.weapon) {
+      gear.weapon = () => w; let drawn = 0, ids = new Set(); const od = Art.drawWeapon;
+      Art.drawWeapon = function (g, id) { drawn++; ids.add(id); return od.apply(this, arguments); };
+      for (const k of held) { const [a, i] = [k.slice(0, k.lastIndexOf('_')), +k.slice(k.lastIndexOf('_') + 1)]; HeroFrames.frame(c, HERO_FRAMES[a][i], 100, 100, 1, 1); }
+      Art.drawWeapon = od; out[w] = { drawn, ids: [...ids] };
+    }
+    gear.weapon = oldW;
+    gear.cloak = () => 'emberweave'; const src = HeroFrames.source(false); gear.cloak = oldC;
+    out.cloakCanvas = src instanceof HTMLCanvasElement;
+    out.poses = held.length;
+    return out;
+  });
+  ok('every weapon but the nail is drawn in the hand in every pose that holds a sword (' + r.poses + ' poses)', r.nail.drawn === 0 && ['duskblade', 'lance', 'fangs', 'cleaver', 'scythe', 'rapier', 'bonesaw'].every(w => r[w].drawn >= r.poses && r[w].ids.join() === w), r);
+  ok('the cloak\'s colour is put on the cloth of the drawn hero', r.cloakCanvas, r);
+
   // the other looks are still there
   r = await ev(() => { HeroStyle.next(); const c = HeroStyle.cur(); DW.draw(); while (HeroStyle.cur() !== 'frames') HeroStyle.next(); return c; });
   ok('the other looks can still be chosen (the jointed hero is next)', r === 'puppet', r);

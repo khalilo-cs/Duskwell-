@@ -11,7 +11,10 @@ Frames 3 and 4 of the bench share one bench in the drawing, so only frames 1 and
 The second sheet (sheet_hero_moves.png, no titles or floor lines) adds the moves the first lacks: a slash upward (5), a stab
 downward in the air (4), clinging to a wall (2, the drawn wall streak left out), a dash (2), a double jump (4), healing (4), casting
 (4) and sitting alone (4). Frames in the air are anchored at the middle of the body (the game puts it at the hero's centre).
-A sword trail or a glow goes to the frame its middle lies in (on the first sheet: the frame its left end starts from)."""
+A sword trail or a glow goes to the frame its middle lies in (on the first sheet: the frame its left end starts from).
+A second atlas, art/hero/hero_frames_bare.webp (the same layout), holds the frames without the drawn sword and without its trails, for
+the other weapons, which the game draws itself: the blade is found as long thin silver strips (the face, a round light shape, is not
+one), the trails as bright teal glow; both are taken out with their dark outline and the hole is filled from the drawing around it."""
 import json, os, sys
 import numpy as np, cv2
 from scipy import ndimage as ndi
@@ -29,6 +32,12 @@ PACK = 0.75
 # where trails of neighbouring frames touch), off (rectangles left out)]
 G1 = dict(sheet=SRC, floor=True, glow=False, arcs='left', off=[])
 G2 = dict(sheet=MOVES, floor=False, glow=True, arcs='center', off=[])
+TRAILS = ('slash1', 'slash2', 'up', 'down', 'double', 'dash')            # the frames whose glow is the sword's trail (not a spell)
+# where the sword is in each frame (grip, tip), from tools/sprites/hero_blades.py: taken out of the bare frames, and given to the game
+# so that the equipped weapon is drawn in the hand along the same line
+_BF = os.path.join(HERE, 'hero_blades_fit.json')
+BLADES = json.load(open(_BF)) if os.path.exists(_BF) else {}
+ROUGH = {k: v for k, v in json.load(open(os.path.join(HERE, 'hero_blades.json'))).items() if not k.startswith('_')}   # the hand-drawn lines too: they reach the whole blade
 GROUPS = {
     'idle': (10, 758, 45, 206, 6, [137, 262, 388, 510, 630], 'floor', G1),
     'run': (766, 1978, 45, 206, 9, [890, 1022, 1165, 1308, 1443, 1572, 1705, 1840], 'floor', G1),
@@ -123,10 +132,40 @@ def split(im, bg, m, x0, x1, gl, n, cuts, anchor, glow, arcs='left', arccuts=Non
         out.append((rgba, ax, ay))
     return out
 
+def bare(rgba, trails, blades=()):
+    """the frame without its drawn blades (the lines in hero_blades_fit.json, with their outline) and, for the sword's moves, its
+    trails (bright teal glow): taken out and filled from the drawing around; what was over the empty background becomes empty"""
+    a = rgba[..., 3]; bgr = np.ascontiguousarray(rgba[..., :3]); hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    cut = np.zeros(a.shape, np.uint8)
+    for (x0, y0, x1, y1) in blades:
+        d = np.array([x1 - x0, y1 - y0], float); L = max(1.0, np.hypot(*d)); d /= L
+        p0 = np.array([x0, y0]) - d * 3; p1 = np.array([x1, y1]) + d * 4         # the guard behind the grip, the point past the tip
+        cv2.line(cut, tuple(int(round(v)) for v in p0), tuple(int(round(v)) for v in p1), 255, 11)
+    cut = cut > 0
+    if trails:
+        teal = (hsv[..., 0] >= 70) & (hsv[..., 0] <= 105) & (hsv[..., 1] > 45) & (hsv[..., 2] > 110)
+        glow = teal & (hsv[..., 2] > 170)
+        core = (hsv[..., 2] > 200) & (hsv[..., 1] < 70) & ndi.binary_dilation(glow, iterations=4)
+        cut |= ndi.binary_dilation(glow | core, iterations=1)
+    cut &= a > 0
+    if not cut.any(): return rgba.copy()
+    col = cv2.inpaint(bgr, cut.astype(np.uint8) * 255, 5, cv2.INPAINT_TELEA)
+    keep = (a > 0) & ~cut
+    body = ndi.binary_fill_holes(ndi.binary_closing(keep & (a > 200), iterations=3))
+    na = cv2.GaussianBlur(np.where(cut, np.where(body, 255, 0), a).astype(np.uint8), (0, 0), 0.6)
+    na = np.where(cut, na, a)
+    # bits left floating once the blade and its trail are gone (a tip, a spark of the trail) are dropped
+    lab, n = ndi.label(na > 40)
+    if n > 1:
+        sizes = ndi.sum(na > 40, lab, range(1, n + 1)); big = sizes.max(); lim = 0.1 if trails else 0.04
+        drop = np.isin(lab, [i + 1 for i, v in enumerate(sizes) if v < lim * big])
+        na = np.where(ndi.binary_dilation(drop, iterations=1) & ~np.isin(lab, [i + 1 for i, v in enumerate(sizes) if v >= lim * big]), 0, na)
+    return np.dstack([col, na]).astype(np.uint8)
+
 def main():
     sheets = {}
     frames, srcdir = {}, os.path.join(ROOT, 'art', 'source', 'hero_hd', 'frames')
-    os.makedirs(srcdir, exist_ok=True)
+    os.makedirs(os.path.join(srcdir, 'bare'), exist_ok=True)
     for name, (x0, x1, y0, gl, n, cuts, anchor, o) in GROUPS.items():
         if o['sheet'] not in sheets: im0 = cv2.imread(o['sheet']); sheets[o['sheet']] = (im0, segment(im0, 20), background(im0))
         im, fg, bg = sheets[o['sheet']]
@@ -139,13 +178,16 @@ def main():
         out = []
         for j, (rgba, ax, ay) in enumerate(row):
             cv2.imwrite(os.path.join(srcdir, '%s_%d.png' % (name, j)), rgba)
-            out.append((rgba, ax, ay))
+            key = '%s_%d' % (name, j); b = bare(rgba, name in TRAILS, BLADES.get(key, []) + [r[:4] for r in ROUGH.get(key, [])]); cv2.imwrite(os.path.join(srcdir, 'bare', '%s_%d.png' % (name, j)), b)
+            out.append((rgba, ax, ay, b))
         frames[name] = out
         print(name, len(out), [f[0].shape[:2] for f in out])
-    flat = []
+    flat, bares = [], {}
     for name, fr in frames.items():
-        for j, (rgba, ax, ay) in enumerate(fr):
-            h, w = rgba.shape[:2]; small = cv2.resize(rgba, (max(1, round(w * PACK)), max(1, round(h * PACK))), interpolation=cv2.INTER_AREA)
+        for j, (rgba, ax, ay, b) in enumerate(fr):
+            h, w = rgba.shape[:2]; sz = (max(1, round(w * PACK)), max(1, round(h * PACK)))
+            small = cv2.resize(rgba, sz, interpolation=cv2.INTER_AREA)
+            bares[(name, j)] = cv2.resize(b, sz, interpolation=cv2.INTER_AREA)
             flat.append((name, j, small, ax * PACK, ay * PACK))
     W, x, y, row, pos = 2048, 2, 2, 0, {}
     for name, j, small, ax, ay in sorted(flat, key=lambda t: -t[2].shape[0]):
@@ -156,10 +198,20 @@ def main():
     for name, j, small, ax, ay in flat: atlas.paste(Image.fromarray(cv2.cvtColor(small, cv2.COLOR_BGRA2RGBA)), tuple(pos[(name, j)][:2]))
     od = os.path.join(ROOT, 'art', 'hero'); os.makedirs(od, exist_ok=True)
     atlas.save(os.path.join(od, 'hero_frames.webp'), quality=90, method=6)
+    atlas2 = Image.new('RGBA', atlas.size, (0, 0, 0, 0))
+    for name, j, small, ax, ay in flat: atlas2.paste(Image.fromarray(cv2.cvtColor(bares[(name, j)], cv2.COLOR_BGRA2RGBA)), tuple(pos[(name, j)][:2]))
+    atlas2.save(os.path.join(od, 'hero_frames_bare.webp'), quality=90, method=6)
     meta = {name: [pos[(name, j)] for j in range(len(fr))] for name, fr in frames.items()}
+    blades = {}
+    for name, fr in frames.items():
+        for j in range(len(fr)):
+            bl = BLADES.get('%s_%d' % (name, j))
+            if bl: blades['%s_%d' % (name, j)] = [[round(v * PACK, 1) for v in b[:4]] for b in bl]
     open(os.path.join(ROOT, 'js', 'hero_frames_meta.js'), 'w').write(
         "'use strict';\n// made by tools/sprites/cut_hero_anims.py: the owner's hero frames in art/hero/hero_frames.webp\n"
-        "// [x, y, w, h, ax, ay]: (ax, ay) is the point under the body that stands on the ground\nconst HERO_FRAMES = " + json.dumps(meta, separators=(',', ':')) + ";\n")
+        "// [x, y, w, h, ax, ay]: (ax, ay) is the point under the body that stands on the ground\nconst HERO_FRAMES = " + json.dumps(meta, separators=(',', ':')) + ";\n"
+        "// where the drawn sword is in a frame: [[grip x, grip y, tip x, tip y], ...] from the frame's corner, the held blade first\n"
+        "const HERO_BLADES = " + json.dumps(blades, separators=(',', ':')) + ";\n")
     print(atlas.size, os.path.getsize(os.path.join(od, 'hero_frames.webp')), 'bytes')
 
 if __name__ == '__main__':

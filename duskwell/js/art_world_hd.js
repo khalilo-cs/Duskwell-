@@ -69,7 +69,7 @@ const WorldArt = (() => {
     put(g, 'shrine_3', x, y, k, 0.5, 1, { alpha: m });
   };
   // the geo cache is a chest on the floor; taken, it opens and its light fades
-  const groundBelow = (x, y) => { const L = G.level; let ty = Math.floor(y / TILE); while (ty < L.h - 1 && !L.solid(Math.floor(x / TILE), ty)) ty++; return ty * TILE; };
+  const groundBelow = (x, y) => { const L = G.level; let ty = Math.floor(y / TILE); while (ty < L.h - 1 && !L.ground(Math.floor(x / TILE), ty)) ty++; return ty * TILE; };
   Art.drawItem = function (g, it, t) {
     if (it.kind !== 'cache' || !ready()) return oldItem(g, it, t);
     if (it._gy == null) it._gy = groundBelow(it.x, it.y);

@@ -565,6 +565,7 @@ class Player {
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300 * Gear.takenKbK(); this.vy = -320 * Gear.takenKbK(); this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
+    try { if (navigator.vibrate) navigator.vibrate(45); } catch (e) { /* no vibration here */ }
     G.burst(this.cx, this.cy, 16, { color: '#e9f3ff', speed: 240, life: 0.5, size: 3 });
     G.burst(this.cx, this.cy, 10, { color: '#1a2230', speed: 200, life: 0.5, size: 4 });
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }

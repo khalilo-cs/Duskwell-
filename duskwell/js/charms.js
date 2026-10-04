@@ -41,8 +41,8 @@ const Charms = (() => {
   const has = id => worn.indexOf(id) >= 0;
   // notches taken by the worn charms
   const used = () => worn.reduce((s, id) => s + DEFS[id].cost, 0);
-  // three to begin with, one more for every two guardians' seals, and up to two from the merchant
-  const notches = () => BASE_NOTCHES + Math.floor(sealCount() / 2) + (G.flags.buy_notch1 ? 1 : 0) + (G.flags.buy_notch2 ? 1 : 0);
+  // three to begin with, one more for every two guardians' seals (up to three more), and up to two from the merchant
+  const notches = () => BASE_NOTCHES + Math.min(3, Math.floor(sealCount() / 2)) + (G.flags.buy_notch1 ? 1 : 0) + (G.flags.buy_notch2 ? 1 : 0);
   // worn charms cost more than the notches allow (only an old save can get here)
   const over = () => used() > notches();
   // owned charms in display order

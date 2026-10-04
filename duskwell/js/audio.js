@@ -26,6 +26,10 @@ const Sound = (() => {
   // volumes
   const MUSIC_VOL = 0.8;
   const MASTER_VOL = 0.55;
+  // the player's levels for the music and the effects (1, 0.7, 0.4 or 0), kept between visits
+  const LEVELS = [1, 0.7, 0.4, 0];
+  let musicLvl = 1, sfxLvl = 1;
+  try { const v = JSON.parse(localStorage.getItem('duskwell_levels') || 'null'); if (v && LEVELS.includes(v.m) && LEVELS.includes(v.s)) { musicLvl = v.m; sfxLvl = v.s; } } catch (e) { /* ignore */ }
 
   // create the audio graph (needs a user gesture), then start the score and the effects
   function init() {
@@ -34,9 +38,9 @@ const Sound = (() => {
     if (!AC) return;
     ctx = new AC();
     master = ctx.createGain(); master.gain.value = muted ? 0 : MASTER_VOL; master.connect(ctx.destination);
-    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.32; musicBus.connect(master);
-    fileBus = ctx.createGain(); fileBus.gain.value = MUSIC_VOL; fileBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9 * sfxLvl; sfxBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.32 * musicLvl; musicBus.connect(master);
+    fileBus = ctx.createGain(); fileBus.gain.value = MUSIC_VOL * musicLvl; fileBus.connect(master);
     // soft echo for the procedural fallback score
     delay = ctx.createDelay(1.5); delay.delayTime.value = 0.42;
     const fb = ctx.createGain(); fb.gain.value = 0.42;
@@ -126,7 +130,7 @@ const Sound = (() => {
       el.addEventListener('error', () => { if (this.el === el) { this.el = null; this.mode = 'synth'; this.update(); } });
       this.el = el;
       el.play().catch(() => {});
-      const target = MUSIC_VOL * MASTER_VOL * ((this.meta && this.meta[name] && this.meta[name].gain) || 0.8);
+      const target = MUSIC_VOL * MASTER_VOL * musicLvl * ((this.meta && this.meta[name] && this.meta[name].gain) || 0.8);
       const t0 = performance.now(), ms = bossMode ? 400 : 1800;
       clearInterval(this.fadeTimer);
       this.fadeTimer = setInterval(() => {
@@ -332,6 +336,18 @@ const Sound = (() => {
       return !muted;
     },
     isOn: () => !muted,
+    // the music and effect levels; cycle() moves one of them to the next step and keeps it
+    levels: () => ({ music: musicLvl, sfx: sfxLvl }),
+    cycle(which) {
+      const next = v => LEVELS[(LEVELS.indexOf(v) + 1) % LEVELS.length];
+      if (which === 'music') musicLvl = next(musicLvl); else sfxLvl = next(sfxLvl);
+      try { localStorage.setItem('duskwell_levels', JSON.stringify({ m: musicLvl, s: sfxLvl })); } catch (e) { /* ignore */ }
+      if (sfxBus) sfxBus.gain.value = 0.9 * sfxLvl;
+      if (musicBus) musicBus.gain.value = 0.32 * musicLvl;
+      if (fileBus) fileBus.gain.value = MUSIC_VOL * musicLvl;
+      if (Score.el && Score.want) { const m = Score.meta && Score.meta[Score.want]; Score.el.volume = MUSIC_VOL * MASTER_VOL * musicLvl * ((m && m.gain) || 0.8); }
+      return which === 'music' ? musicLvl : sfxLvl;
+    },
     sfxState: () => ({ loaded: !!Rec.meta, buffers: Rec.bufs.size, ambience: Rec.ambWant, ambiencePlaying: !!Rec.amb }),
     musicState: () => ({ mode: Score.mode, want: Score.want, playing: Score.cur ? Score.cur.name : (Score.el ? Score.el.src : null), cached: [...Score.cache.keys()] }),
   };

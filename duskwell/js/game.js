@@ -490,7 +490,7 @@ function gfxLabel() {
 // entries of the pause menu
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'bestiary', label: tr('bestiary') },
-    { id: 'sound', label: tr('sound') + ': ' + (Sound.isOn() ? tr('on') : tr('off')) },
+    { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 // pause menu input
@@ -506,7 +506,7 @@ function updatePause() {
     else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
     else if (id === 'gear') { G.state = 'gear'; G.gearSel = 0; G.gearT = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
-    else if (id === 'sound') Sound.toggle();
+    else if (id === 'music' || id === 'sfx') Sound.cycle(id);
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
@@ -571,7 +571,7 @@ function update(dt) {
     case 'gear': updateGear(dt); break;
     case 'trans': updateTrans(dt); break;
     case 'pause': updatePause(); break;
-    case 'map': if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('confirm') || Input.pressed('attack')) { G.state = 'play'; Input.consume('map'); Input.consume('pause'); } break;
+    case 'map': updateMap(); break;
     case 'dialog': updateDialog(dt); updateParticles(dt); break;
     case 'shop': updateShop(); break;
     case 'charms': updateCharms(dt); break;
@@ -768,6 +768,7 @@ const MENU_ICONS = {
   charm(g) { g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 9, 0, 7); g.stroke(); g.beginPath(); g.moveTo(0, -5); g.lineTo(4, 0); g.lineTo(0, 5); g.lineTo(-4, 0); g.closePath(); g.fill(); },
   shield(g) { g.beginPath(); g.moveTo(-8, -9); g.lineTo(8, -9); g.lineTo(8, 1); g.quadraticCurveTo(8, 8, 0, 11); g.quadraticCurveTo(-8, 8, -8, 1); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(0, -7); g.lineTo(0, 8); g.moveTo(-6, -2); g.lineTo(6, -2); g.stroke(); },
   book(g) { g.beginPath(); g.moveTo(-10, -7); g.lineTo(0, -5); g.lineTo(10, -7); g.lineTo(10, 8); g.lineTo(0, 6); g.lineTo(-10, 8); g.closePath(); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(0, -5); g.lineTo(0, 6); g.stroke(); },
+  note(g) { g.beginPath(); g.ellipse(-4, 6, 4, 3, -0.4, 0, 7); g.fill(); g.lineWidth = 2.2; g.beginPath(); g.moveTo(-0.5, 5); g.lineTo(-0.5, -9); g.lineTo(7, -6); g.stroke(); },
   speaker(g) { g.beginPath(); g.moveTo(-9, -3); g.lineTo(-4, -3); g.lineTo(2, -8); g.lineTo(2, 8); g.lineTo(-4, 3); g.lineTo(-9, 3); g.closePath(); g.fill(); g.lineWidth = 2; g.beginPath(); g.arc(3, 0, 5, -1, 1); g.stroke(); g.beginPath(); g.arc(3, 0, 9, -1, 1); g.stroke(); },
   mask(g) { g.beginPath(); g.moveTo(-8, -9); g.lineTo(8, -9); g.lineTo(9, 1); g.lineTo(0, 11); g.lineTo(-9, 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,0.6)'; g.beginPath(); g.ellipse(-3.5, -1, 1.8, 3, 0, 0, 7); g.ellipse(3.5, -1, 1.8, 3, 0, 0, 7); g.fill(); },
   sun(g) { g.beginPath(); g.arc(0, 0, 5, 0, 7); g.fill(); g.lineWidth = 2; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.beginPath(); g.moveTo(Math.cos(a) * 8, Math.sin(a) * 8); g.lineTo(Math.cos(a) * 11, Math.sin(a) * 11); g.stroke(); } },
@@ -777,7 +778,7 @@ const MENU_ICONS = {
   no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
 };
 // which drawing each menu entry uses
-const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', bestiary: 'book', sound: 'speaker', look: 'mask', gfx: 'sun', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
 // a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
 function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
@@ -977,6 +978,13 @@ function collectLights(cx, cy, skipPlayer) {
 }
 
 // map screen
+// the map: opens zoomed on the room you are in; Z shows the whole world, the arrows move the view
+function updateMap() {
+  const mv = G.mapView || (G.mapView = { zoom: true, px: 0, py: 0 });
+  if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('attack')) { G.state = 'play'; G.mapView = null; Input.consume('map'); Input.consume('pause'); return; }
+  if (Input.pressed('confirm')) { mv.zoom = !mv.zoom; mv.px = mv.py = 0; Sound.play('select'); }
+  if (mv.zoom) { mv.px = clamp(mv.px + Input.axisX() * 0.3, -80, 80); mv.py = clamp(mv.py + Input.axisY() * 0.3, -50, 50); }
+}
 function drawMap(g) {
   g.fillStyle = 'rgba(3,5,10,0.94)'; g.fillRect(0, 0, VW, VH);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('map'), VW / 2, 44, '#eef5ff');
@@ -984,8 +992,14 @@ function drawMap(g) {
   const ids = WORLD.order.filter(id => G.visited[id]);
   const all = ids.length ? ids : [G.level.id];
   for (const id of WORLD.order) { const m = WORLD.rooms[id].map, d = WORLD.rooms[id]; minX = Math.min(minX, m.x); minY = Math.min(minY, m.y); maxX = Math.max(maxX, m.x + Math.ceil(d.w / 8)); maxY = Math.max(maxY, m.y + Math.ceil(d.h / 8)); }
-  const u = Math.min((VW - 120) / (maxX - minX), (VH - 130) / (maxY - minY), 16);
-  const ox = (VW - (maxX - minX) * u) / 2 - minX * u, oy = 90 + ((VH - 130) - (maxY - minY) * u) / 2 - minY * u;
+  let u = Math.min((VW - 120) / (maxX - minX), (VH - 130) / (maxY - minY), 16);
+  let ox = (VW - (maxX - minX) * u) / 2 - minX * u, oy = 90 + ((VH - 130) - (maxY - minY) * u) / 2 - minY * u;
+  const mv = G.mapView;
+  if (mv && mv.zoom) {                                      // zoomed: the room you are in stays in the middle, moved by the arrows
+    u = 13; const cm = G.level.def.map, cx = cm.x + Math.ceil(G.level.def.w / 8) / 2 + mv.px, cy = cm.y + Math.ceil(G.level.def.h / 8) / 2 + mv.py;
+    ox = VW / 2 - cx * u; oy = 90 + (VH - 130) / 2 - cy * u;
+  }
+  g.save(); g.beginPath(); g.rect(0, 80, VW, VH - 120); g.clip();
   for (const id of WORLD.order) {
     if (!G.visited[id]) continue;
     const d = WORLD.rooms[id], m = d.map, w = Math.ceil(d.w / 8) * u, h = Math.ceil(d.h / 8) * u, x = ox + m.x * u, y = oy + m.y * u;
@@ -1000,8 +1014,10 @@ function drawMap(g) {
       g.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(G.t * 6)) + ')'; g.beginPath(); g.arc(px, py, 5, 0, 7); g.fill();
     }
   }
+  g.restore();
   g.font = font(20, '600'); g.fillStyle = '#9db5d6';
   g.fillText(tr('area_' + G.level.def.area), VW / 2, VH - 26);
+  g.font = font(13, '500'); g.fillStyle = 'rgba(190,205,230,0.6)'; g.fillText(tr('mapHint'), VW / 2, VH - 8);
 }
 
 // title screen over the banner (js/art_title.js): the logo is in the picture, so below it come the Arabic name (in Arabic),
@@ -1188,7 +1204,7 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 118, 36, { w: 340, h: 31 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 108, 34, { w: 340, h: 29 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);

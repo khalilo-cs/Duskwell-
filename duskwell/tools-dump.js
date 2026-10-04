@@ -1,7 +1,7 @@
 // Dev helper: prints every room as ASCII and checks door pairing. Usage: node duskwell/tools-dump.js [roomId]
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = {}; vm.createContext(ctx);
-for (const f of ['util.js', 'world.js', 'world_frost.js', 'world_ember.js', 'world_storm.js', 'world_mirror.js', 'world_ossuary.js', 'world_lunar.js', 'world_end.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, 'js', f), 'utf8') + (f === 'world_end.js' ? ';this.WORLD=WORLD;' : ''), ctx);
+for (const f of ['util.js', 'world.js', 'world_frost.js', 'world_ember.js', 'world_storm.js', 'world_mirror.js', 'world_ossuary.js', 'world_lunar.js', 'world_extra.js', 'world_end.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, 'js', f), 'utf8') + (f === 'world_end.js' ? ';this.WORLD=WORLD;' : ''), ctx);
 const W = ctx.WORLD, only = process.argv[2];
 let errors = 0;
 for (const id of W.order) {

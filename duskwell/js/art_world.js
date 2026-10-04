@@ -720,8 +720,9 @@ Art.drawSeals = function (g, d, t, lit) {
     const a = -Math.PI * 0.85 + i * (Math.PI * 0.7 / (lit.length - 1)), r = 110;
     const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r * 0.9;
     if (on) bloom(g, x, y, 34, '#ffe2a8', 0.6 + 0.2 * Math.sin(t * 3 + i));
-    ellipse(g, x, y, 11, 11); fs(g, on ? '#fff4d6' : '#1a1e2a', INK, 3);
-    if (on) { g.fillStyle = INK; ellipse(g, x - 3.5, y, 1.6, 3); g.fill(); ellipse(g, x + 3.5, y, 1.6, 3); g.fill(); }
+    const k = lit.length > 8 ? 0.72 : 1;
+    ellipse(g, x, y, 11 * k, 11 * k); fs(g, on ? '#fff4d6' : '#1a1e2a', INK, 3);
+    if (on) { g.fillStyle = INK; ellipse(g, x - 3.5 * k, y, 1.6 * k, 3 * k); g.fill(); ellipse(g, x + 3.5 * k, y, 1.6 * k, 3 * k); g.fill(); }
   });
 };
 Art.drawGate = function (g, x, y, th, t) {

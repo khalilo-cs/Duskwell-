@@ -2,8 +2,9 @@
 // World data: rooms are built from tile rectangles (x, y in tiles, y grows downward).
 // Things stand in the tile their feet are in; flyers use their centre tile.
 const T_AIR = 0, T_SOLID = 1, T_ONEWAY = 2, T_HAZARD = 3, T_BREAK = 4, T_GATE = 5, T_BOUNCE = 6, T_CRACK = 7, T_ACID = 8, T_CRUMBLE = 9;
-// bosses whose seals open the throne gate
-const SEAL_FLAGS = ['boss_guardian', 'boss_spore', 'boss_weaver', 'boss_drowned', 'boss_wraith', 'boss_brood'];
+// bosses whose seals open the throne gate: the six of the deep first, then the six of the far lands, so the Throne comes last
+const SEAL_FLAGS = ['boss_guardian', 'boss_spore', 'boss_weaver', 'boss_drowned', 'boss_wraith', 'boss_brood',
+  'boss_queen', 'boss_colossus', 'boss_roc', 'boss_twin', 'boss_marrow', 'boss_regent'];
 
 class RoomBuilder {
   constructor(id, w, h, opt) {
@@ -468,7 +469,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   ht3.solid(0, 23, 40, 3);
   ht3.door('l', 0, 20, 1, 3, 'ht1', 'r');
   ht3.door('r', 39, 20, 1, 3, 'ht2', 'l');
-  ht3.sealGate = { x: 26, y: 1, w: 2, h: 22, need: 6 };
+  ht3.sealGate = { x: 26, y: 1, w: 2, h: 22, need: SEAL_FLAGS.length };
   ht3.decor('seals', 26, 12);
   ht3.sign(22, 22, 'seal_gate');
   ht3.bench(8, 22);

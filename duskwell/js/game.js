@@ -866,7 +866,10 @@ function drawTitle(g) {
   }
   // the wanderer on the hill
   glow(g, 300, 400, 150, '#9cc4ff', 0.16);
-  if (HeroStyle.puppet()) {
+  if (HeroStyle.frames()) {
+    Pixel.shadow(g, 300, 458, 60);
+    HeroFrames.drawAt(g, 300, 458, 2.2, t);
+  } else if (HeroStyle.puppet()) {
     Pixel.setScene([{ x: 760, y: 150, r: 1100, a: 1, c: '#ffe9b0' }, { x: 120, y: 420, r: 500, a: 0.5, c: '#7aa0ff' }], 0, 0, 'title');
     Pixel.shadow(g, 300, 458, 60);
     Puppet.drawAt(g, 300, 458, 2.5, t);

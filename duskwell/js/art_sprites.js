@@ -206,7 +206,7 @@ function wanderer(g, fx, fy, face, o, alpha, tint) {
   g.restore();
 }
 Art.drawPlayer = function (g, p, t) {
-  const pixelGhosts = !Skins.get('player') && (Art.drawPuppetGhosts(g, p, t) || Art.drawPixelGhosts(g, p, t));
+  const pixelGhosts = !Skins.get('player') && (Art.drawFramesGhosts(g, p, t) || Art.drawPuppetGhosts(g, p, t) || Art.drawPixelGhosts(g, p, t));
   for (const gh of pixelGhosts ? [] : p.ghost) {
     const life = gh.sd ? 0.26 : 0.22, a = (gh.sd ? 0.55 : 0.45) * (1 - (t - gh.t) / life);
     if (a > 0) wanderer(g, gh.x + p.w / 2, gh.y + p.h, gh.face, { t, vx: 0, vy: 0, dash: !gh.sd, sdGo: gh.sd }, a, gh.sd ? '#a8642a' : '#2a3a5a');
@@ -224,7 +224,7 @@ Art.drawPlayer = function (g, p, t) {
     g.fillStyle = gr; g.beginPath(); g.moveTo(x0, p.cy - 4); g.lineTo(p.cx, p.cy - 16); g.lineTo(p.cx, p.cy + 12); g.lineTo(x0, p.cy + 4); g.fill();
     bloom(g, p.cx + d * 10, p.cy, 70, '#ffc070', 0.55);
   }
-  if (p.dead) return;
+  if (p.dead) { if (!Skins.get('player')) Art.drawFramesDeath(g, p, t); return; }
   let alpha = 1;
   if (p.invuln > 0 && Math.floor(t * 24) % 2 === 0) alpha = 0.4;
   const o = { t, vx: p.vx, vy: p.vy, air: !p.onGround && !p.sliding && !p.diving && !sdGo, run: p.onGround && Math.abs(p.vx) > 30 && !sdGo, dash: p.dashT > 0, hurt: p.hurtT > 0, sit: !!p.sitting, landT: p.landT, dive: p.diving, wail: p.wailT > 0,
@@ -241,12 +241,14 @@ Art.drawPlayer = function (g, p, t) {
     g.strokeStyle = rgba('#e8f6ff', 0.75); g.lineWidth = 2.5; ellipse(g, p.cx, p.cy - 4, 28 - k * 12, 36 - k * 14); g.stroke();
   }
   bloom(g, p.cx, p.cy - 8, 46, '#9cc4ff', 0.08);
+  let drawn = null;
   const skin = Skins.get('player');                   // a picture chosen in "Your images"
   if (skin) { g.save(); g.globalAlpha = alpha; Skins.draw(g, skin, { x: p.x, y: p.y, w: p.w, h: p.h }, p.face, 0, 1.5); g.restore(); }
+  else if ((drawn = Art.drawFramesHero(g, p, t, alpha))) { /* the drawn hero: a sideways cut carries its own trail and sword */ }
   else if (Art.drawPuppetHero(g, p, t, alpha)) { /* the cut-out hero; the strike's arc is drawn below */ }
   else if (Art.drawPixelHero(g, p, t, alpha)) return;      // the artist's pixel hero, lit in 3D
   else wanderer(g, p.cx, p.y + p.h + (p.sitting ? 4 : 0), p.face, o, alpha, null);
-  if (p.atkT > 0) {
+  if (p.atkT > 0 && !(drawn && drawn.arc)) {
     const pr = 1 - clamp(p.atkT / 0.16, 0, 1), a = 1 - pr * 0.7, f = p.face, m = p.atkAlt ? 1 : -1, nailArc = Gear.weapon() === 'nail';
     let cx = p.cx, cy = p.cy - 4, a0, a1;
     if (p.atkDir === 'up') { a0 = -Math.PI * 0.85; a1 = -Math.PI * 0.15; cy = p.cy - 8; }
@@ -263,8 +265,10 @@ Art.drawPlayer = function (g, p, t) {
     // the sword in the hand, at the leading edge of the swing
     // the hand sits in front of the chest so the blade never crosses the mask
     const hx = p.cx + f * 14, hy = p.cy + (p.atkDir === 'up' ? -6 : p.atkDir === 'down' ? 6 : 0);
-    heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE * (Charms.has('reach') ? 1.3 : 1), null);
-    g.fillStyle = INK; ellipse(g, hx, hy, 3.2, 2.8); g.fill();
+    if (!drawn) {                                     // the drawn hero holds its own sword
+      heroSword(g, hx + Math.cos(sweep) * 4, hy + Math.sin(sweep) * 4, sweep, 40 * HERO_SCALE * (Charms.has('reach') ? 1.3 : 1), null);
+      g.fillStyle = INK; ellipse(g, hx, hy, 3.2, 2.8); g.fill();
+    }
   }
 };
 

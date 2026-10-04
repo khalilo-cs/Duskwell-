@@ -47,6 +47,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       return { right: lum(cx + 125, cx + 215, 36 * 32, 39 * 32), left: lum(cx - 215, cx - 125, 36 * 32, 39 * 32) };
     });
   };
+  await ev(() => { DW.enterRoom('cx1', { pos: { x: 10 * 32, y: 40 * 32 } }); DW.G.trans = null; DW.draw(); });
+  await page.waitForFunction(() => Art.paintedReady('cave'), null, { timeout: 20000 });              // the painted cave behind, before measuring light on it
   const m1 = await measure(1), m2 = await measure(2);
   const r1 = m1.right / m1.left, r2 = m2.right / m2.left;
   ok('without shadows both sides are similarly lit', r1 > 0.6 && r1 < 1.6, { r1, m1 });

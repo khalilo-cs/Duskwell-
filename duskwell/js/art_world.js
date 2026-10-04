@@ -439,6 +439,8 @@ Art.loadPainted = function (theme) {
   // each set is ~28 MB once decoded, so keep only the current area and its neighbours
   while (painted.size > PAINT_KEEP) painted.delete(painted.keys().next().value);
 };
+// whether an area's painted layers have all arrived (tests wait on it before measuring the picture)
+Art.paintedReady = theme => painted.has(theme) && painted.get(theme).ready;
 function drawPainted(g, th, p, camX, camY, t) {
   for (let li = 0; li < 4; li++) {
     const f = depthFactor(li ? LAYER_Z[li - 1] : SKY_Z);

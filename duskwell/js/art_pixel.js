@@ -2,25 +2,27 @@
 // The pixel-art hero (blue or dark version) and the husk, drawn through the lit sprite engine in
 // pixel.js. HeroStyle remembers which look the player picked (pause menu: "Hero look").
 const HeroStyle = (() => {
-  const LIST = ['puppet', 'blue', 'dark', 'vector'];
+  const LIST = ['frames', 'puppet', 'blue', 'dark', 'vector'];
   let i = 0;
-  try { const v = localStorage.getItem('duskwell_hero_style2'); if (LIST.includes(v)) i = LIST.indexOf(v); } catch (e) { /* ignore */ }
+  try { const v = localStorage.getItem('duskwell_hero_style3'); if (LIST.includes(v)) i = LIST.indexOf(v); } catch (e) { /* ignore */ }
   return {
     cur: () => LIST[i],
     // the sheet in use: the artist's own, with the cloak's two blues swapped for the equipped cloak's colours
     sheet() {
       const base = 'hero_' + LIST[i], id = typeof Gear !== 'undefined' ? Gear.cloak() : 'drifter';
-      if (id === 'drifter' || LIST[i] === 'vector' || LIST[i] === 'puppet') return base;
+      if (id === 'drifter' || LIST[i] === 'vector' || LIST[i] === 'puppet' || LIST[i] === 'frames') return base;
       const c = parseInt(Gear.def('cloak', id).color.slice(1), 16), at = (k, kk) => { const f = v => Math.min(255, Math.round(v * kk)); return (f((c >> 16) & 255) << 16) | (f((c >> 8) & 255) << 8) | f(c & 255); };
       const swaps = LIST[i] === 'blue' ? { 0x3d5da4: at(0, 1.1), 0x192c3e: at(0, 0.45) } : { 0x1d2036: at(0, 0.7), 0x18182f: at(0, 0.4) };
       return Pixel.variant(base, id, swaps) || base;
     },
-    pixel: () => LIST[i] !== 'vector' && LIST[i] !== 'puppet' && Pixel.ready('hero_' + LIST[i]),
+    pixel: () => LIST[i] !== 'vector' && LIST[i] !== 'puppet' && LIST[i] !== 'frames' && Pixel.ready('hero_' + LIST[i]),
+    // the hero drawn frame by frame (js/art_hero_frames.js), the default
+    frames: () => LIST[i] === 'frames' && typeof HeroFrames !== 'undefined' && HeroFrames.ready(),
     puppet: () => LIST[i] === 'puppet' && Puppet.ready(),
     // any look made of a sprite rather than the inked figure (the weapons are drawn over it)
-    sprite() { return this.pixel() || this.puppet(); },
-    next() { i = (i + 1) % LIST.length; try { localStorage.setItem('duskwell_hero_style2', LIST[i]); } catch (e) { /* ignore */ } },
-    label() { return { puppet: ['البطل الجديد', 'New hero'], blue: ['بكسل أزرق', 'Pixel blue'], dark: ['بكسل داكن', 'Pixel dark'], vector: ['مرسوم بالتفصيل', 'Detailed ink'] }[LIST[i]][LANG.cur === 'ar' ? 0 : 1]; },
+    sprite() { return this.pixel() || this.puppet() || this.frames(); },
+    next() { i = (i + 1) % LIST.length; try { localStorage.setItem('duskwell_hero_style3', LIST[i]); } catch (e) { /* ignore */ } },
+    label() { return { frames: ['البطل المرسوم', 'Drawn hero'], puppet: ['البطل المفصّل', 'Jointed hero'], blue: ['بكسل أزرق', 'Pixel blue'], dark: ['بكسل داكن', 'Pixel dark'], vector: ['مرسوم بالتفصيل', 'Detailed ink'] }[LIST[i]][LANG.cur === 'ar' ? 0 : 1]; },
   };
 })();
 

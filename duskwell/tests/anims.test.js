@@ -104,6 +104,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       const seen = {};
       for (let i = 0; i < 420; i++) {
         P.x = k === 'icicle' ? x * 32 + 8 - P.w / 2 : 14 * 32; P.vx = 0;
+        if (k === 'jelly' || k === 'orrery') { P.x = e.cx - 50 - P.w / 2; P.y = e.cy - P.h / 2; P.vy = 0; }   // these two lash out only when the hero is close
         DW.step(1); DW.draw();
         if (e._ad && e._ad.f) { const n = AnimArt.nameOf(k, e._ad.f); if (n) seen[n.split(':')[0]] = 1; }
       }

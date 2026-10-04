@@ -1,7 +1,9 @@
-name: Deploy to GitHub Pages
+# Publishes the game (duskwell/) at the root of the site, with the Android build under /download.
+name: Publish the game
 on:
   push:
     branches: [main]
+    paths: ['duskwell/**', 'duskwell-android/duskwell.apk', 'duskwell-android/duskwell-apk.zip', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,14 +20,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Assemble site
+      - name: Assemble the site
         run: |
           mkdir _site
-          cp -r game _site/game
-          cp -r duskwell _site/duskwell
-          cp duskwell-android/duskwell.apk _site/duskwell/duskwell.apk
-          cp android/zaki-adventure.apk _site/game/zaki-adventure.apk
-          echo '<meta http-equiv="refresh" content="0;url=game/">' > _site/index.html
+          # the game without its source sheets, tests and tools
+          rsync -a --exclude=art/source --exclude=tests --exclude=tools --exclude=docs --exclude=unity --exclude=tools-dump.js --exclude='*.md' duskwell/ _site/
+          mkdir _site/download
+          cp duskwell-android/duskwell.apk duskwell-android/duskwell-apk.zip _site/download/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

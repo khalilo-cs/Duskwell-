@@ -90,7 +90,7 @@ class Player {
   constructor() {
     this.w = 22; this.h = 38;
     this.ab = { dash: false, wall: false, double: false, dive: false, superdash: false, wail: false };
-    this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = 99; this.geo = 0;
+    this.maxHp = 5; this.hp = 5; this.soul = 0; this.maxSoul = Diff.soulMax; this.geo = 0;
     this.nail = 5; this.soulGain = 11;
     this.place(0, 0, 1);
   }
@@ -114,6 +114,8 @@ class Player {
   // standing on ice
   onIce() { const L = G.level, ty = Math.floor((this.y + this.h + 2) / TILE); return L.isIce(Math.floor((this.x + 4) / TILE), ty) || L.isIce(Math.floor((this.x + this.w - 4) / TILE), ty); }
   // ---- numbers the charms change (see charms.js) ----
+  // every gain of soul comes through here: the vessel is large, and each blow fills only part of what it used to
+  gainSoul(n) { this.soul = Math.min(this.maxSoul, this.soul + n * Diff.soulFill); }
   spellCost() { return (Charms.has('thrift') ? 24 : 33) - (G.flags.buy_rune ? 5 : 0); }          // the wizard's rune takes five off
   // numbers that charms and gear change: heal time, damage, spell power, strike gap, reach
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1) * Gear.focusK(); }
@@ -371,7 +373,7 @@ class Player {
         const landed = e.hurt(this.nailDamage(), dir, this.atkDir);      // false: a shield turned it aside
         e.kb = kb0;
         if (landed !== false) {
-          this.soul = Math.min(this.maxSoul, this.soul + Math.round((this.soulGain + (Charms.has('siphon') ? 6 : 0) + Gear.soulBonus()) * Gear.soulK()));
+          this.gainSoul(Math.round((this.soulGain + (Charms.has('siphon') ? 6 : 0) + Gear.soulBonus()) * Gear.soulK()));
           if (Charms.has('cinder') && !e.dead) e.burnT = 0.6;        // Cinder Edge: a burn lands a moment after the blow
           if (Gear.bleeds() && !e.dead) e.bleedT = 1.1;              // Bone Saw: the wound keeps bleeding
         }
@@ -432,7 +434,7 @@ class Player {
       if (this.rushTick > 0) continue;
       e.hurt(Math.max(2, Math.round(this.nailDamage() * 0.75)), f, 'spell');
       G.fx.push({ type: 'cut', x: e.cx + rand(-10, 10), y: e.cy + rand(-14, 14), a: rand(-0.9, 0.9) + (f > 0 ? 0 : Math.PI), t: 0, life: 0.2, color: '#ffe0a8' });
-      this.soul = Math.min(this.maxSoul, this.soul + 2);
+      this.gainSoul(2);
     }
     if (this.rushTick <= 0) this.rushTick = 0.06;
     // the Wanderer slows among the foes and cuts them again and again, then bursts out the far side
@@ -520,7 +522,7 @@ class Player {
     if (this.wailTick <= 0) {
       this.wailTick = 0.13;
       const col = { x: this.cx - 38, y: this.wailTop, w: 76, h: this.y + this.h - this.wailTop };
-      for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(col, e.hb())) { e.hurt(this.spellDmg(6), e.cx > this.cx ? 1 : -1, 'wail'); this.soul = Math.min(this.maxSoul, this.soul + 1); }
+      for (const e of G.enemies) if (!e.dead && !e.ghostly && overlap(col, e.hb())) { e.hurt(this.spellDmg(6), e.cx > this.cx ? 1 : -1, 'wail'); this.gainSoul(1); }
       G.burst(this.cx + rand(-30, 30), rand(this.wailTop, this.y), 5, { color: '#dff3ff', speed: 60, life: 0.4, size: 3, grav: -260 });
     }
     if (this.wailT <= 0) { this.wailT = 0; this.invuln = Math.max(this.invuln, 0.2); }
@@ -569,7 +571,7 @@ class Player {
     G.burst(this.cx, this.cy, 16, { color: '#e9f3ff', speed: 240, life: 0.5, size: 3 });
     G.burst(this.cx, this.cy, 10, { color: '#1a2230', speed: 200, life: 0.5, size: 4 });
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }
-    if (Charms.has('spirit')) this.soul = Math.min(this.maxSoul, this.soul + 18);
+    if (Charms.has('spirit')) this.gainSoul(18);
     if (Charms.has('thorn')) this.thornBurst();
     if (Gear.frost()) this.frostBurst();
     return true;
@@ -647,7 +649,7 @@ class Player {
     for (const e of G.enemies) {
       if (e.dead || e.ghostly || s.hits.has(e) || !overlap(hb, e.hb())) continue;
       s.hits.add(e); e.hurt(SD_DMG, s.dir, 'spell'); G.hitstop(0.05);
-      this.soul = Math.min(this.maxSoul, this.soul + 6);
+      this.gainSoul(6);
     }
     if (this.hitL || this.hitR) {
       this.sd = null; this.vx = -s.dir * 170; this.vy = -240; this.recoil = 0.15;
@@ -867,7 +869,7 @@ class Enemy {
   // die: drop geo, burst, count the kill
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15); Mind.killed(this, this.lastHow);
-    if (Charms.has('grave') && !G.player.dead) { G.player.soul = Math.min(G.player.maxSoul, G.player.soul + 8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
+    if (Charms.has('grave') && !G.player.dead) { G.player.gainSoul(8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
     G.burst(this.cx, this.cy, 8, { color: '#0a0d12', speed: 180, life: 0.6, size: 5 });
     G.dropGeo(this.cx, this.cy, this.geo);

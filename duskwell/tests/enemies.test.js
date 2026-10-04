@@ -42,7 +42,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     return out;
   });
   ok('a strike from the front is blocked (no damage, no soul)', r.front.hp === 100 && r.front.soul === 0 && r.front.blockedT, r.front);
-  ok('a strike on its back lands and gathers soul', r.back.hp === 95 && r.back.soul === 11, r.back);
+  ok('a strike on its back lands and gathers soul', r.back.hp === 95 && r.back.soul === 5.5, r.back);
   ok('a downward strike from above lands', r.above.dmg === 5, r.above);
   ok('up strikes and spells ignore the shield', r.spell === 14, r);
 

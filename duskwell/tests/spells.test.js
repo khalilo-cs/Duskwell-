@@ -53,13 +53,13 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await setup(['cx2', 12, 20]);
   r = await ev(() => {
     const { G, P } = DW; const out = {};
-    P.soul = 90; G.shade = { room: 'cx2', x: 100, y: 600, geo: 40 }; DW.step(2); out.capped = [P.maxSoul, P.soul];
-    P.soul = 66; P.soulGain = 11; P.soul = Math.min(P.maxSoul, P.soul + P.soulGain); DW.step(1); out.stays = P.soul;
+    P.soul = 250; G.shade = { room: 'cx2', x: 100, y: 600, geo: 40 }; DW.step(2); out.capped = [P.maxSoul, P.soul];
+    P.soul = 190; P.gainSoul(40); DW.step(1); out.stays = P.soul;
     G.shade = null; DW.step(2); out.freed = P.maxSoul;
     return out;
   });
-  ok('with a shade out there the soul vessel holds only 66', r.capped[0] === 66 && r.capped[1] === 66 && r.stays === 66, r);
-  ok('recovering the shade restores 99', r.freed === 99, r);
+  ok('with a shade out there the soul vessel holds only 198 (two thirds of 297)', r.capped[0] === 198 && r.capped[1] === 198 && r.stays === 198, r);
+  ok('recovering the shade restores 297', r.freed === 297, r);
   await ev(() => { DW.G.shade = { room: 'cx2', x: 100, y: 600, geo: 40 }; DW.step(2); });
   await page.waitForTimeout(150); await page.screenshot({ path: shot('soul_cracked.png'), clip: { x: 0, y: 0, width: 400, height: 160 } });
 

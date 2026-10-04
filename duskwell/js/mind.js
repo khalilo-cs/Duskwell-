@@ -1,8 +1,9 @@
 'use strict';
 // What the creatures learn from you. Every kind keeps a record (G.mind, saved with the game): how many of it you killed,
 // how many times it wounded you, how many times it killed you. From those three numbers it gets a level, 0 to 5, and the level
-// changes how every creature of that kind behaves, in this room and in every later one:
-//   1  it is quicker and notices you from farther away
+// changes how every creature of that kind behaves, in this room and in every later one. The deeper areas are born with a level
+// of their own (Diff.innate), so a player who has never met the kind still meets a clever one:
+//   1  it is quicker, notices you from farther away and leads its shots a little
 //   2  it sidesteps now and then when it sees your nail swing
 //   3  it hops over your spell bolts, if spells are how you mostly killed it
 //   4  when one of them has seen you the others of its kind in the room are on the alert too
@@ -10,7 +11,7 @@
 // Bosses do not sidestep: a boss that has beaten you before only shortens its pauses.
 // Nothing here is in the creatures' own code: update() and seesPlayer() of every class are wrapped once, below.
 const Mind = (() => {
-  const LEVELS = [3, 8, 16, 28, 45];                                        // score needed for levels 1 to 5
+  const LEVELS = [2, 5, 10, 18, 30];                                        // score needed for levels 1 to 5
   const NAMES = [['غِرّ', 'Green'], ['متنبّه', 'Wary'], ['متمرّس', 'Seasoned'], ['ماكر', 'Cunning'], ['خبير', 'Veteran'], ['داهية', 'Mastermind']];
   const ROOTED = new Set(['shard', 'spitter', 'icicle', 'censer', 'heap', 'mole', 'lavaworm', 'shroom', 'orrery']);       // these never move out of the way
   const SPELL_HOW = new Set(['spell', 'wail', 'dive', 'nova']);
@@ -27,10 +28,11 @@ const Mind = (() => {
   // score -> level
   const score = r => r.k + 1.5 * r.w + 4 * r.d;
   const levelOf = r => { const s = score(r); let l = 0; while (l < MAX && s >= LEVELS[l]) l++; return l; };
-  // the level of a creature (0 when it has no record)
+  // the level of a creature: what it has learned from you, or what its depth gives it, whichever is more
   function level(e) {
-    const k = keyOf(e); if (!k || !G.mind || !G.mind[k]) return 0;
-    return levelOf(G.mind[k]);
+    const k = keyOf(e); if (!k) return 0;
+    const learned = G.mind && G.mind[k] ? levelOf(G.mind[k]) : 0;
+    return Math.max(learned, e.area ? Diff.innate(e.area) : 0);
   }
   // share of this kind's deaths that spells dealt
   const spellShare = r => (r.k ? r.sp / r.k : 0);
@@ -58,10 +60,11 @@ const Mind = (() => {
   // set a creature up when it appears: the depth of its area (Diff) and, for a boss, the shorter pauses its memory gives it
   function prepare(e, area) {
     e.area = area; e.tempo = Diff.tempo(area); e.sightK = Diff.sight(area);
+    if (e.kb) e.kb *= Diff.flinch(area);                              // the deep ones are hard to push around
     if (e.isBoss) { const l = level(e); if (l) e.spd = Math.max(0.55, e.spd * (1 - 0.045 * l)); }
   }
   // how much faster than normal a creature acts: the area's tempo times what it has learned
-  const tempo = e => Math.min(1.4, (e.tempo || 1) * (1 + 0.03 * level(e)));
+  const tempo = e => Math.min(1.5, (e.tempo || 1) * (1 + 0.04 * level(e)));
   // how much farther it notices you
   const sight = e => (e.sightK || 1) * (1 + 0.12 * level(e)) * (e.alertT > 0 ? 1.8 : 1);
 
@@ -73,8 +76,8 @@ const Mind = (() => {
     const busy = e.currentState === ST.ANTICIPATION || e.currentState === ST.ATTACK || e.stun > 0 || e.isBoss || ROOTED.has(e.kind);
     if (l >= 2 && !busy && e.dodgeCD <= 0 && swing) {
       const dx = e.cx - p.cx;
-      if (Math.abs(dx) < 120 && Math.abs(e.cy - p.cy) < 70 && Math.sign(dx) === p.face && Math.random() < Math.min(0.5, 0.09 * l)) {
-        e.dodgeT = 0.22; e.dodgeVx = Math.sign(dx) * 340; e.dodgeCD = 1.6 - 0.1 * l;
+      if (Math.abs(dx) < 120 && Math.abs(e.cy - p.cy) < 70 && Math.sign(dx) === p.face && Math.random() < Math.min(0.65, 0.13 * l)) {
+        e.dodgeT = 0.22; e.dodgeVx = Math.sign(dx) * 340; e.dodgeCD = 1.4 - 0.1 * l;
         if (e.onGround) e.vy = -200;
       }
     }
@@ -93,6 +96,17 @@ const Mind = (() => {
   // the dodge goes on for its short time after the creature's own update has set its velocity
   function after(e, dt) { if (e.dodgeT > 0) { e.dodgeT -= dt; e.vx = e.dodgeVx; } }
 
+  // a straight, fast shot is turned toward where the hero will be, not where he is: the stronger the creature's level, the more so
+  function lead(e, q) {
+    const l = level(e), p = G.player; if (!l || !p || q.kind !== 'shard') return;
+    const sp = Math.hypot(q.vx, q.vy); if (sp < 100) return;
+    const dx = p.cx - q.x, dy = p.cy - q.y, t = Math.hypot(dx, dy) / sp;
+    const a0 = Math.atan2(dy, dx), a1 = Math.atan2(dy + p.vy * t, dx + p.vx * t);
+    let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+    const k = Math.min(1, 0.3 * l), c = Math.cos(d * k), sn = Math.sin(d * k);
+    const vx = q.vx * c - q.vy * sn, vy = q.vx * sn + q.vy * c; q.vx = vx; q.vy = vy;
+  }
+
   // wrap one class once: its update runs faster, then acts on what was learned. A subclass that calls super.update() is not wrapped twice.
   function wrap(cls) {
     if (!cls || !Object.prototype.hasOwnProperty.call(cls.prototype, 'update') || cls.prototype.update._mind) return;
@@ -104,7 +118,11 @@ const Mind = (() => {
         act(this, dt);
         const n = G.projs.length;
         orig.call(this, dt * tempo(this));
-        for (let i = n; i < G.projs.length; i++) if (!G.projs[i].friendly && !G.projs[i].owner) G.projs[i].owner = this;      // whoever fired it gets the credit
+        for (let i = n; i < G.projs.length; i++) {
+          const q = G.projs[i]; if (q.friendly || q.owner) continue;
+          q.owner = this;                                                      // whoever fired it gets the credit
+          lead(this, q);
+        }
         after(this, dt);
       } finally { this._inMind = false; }
     };
@@ -131,8 +149,8 @@ const Mind = (() => {
   Enemy.prototype.seesPlayer = function (range) { return seen.call(this, range * sight(this)); };
 
   // the record as text, for the bestiary: level name and what it has learned
-  function describe(key) {
-    const r = G.mind && G.mind[key], l = r ? levelOf(r) : 0, ar = LANG.cur === 'ar';
+  function describe(key, area) {
+    const r = G.mind && G.mind[key], l = Math.max(r ? levelOf(r) : 0, area ? Diff.innate(area) : 0), ar = LANG.cur === 'ar';
     const learned = [];
     if (l >= 1) learned.push(ar ? 'أسرع ويرى أبعد' : 'quicker, sees farther');
     if (l >= 2 && !key.startsWith('b:')) learned.push(ar ? 'يتفادى ضربة النصل' : 'sidesteps the nail');

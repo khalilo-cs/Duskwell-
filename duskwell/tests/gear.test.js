@@ -77,7 +77,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   let i = await dummy(50);
   await ev(() => { DW.P.soul = 0; DW.P.atkBuf = 0.12; DW.step(3); });
   r = await ev(() => DW.P.soul);
-  ok('Twin Fangs gather extra soul (11 + 3)', r === 14, r);
+  ok('Twin Fangs gather extra soul ((11 + 3) at half value)', r === 7, r);
   await setup();
   await ev(() => { const { Gear } = DW; Gear.give('weapon', 'bonesaw'); Gear.equip('weapon', 'bonesaw'); });
   i = await dummy(50);
@@ -95,7 +95,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     P.invuln = 0; P.hurt(1, P.cx + 10); out.invuln = P.invuln; out.vx = Math.abs(P.vx);
     return out;
   });
-  ok('Ironhide: longer grace (the base grace x 1.5) and half the recoil', Math.abs(r.invuln - 1.05 * 1.5) < 0.01 && Math.abs(r.vx - 165) < 1, r);
+  ok('Ironhide: longer grace (the base grace x 1.5) and half the recoil', Math.abs(r.invuln - 0.9 * 1.5) < 0.01 && Math.abs(r.vx - 165) < 1, r);
   await setup();
   await ev(() => { const { Gear } = DW; Gear.give('cloak', 'windweave'); Gear.equip('cloak', 'windweave'); });
   await page.keyboard.down('ArrowRight'); await ev(() => DW.step(40)); await page.keyboard.up('ArrowRight');

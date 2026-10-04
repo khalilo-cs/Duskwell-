@@ -332,7 +332,7 @@ function updatePlay(dt) {
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
   // a cracked soul vessel: while the shade still holds your Geo, only two thirds of the soul can be kept
-  P.maxSoul = G.shade ? 66 : 99; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
+  P.maxSoul = G.shade ? Diff.soulMax * 2 / 3 : Diff.soulMax; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
   // looking up or down: hold the key while standing still and the camera drifts that way
   const still = P.onGround && !P.sitting && Input.axisX() === 0 && P.atkT <= 0 && P.hurtT <= 0 && !P.diving && !P.sd && !P.wailT;
   const iy = still ? Input.axisY() : 0;
@@ -674,7 +674,7 @@ function drawGearCard(g) {
 // masks, soul orb, geo, boss bar, banners and messages
 function drawHUD(g) {
   // soul orb
-  const ox = 52, oy = 54, r = 30, soul = P.soul / 99;
+  const ox = 52, oy = 54, r = 30, soul = P.soul / Diff.soulMax;
   g.save();
   glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
   const orbArt = IconArt.ready();
@@ -687,8 +687,8 @@ function drawHUD(g) {
   for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
   g.lineTo(ox + r, oy + r); g.closePath();
   if (orbArt) { g.clip(); IconArt.draw(g, 'orb_full', ox, oy, r * 2.5, P.soul >= P.spellCost() ? null : { filter: 'brightness(0.72) saturate(0.8)' }); } else g.fill();
-  if (P.maxSoul < 99) {            // the cracked top third
-    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / 99);
+  if (P.maxSoul < Diff.soulMax) {            // the cracked top third
+    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / Diff.soulMax);
     g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
     g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
   }
@@ -696,6 +696,9 @@ function drawHUD(g) {
   if (!orbArt) { g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
   g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke(); }
   g.restore();
+  // how much soul there is, under the orb (the vessel holds Diff.soulMax)
+  g.font = font(12, '700'); g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
+  textShadow(g, Math.floor(P.soul) + '', ox, oy + r + 10, P.soul >= P.spellCost() ? '#dff0ff' : '#8fa6c4');
   // masks
   for (let i = 0; i < P.maxHp; i++) drawMaskIcon(g, 108 + i * 32, 50, i < P.hp, (P.invuln > 1.1 || (P.focusT === 0 && G.flash > 0.2)) ? 0.2 : 0);
   // geo

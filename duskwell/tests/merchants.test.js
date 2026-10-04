@@ -47,11 +47,11 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ geo: DW.P.geo, soul: DW.P.soul, sold: shopSold(shopList().find(i => i.id === 'flask')) }));
-  ok('two flasks bought one after the other: 66 soul for 140 geo, never sold out', r.geo === 860 && r.soul === 66 && r.sold === false, r);
+  ok('two flasks bought one after the other: 198 soul (a third each) for 180 geo, never sold out', r.geo === 820 && r.soul === 198 && r.sold === false, r);
   r = await ev(() => { const { P } = DW; P.hp = 2; const list = shopList(); DW.G.menuSel = list.findIndex(i => i.id === 'vial'); return DW.G.menuSel; });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ hp: DW.P.hp, geo: DW.P.geo }));
-  ok('a vial mends one mask for 120 geo', r.hp === 3 && r.geo === 740, r);
+  ok('a vial mends one mask for 120 geo', r.hp === 3 && r.geo === 700, r);
   // the ink and the rune need seals, then change the numbers
   r = await ev(() => {
     const { G, P } = DW, list = shopList(), ink = list.find(i => i.id === 'buy_ink'), rune = list.find(i => i.id === 'buy_rune');

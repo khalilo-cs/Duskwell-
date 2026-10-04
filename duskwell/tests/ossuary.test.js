@@ -117,7 +117,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     const d = new ENEMY_TYPES.crawler({ type: 'crawler', x: 24, y: 17 }); d.kind = 'crawler'; G.enemies.push(d); d.hurt(99, 1, 'side');
     return { withC, without: P.soul };
   });
-  ok('Grave Whisper: a slain foe gives 8 soul; without the charm none', r.withC === 8 && r.without === 0, r);
+  ok('Grave Whisper: a slain foe gives 8 soul at half value (4); without the charm none', r.withC === 4 && r.without === 0, r);
 
   // ---------------------------------------------------------------- the Bonewright
   let b = await fight('os4', 30);

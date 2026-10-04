@@ -14,11 +14,24 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await setup();
   // ---- difficulty
   let r = await ev(() => ({ hp0: Diff.enemyHp('hushvale'), hp14: Diff.enemyHp('throne'), boss0: Diff.bossHp('hushvale'), t: Diff.tempo('throne'), s: Diff.sight('throne'), grace: Diff.grace }));
-  ok('creatures are tougher, quicker and sharper-eyed than before, more so the deeper the area', r.hp0 === 1.3 && Math.abs(r.hp14 - 1.72) < 1e-9 && r.boss0 === 1.3 && r.t > 1.15 && r.s > 1.15 && r.grace === 1.05, r);
+  ok('creatures are much tougher, quicker and sharper-eyed, more so the deeper the area', r.hp0 === 1.6 && Math.abs(r.hp14 - 2.3) < 1e-9 && r.boss0 === 1.5 && r.t > 1.25 && r.s > 1.3 && r.grace === 0.9, r);
+  // ---- born clever: the depth gives a level before the player has taught anything
+  r = await ev(() => ({ a: Diff.innate('hushvale'), b: Diff.innate('crossroads'), c: Diff.innate('crystal'), d: Diff.innate('frost'), e: Diff.innate('lunar'), f: Diff.innate('throne'),
+    fresh: (Mind.reset(), Mind.level({ kind: 'husk', area: 'throne' })), shallow: Mind.level({ kind: 'husk', area: 'crossroads' }), taught: (G.mind = { husk: { k: 100, w: 0, d: 0, sp: 0 } }, Mind.level({ kind: 'husk', area: 'crystal' })) }));
+  ok('the first areas are born at level 0, the deep ones at 1, 2 and 3', r.a === 0 && r.b === 0 && r.c === 1 && r.d === 2 && r.e === 3 && r.f === 3, r);
+  ok('a creature that has never met you is already clever in the throne, and what it learned still counts when it is more', r.fresh === 3 && r.shallow === 0 && r.taught === 5, r);
+  // ---- they flinch less the deeper they live
+  r = await ev(() => { const mk = area => { const e = new ENEMY_TYPES.crawler({ x: 12, y: 17 }); e.kind = 'crawler'; Mind.prepare(e, area); return e.kb; }; return { shallow: mk('crossroads'), deep: mk('throne') }; });
+  ok('a deep creature is knocked back less than a shallow one', r.deep < r.shallow && r.deep >= 0.5, r);
+  // ---- the soul vessel holds three times as much and every blow fills half of what it did
+  r = await ev(() => { const { P } = DW; P.soul = 0; P.maxSoul = Diff.soulMax; P.gainSoul(11); const one = P.soul; P.gainSoul(10000); return { max: Diff.soulMax, one, full: P.soul, start: new Player().maxSoul }; });
+  ok('the vessel holds 297, a blow of 11 gathers 5.5, and it never overflows', r.max === 297 && r.one === 5.5 && r.full === 297 && r.start === 297, r);
+  r = await ev(() => { const { P } = DW; P.soul = 0; let hits = 0; while (P.soul < P.spellCost() && hits < 100) { P.gainSoul(P.soulGain); hits++; } return { hits }; });
+  ok('it takes six blows to gather one spell where it took three', r.hits === 6, r);
   // ---- levels
   r = await ev(() => {
     const out = {}, e = { kind: 'husk' };
-    out.l0 = Mind.level(e);
+    Mind.reset(); out.l0 = Mind.level(e);
     G.mind = { husk: { k: 3, w: 0, d: 0, sp: 0 } }; out.l1 = Mind.level(e);
     G.mind = { husk: { k: 0, w: 2, d: 0, sp: 0 } }; out.w2 = Mind.level(e);        // 2 wounds = 3 points: level 1 as well
     G.mind = { husk: { k: 0, w: 0, d: 2, sp: 0 } }; out.d2 = Mind.level(e);         // 2 deaths = 8: level 2
@@ -114,6 +127,19 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   });
   ok('a spell kill is counted, with its share', JSON.parse(r.afterKill).k === 1 && JSON.parse(r.afterKill).sp === 1, r.afterKill);
   ok('what a creature fires carries its name, so the wound is credited to it', r.owned && r.spitterW === 1, r);
+  // ---- a clever shooter aims where the hero will be
+  const shot = lvlKnown => ev(known => {
+    const { G, P } = DW; Mind.reset(); G.enemies = []; G.projs = [];
+    const e = new ENEMY_TYPES.shard({ x: 20, y: 17 }); e.kind = 'shard'; Mind.prepare(e, 'crystal'); G.enemies.push(e);
+    if (known) G.mind = { shard: { k: 100, w: 0, d: 0, sp: 0 } };
+    P.x = e.cx - 300; P.y = e.cy - 20; P.vx = 0; P.vy = 400;                       // the hero is falling: a shot at him should be aimed lower
+    for (let i = 0; i < 400 && !G.projs.some(q => q.kind === 'shard'); i++) { P.x = e.cx - 300; P.y = e.cy - 20; P.vy = 400; e.update(1 / 60); }
+    const q = G.projs.find(x => x.kind === 'shard'); if (!q) return null;
+    const direct = Math.atan2(P.cy - q.y, P.cx - q.x), a = Math.atan2(q.vy, q.vx);
+    return { diff: +(a - direct).toFixed(3) };
+  }, lvlKnown);
+  const plainShot = await shot(false), taughtShot = await shot(true);
+  ok('a shard fired by a taught turret leads a falling hero (aimed lower than a straight shot)', plainShot && taughtShot && Math.abs(taughtShot.diff) > Math.abs(plainShot.diff) + 0.02, [plainShot, taughtShot]);
   // ---- saved with the game
   r = await ev(() => {
     const { G } = DW; G.mind = { crawler: { k: 5, w: 1, d: 0, sp: 2 } }; G.bench = { room: 'town' }; saveGame();
@@ -137,7 +163,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     const e = new ENEMY_TYPES.husk({ x: 12, y: 17 }); e.kind = 'husk'; G.enemies = [e]; try { DW.draw(); out.pips = true; } catch (e2) { out.err2 = e2.message; }
     return out;
   });
-  ok('the bestiary and the pips draw', r.level === 4 && r.learned >= 3 && r.none === 0 && r.drew && r.pips, r);
+  ok('the bestiary and the pips draw', r.level === 5 && r.learned >= 3 && r.none === 0 && r.drew && r.pips, r);
   ok('no page errors', errors.length === 0, errors.slice(0, 3));
   await browser.close();
   process.exit(fails ? 1 : 0);

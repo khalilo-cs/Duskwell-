@@ -25,7 +25,7 @@ const SHOP_ITEMS = [
   { id: 'buy_magnet', charm: 'magnet', price: 400, ...needSeals(2), apply() { Charms.give('magnet'); } },
   // things that can be bought again and again: they do nothing, and are refused, when there is nothing to mend
   { id: 'vial', name: 'itemVial', desc: 'itemVialD', price: 120, icon: 'vial', repeat: true, useless: () => P.hp >= P.maxHp, apply() { P.hp = Math.min(P.maxHp, P.hp + 1); } },
-  { id: 'flask', name: 'itemFlask', desc: 'itemFlaskD', price: 70, icon: 'soul', repeat: true, useless: () => P.soul >= P.maxSoul, apply() { P.soul = Math.min(P.maxSoul, P.soul + 33); } },
+  { id: 'flask', name: 'itemFlask', desc: 'itemFlaskD', price: 90, icon: 'soul', repeat: true, useless: () => P.soul >= P.maxSoul, apply() { P.soul = Math.min(P.maxSoul, P.soul + Diff.soulMax / 3); } },
 ];
 const shopItem = id => SHOP_ITEMS.find(it => it.id === id);
 // the wizard's upgrades: the effect is read from the flag (Player.spellDmg, Player.spellCost), so a saved game keeps it

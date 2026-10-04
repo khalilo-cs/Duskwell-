@@ -8,8 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION_CODE="${VERSION_CODE:-14}"
-VERSION_NAME="${VERSION_NAME:-2.3}"
+VERSION_CODE="${VERSION_CODE:-15}"
+VERSION_NAME="${VERSION_NAME:-2.4}"
 PACKAGE="com.duskwell.game"
 KEYSTORE="${KEYSTORE:-sideload.keystore}"
 ALIAS="${ALIAS:-duskwell}"

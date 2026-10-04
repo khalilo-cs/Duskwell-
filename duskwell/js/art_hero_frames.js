@@ -4,9 +4,10 @@
 // this file picks one from what the hero is really doing:
 //  - the run advances with the ground covered, so the feet do not slide; at rest the six breathing frames loop
 //  - in the air the frame follows the real vertical speed (rising, the tuck at the top, falling), and a hard landing shows the last
-//  - a sideways strike plays one of the two drawn slashes (they alternate, as the strikes do), the trail drawn with it; strikes up and
-//    down hold the raised-sword and tucked frames while the game's own arc shows the reach
-//  - a wound plays the flinch; dying plays the fall to the ground; resting, the hero sits down on the bench drawn with it
+//  - a sideways strike plays one of the two drawn slashes (they alternate, as the strikes do), the trail drawn with it
+//  - strikes up and down have their own drawn cuts (from the second sheet), as do the dash, the second jump's spin, clinging to a
+//    wall, healing, casting and resting on the bench
+//  - a wound plays the flinch; dying plays the fall to the ground
 // The game's other looks (the jointed puppet, the pixel heroes, the inked one) stay in the pause menu.
 const HeroFrames = (() => {
   const img = new Image(); img.src = 'art/hero/hero_frames.webp';
@@ -28,22 +29,30 @@ const HeroFrames = (() => {
     }
     S.atkPrev = atk;
     if (p.sitting) { if (S.sitBench !== p.sitting) { S.sitBench = p.sitting; S.sitAt = t; } } else S.sitBench = null;
+    if (!p.onGround && S.djPrev && !p.djAvail && p.vy < 0) S.djAt = t;  // the second jump, in the air
+    S.djPrev = p.djAvail;
     const sdGo = !!(p.sd && p.sd.state === 'go'), sdCharge = !!(p.sd && p.sd.state === 'charge');
-    if (p.sitting) return { f: t - S.sitAt < 0.18 ? A.sit[0] : A.sit[1], sit: true };
+    if (p.sitting) return { f: loop(A.rest, t, 2.4), sit: true };                             // resting on the bench, breathing
     if (p.hurtT > 0) return { f: seq(A.hit, 1 - p.hurtT / 0.28) };
     const since = t - S.atkAt, slashLen = Math.max(S.atkLen, 0.1) + 0.14;
-    if (since >= 0 && since < slashLen && (p.atkT > 0 || S.atkDir === 'side')) {
-      if (S.atkDir === 'up') return { f: A.slash2[1], arc: p.atkT > 0 };                       // the overhead cut, its trail drawn with it
-      if (S.atkDir === 'down') return { f: A.jump[3], arc: false };
+    if (since >= 0 && since < slashLen && (p.atkT > 0 || S.atkDir !== 'down')) {
+      const k = 1 - Math.max(0, p.atkT) / S.atkLen, after = (since - S.atkLen) / 0.14;
+      if (S.atkDir === 'up') return { f: p.atkT > 0 ? seq(A.up.slice(0, 4), k) : A.up[4], arc: true };    // the cut over the head, its trail drawn with it
+      if (S.atkDir === 'down') return { f: seq(A.down, k), arc: true, mid: true };                         // the stab below the feet
       const sl = S.atkAlt ? A.slash2 : A.slash1;
-      if (p.atkT > 0) return { f: seq(sl.slice(0, 3), 1 - p.atkT / S.atkLen), arc: true };   // the wind-up and the cut, with its trail
-      if (p.onGround && Math.abs(p.vx) < 30 || !p.onGround) return { f: seq(sl.slice(3), (since - S.atkLen) / 0.14), arc: true };   // the follow-through
+      if (p.atkT > 0) return { f: seq(sl.slice(0, 3), k), arc: true };                         // the wind-up and the cut, with its trail
+      if (p.onGround && Math.abs(p.vx) < 30 || !p.onGround) return { f: seq(sl.slice(3), after), arc: true };   // the follow-through
     }
     if (sdCharge) return { f: A.jump[0] };                                                      // gathering the Comet Heart: crouched
-    if (p.dashT > 0 || sdGo || p.rushT > 0) return { f: A.run[4], dash: true };
-    if (p.diving) return { f: A.jump[3] };
-    if (p.sliding) return { f: A.jump[5], wall: true };
+    if (p.novaT > 0) return { f: loop(A.double, t, 14), mid: true };                           // Soul Nova: the spin
+    if (p.dashT > 0 || sdGo || p.rushT > 0) return { f: loop(A.dash, t, 10), dash: true, mid: true };
+    if (p.diving) return { f: A.down[2], mid: true };                                          // the plunge: sword first
+    if (p.castT > 0) return { f: seq([A.cast[2], A.cast[3], A.cast[3], A.cast[1]], 1 - p.castT / 0.25) };   // a bolt leaves the hand
+    if (p.wailT > 0) return { f: loop(A.cast.slice(0, 3), t, 10) };
+    if (p.focusT > 0 || p.rendHold) return p.rendHold ? { f: A.slash1[0] } : { f: loop(A.focus, t, 7) };
+    if (p.sliding) return { f: loop(A.wall, t, 4), mid: true };                                 // back to the wall, sliding
     if (!p.onGround) {
+      if (t - (S.djAt || -9) < 0.36) return { f: seq(A.double, (t - S.djAt) / 0.36), mid: true };   // the spin of the second jump
       if (p.vy < -420) return { f: A.jump[1] };
       if (p.vy < -120) return { f: A.jump[2] };
       if (p.vy < 160) return { f: A.jump[3] };
@@ -76,15 +85,13 @@ const HeroFrames = (() => {
   }
   return {
     ready, pick, frame, tinted, S, scale,
-    // the bench is drawn with the hero while sitting on it: the world's own bench steps aside
-    benchTaken: b => S.sitBench === b && S.sitAt != null && S.t - S.sitAt >= 0.18,
     draw(g, p, t, alpha) {
       S.t = t;
       const o = pick(p, t);
-      Pixel.shadow(g, p.cx, p.y + p.h, o.sit ? 30 : 18);
-      // sitting: the bench in the drawing goes where the bench is, the hero on its end
-      const x = o.sit && p.sitting && S.t - S.sitAt >= 0.18 ? p.sitting.px - p.face * 6 : p.cx, y = (o.sit && p.sitting ? p.sitting.py : p.y + p.h) + 1;
-      frame(g, o.f, x, y, p.face || 1, alpha);
+      Pixel.shadow(g, p.cx, p.y + p.h, 18);
+      // frames in the air (dash, spin, wall, stab) are placed by the middle of the body; resting, the hero sits on the bench's seat
+      const y = o.mid ? p.cy + 2 : o.sit && p.sitting ? p.sitting.py - 10 : p.y + p.h + 1;
+      frame(g, o.f, p.cx, y, p.face || 1, alpha);
       return o;
     },
     // standing at rest, any size (the title, the equipment screen)
@@ -101,7 +108,7 @@ Art.drawFramesGhosts = function (g, p, t) {
   const A = HERO_FRAMES;
   for (const gh of p.ghost) {
     const life = gh.sd ? 0.26 : 0.22, a = (gh.sd ? 0.55 : 0.45) * (1 - (t - gh.t) / life);
-    if (a > 0) HeroFrames.tinted(g, A.run[4], gh.x + p.w / 2, gh.y + p.h + 1, gh.face, a, gh.sd ? '#ff9a50' : '#4a6aa8');
+    if (a > 0) HeroFrames.tinted(g, A.dash[0], gh.x + p.w / 2, gh.y + p.h / 2 + 2, gh.face, a, gh.sd ? '#ff9a50' : '#4a6aa8');
   }
   return true;
 };
@@ -113,10 +120,4 @@ Art.drawFramesDeath = function (g, p, t) {
   HeroFrames.frame(g, A[Math.min(A.length - 1, Math.floor(k * A.length))], p.cx, p.y + p.h + 1, p.face || 1, 1);
   return true;
 };
-(function () {
-  const oldBench = Art.drawBench;
-  Art.drawBench = function (g, b, t, resting) {
-    if (HeroStyle.frames() && HeroFrames.benchTaken(b)) { bloom(g, b.px, b.py - 44, 38, '#cfe8ff', 0.3 + 0.1 * Math.sin(t * 6)); return; }
-    return oldBench(g, b, t, resting);
-  };
-})();
+

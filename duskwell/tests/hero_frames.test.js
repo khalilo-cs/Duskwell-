@@ -20,7 +20,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   });
 
   let r = await ev(() => [HeroStyle.cur(), HeroStyle.frames(), Object.fromEntries(Object.entries(HERO_FRAMES).map(([k, v]) => [k, v.length]))]);
-  ok('the drawn hero is the default look, with all its animations', r[0] === 'frames' && r[1] && r[2].idle === 6 && r[2].run === 9 && r[2].jump === 6 && r[2].slash1 === 5 && r[2].slash2 === 5 && r[2].hit === 4 && r[2].death === 8 && r[2].sit === 2, r);
+  const want = { idle: 6, run: 9, jump: 6, slash1: 5, slash2: 5, hit: 4, death: 8, up: 5, down: 4, wall: 2, dash: 2, double: 4, focus: 4, cast: 4, rest: 4 };
+  ok('the drawn hero is the default look, with all its animations from both sheets', r[0] === 'frames' && r[1] && Object.entries(want).every(([k, n]) => r[2][k] === n), r);
 
   await reset();
   r = await ev(() => { const seen = new Set(); for (let i = 0; i < 70; i++) seen.add(nameOf(stepDraw().f)); return [...seen]; });
@@ -65,21 +66,33 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     DW.step(30); P.onGround = false; P.y -= 80; P.vy = 0; P.atkDir = 'down'; P.atkT = 0.16; P.hits = new Set(); let got = null; const o = Art.drawFramesHero; Art.drawFramesHero = function () { got = o.apply(this, arguments); return got; }; DW.draw(); Art.drawFramesHero = o; out.down = nameOf(got.f);
     return out;
   });
-  ok('a strike up shows the overhead cut, a strike down the tuck', r.up === 'slash2:1' && r.down === 'jump:3', r);
+  ok('a strike up plays the drawn overhead cut, a strike down the drawn stab', r.up.startsWith('up:') && r.down.startsWith('down:'), r);
 
   await reset();
   r = await ev(() => { const { P } = DW; P.hurt(1, P.cx + 30); const seen = new Set(); for (let i = 0; i < 40; i++) seen.add(nameOf(stepDraw().f)); return [...seen]; });   // (the blow freezes the game for a moment first)
   ok('a wound plays the flinch', r.filter(n => n.startsWith('hit')).length >= 3, r);
 
-  // sitting down: first standing by the bench, then sitting on the one drawn with the hero; the world's bench steps aside
+  // resting: the hero sits on the bench's seat and breathes on the four drawn frames; the bench stays
   r = await ev(() => {
     const { G, P, enterRoom } = DW; enterRoom('town', { bench: true }); G.state = 'play'; G.areaBanner = null; G.fadeA = 0; G.trans = null;
-    const b = P.sitting, seen = []; let benchDrawn = 0; const ob = Art.drawBench;
-    for (let i = 0; i < 30; i++) { const o = stepDraw(); seen.push(nameOf(o.f)); }
-    const wb = WorldArt.R; let drawnBench = false; const old = WorldArt.put; WorldArt.put = function (g, n) { if (n === 'bench') drawnBench = true; return old.apply(this, arguments); }; DW.draw(); WorldArt.put = old;
-    return { sitting: !!b, first: seen[0], last: seen[seen.length - 1], worldBench: drawnBench };
+    const seen = new Set(); for (let i = 0; i < 120; i++) seen.add(nameOf(stepDraw().f));
+    let drawnBench = false; const old = Art.drawBench; Art.drawBench = function () { drawnBench = true; return old.apply(this, arguments); }; DW.draw(); Art.drawBench = old;
+    return { sitting: !!P.sitting, seen: [...seen], bench: drawnBench };
   });
-  ok('resting: the hero sits down on the bench drawn with it, and the world\'s bench steps aside', r.sitting && r.first === 'sit:0' && r.last === 'sit:1' && !r.worldBench, r);
+  ok('resting: the hero breathes on the drawn resting frames, on the bench', r.sitting && r.seen.length === 4 && r.seen.every(n => n.startsWith('rest')) && r.bench, r);
+
+  // the moves of the second sheet
+  await reset();
+  r = await ev(() => {
+    const { P } = DW; const out = {}; const one = () => nameOf(stepDraw().f).split(':')[0];
+    P.dashT = 0.21; P.vx = 600; out.dash = one();
+    DW.step(30); P.onGround = false; P.y -= 100; P.vy = 100; P.djAvail = true; stepDraw(); P.djAvail = false; P.vy = -630; out.double = one();
+    DW.step(60); P.focusT = 0.3; P.castHold = 0.3; let got = null; const o = Art.drawFramesHero; Art.drawFramesHero = function () { got = o.apply(this, arguments); return got; }; DW.draw(); Art.drawFramesHero = o; out.focus = nameOf(got.f).split(':')[0]; P.focusT = 0;
+    P.castT = 0.25; out.cast = one(); DW.step(30);
+    P.sliding = true; P.onGround = false; Art.drawFramesHero = function () { got = o.apply(this, arguments); return got; }; DW.draw(); Art.drawFramesHero = o; out.wall = nameOf(got.f).split(':')[0];
+    return out;
+  });
+  ok('the dash, the second jump, healing, casting and the wall each show their own drawn frames', r.dash === 'dash' && r.double === 'double' && r.focus === 'focus' && r.cast === 'cast' && r.wall === 'wall', r);
 
   await reset();
   r = await ev(() => {

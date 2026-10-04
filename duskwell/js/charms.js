@@ -1,6 +1,6 @@
 'use strict';
-// Charms: relics worn on the cloak. Each costs notches; wearing more than the notches allow
-// makes every wound cost double. The effects are read elsewhere through Charms.has(id).
+// Charms: relics worn on the cloak. Each costs notches and a charm only goes on if enough notches
+// are free. The effects are read elsewhere through Charms.has(id).
 const Charms = (() => {
   // notches available at the start
   const BASE_NOTCHES = 3;
@@ -43,7 +43,7 @@ const Charms = (() => {
   const used = () => worn.reduce((s, id) => s + DEFS[id].cost, 0);
   // three to begin with, one more for every two guardians' seals, and up to two from the merchant
   const notches = () => BASE_NOTCHES + Math.floor(sealCount() / 2) + (G.flags.buy_notch1 ? 1 : 0) + (G.flags.buy_notch2 ? 1 : 0);
-  // worn charms cost more than the notches allow
+  // worn charms cost more than the notches allow (only an old save can get here)
   const over = () => used() > notches();
   // owned charms in display order
   const ownedList = () => ORDER.filter(id => owned[id]);
@@ -53,15 +53,14 @@ const Charms = (() => {
     if (!DEFS[id] || owned[id]) return false;
     owned[id] = true; return true;
   }
-  // Wear or remove a charm. Returns 'on', 'over' (worn, but now overcharmed), 'off', 'full' (already
-  // overcharmed, so nothing more fits) or 'none' (not owned).
+  // Wear or remove a charm. Returns 'on', 'off', 'full' (not enough free notches) or 'none' (not owned).
   function toggle(id) {
     if (!owned[id]) return 'none';
     const i = worn.indexOf(id);
     if (i >= 0) { worn.splice(i, 1); return 'off'; }
-    if (used() > notches()) return 'full';
+    if (used() + DEFS[id].cost > notches()) return 'full';
     worn.push(id);
-    return used() > notches() ? 'over' : 'on';
+    return 'on';
   }
 
   // Shell Ward: armed by resting, spent by the next wound.

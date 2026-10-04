@@ -542,7 +542,7 @@ function updateCharms(dt) {
     if (r === 'full') { Sound.play('hurt'); G.charmNote = { text: tr('charmsFull'), t: 0, bad: true }; }
     else {
       Sound.play(r === 'off' ? 'select' : 'confirm');
-      G.charmNote = r === 'over' ? { text: tr('overcharm'), t: 0, bad: true } : null;
+      G.charmNote = null;
     }
   }
 }

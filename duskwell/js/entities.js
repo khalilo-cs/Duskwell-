@@ -560,8 +560,7 @@ class Player {
       G.burst(this.cx, this.cy, 14, { color: '#e8dcb8', speed: 220, life: 0.4, size: 3 });
       return true;
     }
-    if (Charms.over()) dmg *= 2;               // overcharmed: every wound costs double
-    this.hp -= dmg; this.invuln = 1.4 * Gear.hurtK(); this.hurtT = 0.28; this.rendT = 0; this.rendHold = false; this.rushT = 0; this.novaT = 0; this.focusT = 0; this.wailT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
+    this.hp -= 1;                              // one wound is always one mask this.invuln = 1.4 * Gear.hurtK(); this.hurtT = 0.28; this.rendT = 0; this.rendHold = false; this.rushT = 0; this.novaT = 0; this.focusT = 0; this.wailT = 0; this.castDone = true; this.dashT = 0; this.atkT = 0; this.sd = null;
     const dir = this.cx < srcX ? -1 : 1;
     this.vx = dir * 300 * Gear.takenKbK(); this.vy = -320 * Gear.takenKbK(); this.onGround = false; this.sitting = null;
     Sound.play('hurt'); G.hitstop(0.14); G.shake(9, 0.3); G.flash = 0.35;
@@ -593,7 +592,7 @@ class Player {
   }
   // fell on spikes: one mask and back to the last safe ground
   spikeHurt() {
-    this.hp -= Charms.over() ? 2 : 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
+    this.hp -= 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
     Sound.play('hurt'); G.hitstop(0.12); G.shake(8, 0.3);
     if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return; }
     G.respawnFade(this.safe.x, this.safe.y);

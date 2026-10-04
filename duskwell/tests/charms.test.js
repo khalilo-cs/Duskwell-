@@ -24,8 +24,8 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
     G.flags.buy_notch1 = true; G.flags.buy_notch2 = true; out.nAll = Charms.notches();
     G.flags = {}; Charms.reset();
     for (const id of ['focus', 'deep', 'thorn']) Charms.give(id);
-    out.t1 = Charms.toggle('focus'); out.t2 = Charms.toggle('deep'); out.over = Charms.over(); out.t3 = Charms.toggle('thorn');
-    out.t4 = Charms.toggle('deep'); out.overAfter = Charms.over(); out.t5 = Charms.toggle('thorn'); out.none = Charms.toggle('mage');
+    out.t1 = Charms.toggle('focus'); out.t2 = Charms.toggle('deep'); out.t3 = Charms.toggle('thorn');
+    out.t4 = Charms.toggle('focus'); out.t5 = Charms.toggle('thorn'); out.over = Charms.over(); out.none = Charms.toggle('mage');
     out.dupGive = Charms.give('focus');
     return out;
   });
@@ -33,19 +33,21 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
   ok('2 seals give a 4th notch', r.n2seals === 4, r.n2seals);
   ok('3 seals still 4 (one per two)', r.n3seals === 4, r.n3seals);
   ok('merchant notches add 2 (3 seals: 3+1+2)', r.nAll === 6, r.nAll);
-  ok('first charm fits', r.t1 === 'on'); ok('second overcharms', r.t2 === 'over' && r.over === true);
-  ok('third refused while overcharmed', r.t3 === 'full'); ok('removing clears overcharm', r.t4 === 'off' && r.overAfter === false);
-  ok('a 1-notch charm over the limit overcharms', r.t5 === 'over'); ok('unowned charm not wearable', r.none === 'none'); ok('no duplicate give', r.dupGive === false);
+  ok('first charm fits', r.t1 === 'on'); ok('a charm that does not fit is refused', r.t2 === 'full');
+  ok('no free notch, no charm', r.t3 === 'full'); ok('taking one off frees its notches', r.t4 === 'off' && r.t5 === 'on');
+  ok('never over the notch limit', r.over === false); ok('unowned charm not wearable', r.none === 'none'); ok('no duplicate give', r.dupGive === false);
 
-  // ---------- overcharm doubles wounds; shell ward; thorn; spirit
+  // ---------- a wound is one mask; shell ward; thorn; spirit
   await setup();
   r = await ev(() => {
     const { G, P, Charms } = DW; const out = {};
     for (const id of ['focus', 'deep']) { Charms.give(id); Charms.toggle(id); }
-    out.over = Charms.over(); P.hurt(1, P.cx + 10); out.hpOver = P.hp;
+    out.over = Charms.over(); P.hurt(2, P.cx + 10); out.hp1 = P.hp;
+    P.invuln = 0; P.hurt(1, P.cx + 10); out.hp2 = P.hp;
+    P.invuln = 0; P.spikeHurt(); out.hp3 = P.hp;
     return out;
   });
-  ok('overcharmed wound costs 2', r.over && r.hpOver === 3, r);
+  ok('every wound costs exactly one mask, even a heavy one', !r.over && r.hp1 === 4 && r.hp2 === 3 && r.hp3 === 2, r);
 
   await setup();
   r = await ev(() => {
@@ -100,7 +102,7 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
   ok('without boots: run speed 250', near(vx0, 250, 1), vx0);
 
   await setup();
-  await ev(() => { const { P, Charms } = DW; Charms.give('dashmaster'); Charms.toggle('dashmaster'); Charms.give('swift'); Charms.toggle('swift'); P.dashCD = 0; });
+  await ev(() => { const { G, P, Charms } = DW; G.flags.buy_notch1 = true; Charms.give('dashmaster'); Charms.toggle('dashmaster'); Charms.give('swift'); Charms.toggle('swift'); P.dashCD = 0; });
   await page.keyboard.press('KeyC'); await ev(() => DW.step(1));
   const dcd = await ev(() => DW.P.dashCD);
   ok('dash master: cooldown about 0.3', dcd > 0.25 && dcd <= 0.3, dcd);
@@ -193,10 +195,10 @@ const near = (a, b, e) => Math.abs(a - b) <= (e || 1e-6);
   await ev(() => { DW.P.sitting = { px: DW.P.cx, py: DW.P.y + DW.P.h }; });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => DW.Charms.has('swift')); ok('on a bench the charm comes off', r === false);
-  await ev(() => { DW.G.charmSel = 4; });  // deep (4 notches) -> overcharm
+  await ev(() => { DW.G.charmSel = 4; });  // deep (4 notches) does not fit in the free notches
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
-  r = await ev(() => ({ over: DW.Charms.over(), note: DW.G.charmNote && DW.G.charmNote.text }));
-  ok('overcharm shows a warning', r.over && /ضعف|double/i.test(r.note || ''), r);
+  r = await ev(() => ({ worn: DW.Charms.has('deep'), note: DW.G.charmNote && DW.G.charmNote.text }));
+  ok('a charm with no room is refused with a message', !r.worn && !!r.note, r);
   await page.waitForTimeout(150); await page.screenshot({ path: shot('charms_screen_over.png') });
   await ev(() => { DW.G.state = 'shop'; DW.G.menuSel = 2; DW.G.shopTop = 0; DW.P.geo = 400; });
   await page.waitForTimeout(150); await page.screenshot({ path: shot('charms_shop.png') });

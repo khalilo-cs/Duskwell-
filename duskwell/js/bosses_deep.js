@@ -106,7 +106,7 @@ class Marrow extends Boss {
     this.facePlayer(); this.tele = 1; Sound.play('tele'); this.slashing = 1;
     yield* this.wait(0.95 * this.spd);
     this.tele = 0; Sound.play('slam'); G.shake(10, 0.35); this.slashing = 2;
-    this.doMelee(28, 10, 150, 130, 2, 0.28);
+    this.doMelee(28, 10, 150, 130, 1, 0.28);
     spawnShock(this.cx + this.face * 120, this.y + this.h, this.face, 380, '#efe6d0');
     yield* this.wait(0.4); this.slashing = 0;
     yield* this.wait(0.7 * this.spd);

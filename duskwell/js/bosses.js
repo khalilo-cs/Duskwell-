@@ -157,7 +157,7 @@ class Guardian extends Boss {
   *slam() {
     this.facePlayer(); this.tele = 1; Sound.play('tele'); this.setAct('slam', 'wind', 0.75 * this.spd);
     yield* this.wait(0.75 * this.spd);
-    this.tele = 0; this.doMelee(24, 28, 120, 80, 2, 0.25); this.setAct('slam', 'hit', 0.9 * this.spd);
+    this.tele = 0; this.doMelee(24, 28, 120, 80, 1, 0.25); this.setAct('slam', 'hit', 0.9 * this.spd);
     Sound.play('slam'); G.shake(8, 0.3);
     spawnShock(this.cx + this.face * 70, this.y + this.h, this.face, 430);
     this.dropRocks(this.phase >= 2 ? 5 : 3);
@@ -348,7 +348,7 @@ class King extends Boss {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.8 * this.spd);
     this.tele = 0; Sound.play('slam'); G.shake(7, 0.25);
-    this.doMelee(20, 10, 170, 120, 2, 0.28);
+    this.doMelee(20, 10, 170, 120, 1, 0.28);
     spawnShock(this.cx + this.face * 90, this.y + this.h, this.face, 520, '#e8f4ff');
     if (this.phase >= 3) spawnShock(this.cx - this.face * 90, this.y + this.h, -this.face, 520, '#e8f4ff');
     yield* this.wait(0.75 * this.spd);
@@ -418,7 +418,7 @@ class King extends Boss {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.3);
     this.tele = 0; Sound.play('slam'); G.shake(7, 0.25);
-    this.doMelee(20, 10, 170, 120, 2, 0.28);
+    this.doMelee(20, 10, 170, 120, 1, 0.28);
     spawnShock(this.cx + this.face * 90, this.y + this.h, this.face, 560, '#e8f4ff');
     yield* this.wait(0.6);
   }
@@ -765,7 +765,7 @@ class Colossus extends Boss {
   *smash() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.85 * this.spd);
-    this.tele = 0; this.doMelee(24, 18, 150, 112, 2, 0.25);
+    this.tele = 0; this.doMelee(24, 18, 150, 112, 1, 0.25);
     Sound.play('slam'); G.shake(9, 0.3);
     spawnShock(this.cx + this.face * 80, this.y + this.h, this.face, 440, '#ff9a50');
     if (this.phase >= 2) spawnShock(this.cx - this.face * 80, this.y + this.h, -this.face, 440, '#ff9a50');
@@ -881,7 +881,7 @@ class Thunderhoof extends Boss {
   *stomp() {
     this.facePlayer(); this.tele = 1; Sound.play('tele');
     yield* this.wait(0.7 * this.spd);
-    this.tele = 0; this.doMelee(24, 14, 150, 80, 2, 0.25);
+    this.tele = 0; this.doMelee(24, 14, 150, 80, 1, 0.25);
     Sound.play('slam'); G.shake(8, 0.3);
     for (const d of [-1, 1]) spawnShock(this.cx + d * 80, this.y + this.h, d, 430, '#dfe9ff');
     yield* this.wait(0.8 * this.spd);
@@ -1066,7 +1066,7 @@ class Duelist extends Boss {
       this.parried = false; this.facePlayer(); this.tele = 1;
       yield* this.wait(0.12);
       this.tele = 0; Sound.play('dash'); this.lunging = true;
-      let x = 0.34; while (x > 0) { this.vx = this.face * 900; this.doMelee(10, 30, 130, 24, 2, 0.06); x -= this.dt; if (this.hitL || this.hitR) break; yield; }
+      let x = 0.34; while (x > 0) { this.vx = this.face * 900; this.doMelee(10, 30, 130, 24, 1, 0.06); x -= this.dt; if (this.hitL || this.hitR) break; yield; }
       this.vx = 0; this.lunging = false;
       yield* this.wait(0.55);
     } else {                                     // nobody struck: it comes down in a slow overhead, wide open afterwards
@@ -1145,7 +1145,7 @@ class Twin extends Boss {
     yield* this.wait(0.22);
     this.tele = 1; this.vx = 0; this.vy = -60; yield* this.wait(0.18); this.tele = 0;
     this.diving = true; this.vy = 1000; this.vx = clamp((G.player.cx - this.cx) * 1.2, -260, 260);
-    while (!this.onGround) { this.doMelee(-24, this.h - 20, 48, 46, 2, 0.05); yield; }
+    while (!this.onGround) { this.doMelee(-24, this.h - 20, 48, 46, 1, 0.05); yield; }
     this.diving = false; this.airborne = false; this.vx = 0; Sound.play('slam'); G.shake(8, 0.25);
     for (const d of [-1, 1]) spawnShock(this.cx + d * 30, this.y + this.h, d, 380, '#d8c8ff');
     yield* this.wait(0.6 * this.spd);

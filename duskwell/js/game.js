@@ -211,6 +211,7 @@ G.collectItem = function (it) {
   else if (d.kind === 'ability') {
     P.ab[d.ability] = true;
     G.banner = { title: tr('abil_' + d.ability), desc: tr('abil_' + d.ability + '_d'), t: 0, big: true };
+    if (MOVE_OF_ABILITY[d.ability]) { G.banner.move = MOVE_OF_ABILITY[d.ability]; Coach.learned(G.banner.move); }
   }
   syncAbilityButtons();
   Sound.play('ability'); G.ring(it.x, it.y, '#ffffff'); G.flash = 0.6;
@@ -507,7 +508,7 @@ function diffLabel() { return sx('الصعوبة: ', 'Difficulty: ') + Diff.MODE
 function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'moves', label: sx('الحركات', 'Moves') }, { id: 'bestiary', label: tr('bestiary') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'moves', label: sx('الحركات', 'Moves') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -617,7 +618,7 @@ function update(dt) {
       if (G.hitstopT > 0) { G.hitstopT -= dt; break; }
       let d = dt;
       if (G.slowmo > 0) { G.slowmo -= dt; d = dt * 0.35; }
-      updatePlay(d); updateParticles(d);
+      updatePlay(d); updateParticles(d); Coach.update(d);
       break;
     }
   }
@@ -1197,11 +1198,14 @@ function drawBanner(g) {
   g.save(); g.globalAlpha = k; setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';
   glow(g, VW / 2, 230, 240, '#dff0ff', 0.25);
   if (b.charm) Art.drawCharm(g, b.charm, VW / 2, 124, 46, { glow: true, worn: true });
+  const mv = b.move ? moveOf(b.move) : null;
+  if (mv) FxArt.loop(g, mv.fx, VW / 2, 118, 300, 110, b.t);                       // a move: its effect plays above the name
   g.font = font(54, '700'); textShadow(g, b.title, VW / 2, 206, '#f4f9ff', 16);
   g.fillStyle = 'rgba(230,240,255,0.7)'; g.fillRect(VW / 2 - 160, 240, 320, 2);
   g.font = font(24, '600'); const lines = wrapText(g, b.desc, 620);
   lines.forEach((l, i) => { g.fillStyle = '#d6e4f5'; g.fillText(l, VW / 2, 290 + i * 34); });
-  if (b.t > 1.4) { g.font = font(18, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText('Z', VW / 2, 420); }
+  if (mv) { g.font = font(20, '700'); g.fillStyle = '#9fe0d8'; g.fillText(sx('الزر: ', 'Keys: ') + moveKeys(mv), VW / 2, 296 + lines.length * 34 + 12); }
+  if (b.t > 1.4) { g.font = font(18, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText('Z', VW / 2, mv ? 486 : 420); }
   g.restore();
 }
 // ending screen
@@ -1237,7 +1241,7 @@ function draw() {
     case 'ending': drawEnding(g); break;
     default:
       if (G.level) {
-        drawWorld(g); drawHUD(g);
+        drawWorld(g); drawHUD(g); drawCoach(g);
         if (G.state === 'map') drawMap(g);
         if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 86, 29, { w: 340, h: 26 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);

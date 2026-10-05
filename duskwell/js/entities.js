@@ -372,7 +372,7 @@ class Player {
         const kb0 = e.kb; e.kb = kb0 * Gear.kbK();
         const landed = e.hurt(this.nailDamage(), dir, this.atkDir);      // false: a shield turned it aside
         e.kb = kb0;
-        if (landed !== false) {
+        if (landed !== false && !e.dummy) {
           this.gainSoul(Math.round((this.soulGain + (Charms.has('siphon') ? 6 : 0) + Gear.soulBonus()) * Gear.soulK()));
           if (Charms.has('cinder') && !e.dead) e.burnT = 0.6;        // Cinder Edge: a burn lands a moment after the blow
           if (Gear.bleeds() && !e.dead) e.bleedT = 1.1;              // Bone Saw: the wound keeps bleeding
@@ -405,7 +405,7 @@ class Player {
   // ---- the arts of the nail ----
   // Moon Rend: a great crescent of moonlight that cuts through everything in its way
   rend() {
-    const dir = this.face;
+    const dir = this.face; Coach.did('rend');
     this.atkDir = 'side'; this.atkT = 0.2; this.atkCD = 0.42; this.atkAlt ^= 1; this.hits = new Set(); this.atkBuf = 0;
     G.projs.push(new Proj({ kind: 'moon', x: this.cx + dir * 40, y: this.cy - 2, vx: dir * 800, r: 40, dmg: Math.max(6, Math.round(this.nailDamage() * 2.6)), friendly: true, pierce: true, life: 0.62, color: '#dbe8ff', passWalls: false }));
     this.vx = dir * 240; this.lockX = 0.12;
@@ -415,6 +415,7 @@ class Player {
   }
   // Dusk Rush: the dash turns into a charge of blades; the Wanderer cannot be touched while it lasts
   startRush() {
+    Coach.did('rush');
     this.rushT = Gear.RUSH_TIME; this.dashT = Math.max(this.dashT, this.rushT + 0.02); this.rushCD = 1.1; this.rushTick = 0; this.atkBuf = 0;
     this.invuln = Math.max(this.invuln, Gear.RUSH_TIME + 0.2); this.rendHold = false;
     Sound.play('rush'); G.shake(6, 0.3); G.flash = Math.max(G.flash, 0.15);
@@ -434,7 +435,7 @@ class Player {
       if (this.rushTick > 0) continue;
       e.hurt(Math.max(2, Math.round(this.nailDamage() * 0.75)), f, 'spell');
       G.fx.push({ type: 'cut', x: e.cx + rand(-10, 10), y: e.cy + rand(-14, 14), a: rand(-0.9, 0.9) + (f > 0 ? 0 : Math.PI), t: 0, life: 0.2, color: '#ffe0a8' });
-      this.gainSoul(2);
+      if (!e.dummy) this.gainSoul(2);
     }
     if (this.rushTick <= 0) this.rushTick = 0.06;
     // the Wanderer slows among the foes and cuts them again and again, then bursts out the far side
@@ -460,6 +461,7 @@ class Player {
   }
   // Soul Nova: the Wanderer gathers the whole vessel, hangs for a breath, then it all goes at once
   startNova() {
+    Coach.did('nova');
     this.soul -= Gear.NOVA_COST; this.novaT = 1.0; this.novaFired = false; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.rendHold = false; this.rendT = 0; this.castDone = true;
     this.vx = 0; this.vy = 0; this.invuln = Math.max(this.invuln, 1.4);
     Sound.play('novaCharge'); G.shake(3, 0.5);
@@ -529,6 +531,7 @@ class Player {
   }
   // dive: plunge down from the air
   startDive() {
+    Coach.did('dive');
     this.soul -= this.spellCost(); this.diving = true; this.dashT = 0; this.atkT = 0; this.focusT = 0; this.vx = 0; this.vy = 1250;
     Sound.play('cast'); G.burst(this.cx, this.cy, 12, { color: '#dff3ff', speed: 160, life: 0.4, size: 3 });
   }
@@ -628,7 +631,7 @@ class Player {
         if (!s.ready) { this.sd = null; return false; }
         s.state = 'go'; s.t = 0; s.dir = s.wall ? -s.wall : this.face; this.face = s.dir;
         this.sliding = false; this.wallDir = 0;
-        Sound.play('sdlaunch'); G.shake(6, 0.2);
+        Sound.play('sdlaunch'); G.shake(6, 0.2); Coach.did('comet');
         G.burst(this.cx - s.dir * 10, this.cy, 16, { color: '#ffd890', speed: 260, life: 0.45, size: 3 });
       }
       return true;

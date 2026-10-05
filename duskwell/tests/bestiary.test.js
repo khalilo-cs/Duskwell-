@@ -9,7 +9,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   let r = await ev(() => {
     const keys = BESTIARY.map(b => (b.boss ? 'b:' : 'e:') + b.k), dup = keys.filter((k, i) => keys.indexOf(k) !== i);
     const noArt = BESTIARY.filter(b => { const c = document.createElement('canvas'); c.width = c.height = 400; return !Art.drawCreature(c.getContext('2d'), b.k, !!b.boss, 200, 300, 2, 1, {}); }).map(b => b.k);
-    const missEnemy = Object.keys(ENEMY_TYPES).filter(k => !['slimelet', 'brood_child'].includes(k) && BESTIARY_INDEX['e:' + k] === undefined);
+    const missEnemy = Object.keys(ENEMY_TYPES).filter(k => !['slimelet', 'brood_child', 'dummy'].includes(k) && BESTIARY_INDEX['e:' + k] === undefined);
     const missBoss = Object.keys(BOSS_TYPES).filter(k => BESTIARY_INDEX['b:' + k] === undefined);
     const noText = BESTIARY.filter(b => !(b.ar[0] && b.ar[1] && b.en[0] && b.en[1] && b.ar[1].length > 30 && b.en[1].length > 30)).map(b => b.k);
     const areas = BESTIARY.filter(b => !STR.ar['area_' + b.area] && !['hushvale', 'crossroads', 'mossgrove', 'crystal', 'spore', 'aqueduct', 'webbed', 'throne'].includes(b.area)).map(b => b.k);

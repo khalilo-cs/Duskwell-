@@ -103,7 +103,7 @@ function buyItem(it) {
   if (it.gear) {
     const [kind, id] = it.gear;
     Gear.give(kind, id);
-    if (kind === 'art') { G.banner = { title: Gear.name(kind, id), desc: Gear.desc(kind, id), t: 0 }; G.state = 'banner'; }
+    if (kind === 'art') { G.banner = { title: Gear.name(kind, id), desc: Gear.desc(kind, id), t: 0, move: id }; Coach.learned(id); G.state = 'banner'; }
     else { Gear.equip(kind, id); G.toastMsg(sx('جُهّز: ', 'Equipped: ') + Gear.name(kind, id), 2); }
     Sound.play('equip');
   } else { if (!it.repeat) G.flags[it.id] = true; it.apply(); G.toastMsg(shopName(it), 1.8); }

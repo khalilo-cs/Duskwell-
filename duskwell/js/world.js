@@ -120,6 +120,7 @@ function room(id, w, h, opt) { const r = new RoomBuilder(id, w, h, opt); WORLD.r
   town.plat(24, 14, 5).plat(34, 13, 4);
   town.door('east', 63, 15, 1, 3, 'fr1', 'w').door('west', 0, 15, 1, 3, 'em1', 'e');          // Rimecrest to the east, Cinderdeep to the west
   town.sign(59, 17, 'sign_to_frost').sign(2, 17, 'sign_to_ember');
+  town.enemy('dummy', 44, 17);                                                                        // the training post, to try the nail's arts on
 
   // ===================== SUNKEN CROSSROADS =====================
   const cx1 = room('cx1', 40, 44, { area: 'crossroads', theme: 'cave', map: { x: 5, y: 3 } });

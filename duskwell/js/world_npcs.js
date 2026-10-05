@@ -20,6 +20,7 @@
     }
     return out;
   }
+  WORLD.freeSpots = spots;                                          // world_quests.js sets the things of the quests on the same kind of spot
   // put a person of the given type in the room, on its lowest floor (the one the way runs along), as near as possible to the
   // bench if there is one, else to share f of the room's width
   function put(id, type, f, shop) {

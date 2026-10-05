@@ -98,6 +98,8 @@ const shopSold = it => (it.repeat ? false : it.gear ? Gear.owns(...it.gear) : !!
 const shopLocked = it => !!(it.req && !it.req());
 const lockText = it => sx(...it.lock);
 
+// what an item costs: its price, a tenth less for the one the Ledger's Word (a quest) made a friend of the merchants
+const shopPrice = it => (Quests.priceK() === 1 ? it.price : Math.max(1, Math.round(it.price * Quests.priceK())));
 // give the item (gear is equipped at once) and apply it
 function buyItem(it) {
   if (it.gear) {
@@ -118,8 +120,8 @@ function updateShop() {
     if (shopSold(it)) { Sound.play('hit'); return; }
     if (shopLocked(it)) { Sound.play('hurt'); G.toastMsg(lockText(it), 2.2); return; }
     if (it.useless && it.useless()) { Sound.play('hit'); G.toastMsg(tr('noNeed'), 1.6); return; }          // nothing to mend: keep the geo
-    if (P.geo < it.price) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
-    P.geo -= it.price; buyItem(it); Sound.play(it.gear ? 'buy' : 'ability');
+    if (P.geo < shopPrice(it)) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
+    P.geo -= shopPrice(it); buyItem(it); Sound.play(it.gear ? 'buy' : 'ability');
   }
   G.menuSel = Math.min(G.menuSel, n - 1);
   if (G.menuSel < G.shopTop) G.shopTop = G.menuSel;
@@ -180,8 +182,8 @@ function drawShop(g) {
     if (it.gear && !lock) g.direction = 'ltr';
     g.fillText(sub, VW / 2, y + 15);
     setDir(g); g.textAlign = 'right'; g.direction = 'ltr'; g.font = font(21, '700');
-    g.fillStyle = sold ? '#6d7a8c' : lock ? '#6d7a8c' : (P.geo >= it.price ? '#ffe9a0' : '#c77');
-    g.fillText(sold ? tr('soldout') : it.price + ' ' + tr('price'), VW - 180, y);
+    g.fillStyle = sold ? '#6d7a8c' : lock ? '#6d7a8c' : (P.geo >= shopPrice(it) ? '#ffe9a0' : '#c77');
+    g.fillText(sold ? tr('soldout') : shopPrice(it) + ' ' + tr('price'), VW - 180, y);
   }
   g.fillStyle = 'rgba(230,240,255,0.55)';
   if (G.shopTop > 0) { g.beginPath(); g.moveTo(VW / 2 - 8, 104); g.lineTo(VW / 2 + 8, 104); g.lineTo(VW / 2, 95); g.fill(); }

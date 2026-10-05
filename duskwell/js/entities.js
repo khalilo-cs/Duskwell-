@@ -120,7 +120,7 @@ class Player {
   // numbers that charms and gear change: heal time, damage, spell power, strike gap, reach
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1) * Gear.focusK(); }
   nailDamage() { return Math.max(1, Math.round(this.nail * Gear.dmgK() * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1))); }
-  spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1) * (G.flags.buy_ink ? 1.25 : 1)); }          // the wizard's ink adds a quarter
+  spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1) * (G.flags.buy_ink ? 1.25 : 1) * Quests.spellK()); }          // the wizard's ink adds a quarter
   strikeGap() { const c = Gear.atkCD(); return Charms.has('swift') ? Math.min(0.21, c * 0.62) : c; }
   reachK() { return (Charms.has('reach') ? 1.35 : 1) * Gear.reachK(); }
 
@@ -871,7 +871,7 @@ class Enemy {
   onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   // die: drop geo, burst, count the kill
   kill() {
-    this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15); Mind.killed(this, this.lastHow);
+    this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15); Mind.killed(this, this.lastHow); Quests.killed(this);
     if (Charms.has('grave') && !G.player.dead) { G.player.gainSoul(8); G.burst(this.cx, this.cy, 6, { color: '#bfe8d0', speed: 120, life: 0.5, size: 3, grav: -120 }); }
     G.burst(this.cx, this.cy, 22, { color: this.blood || '#ffd59a', speed: 260, life: 0.6, size: 4 });
     G.burst(this.cx, this.cy, 8, { color: '#0a0d12', speed: 180, life: 0.6, size: 5 });

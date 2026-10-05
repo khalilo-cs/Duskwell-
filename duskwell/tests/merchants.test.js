@@ -5,6 +5,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
 (async () => {
   const { browser, page, errors } = await open({ http: true });
   const ev = (f, a) => page.evaluate(f, a);
+  // the quests (quests.js) have their own dialogs; here every quest is already done, so the people only greet and sell
+  await ev(() => { const Q = DW.G.flags.qs = {}; for (const q of QUESTS) Q[q.id] = { s: 2, k: q.steps.length, n: 0, got: {}, vis: {} }; });
   // where everybody stands
   let r = await ev(() => {
     const out = { merchants: [], wizards: [], bad: [] };

@@ -261,8 +261,19 @@ const MapView = (() => {
       const q = L.pos[id], R = W[id], at = (o, k) => [X(q.x + o.x + 0.5), Y(q.y + o.y - k)];
       for (const b of R.benches) bench(g, ...at(b, 1.2), r * 0.85);
       for (const sn of R.stations) lantern(g, ...at(sn, 1.6), r, stationLit(id));
-      for (const n of R.npcs) { const k = n.type === 'trader' ? 'merchant' : n.type; if (SIGNS[k]) SIGNS[k](g, ...at(n, 2.2), r * 0.95); }
+      for (const n of R.npcs) {
+        const k = n.type === 'trader' ? 'merchant' : n.type; if (SIGNS[k]) SIGNS[k](g, ...at(n, 2.2), r * 0.95);
+        const qm = Quests.mark(id, n.type);                                    // work to give, or work to hand in
+        if (qm) { const [qx, qy] = at(n, 2.2); g.save(); g.font = '800 ' + Math.round(r * 2.3) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr'; g.lineWidth = 3.5; g.strokeStyle = DARK; g.strokeText(qm, qx + r * 1.2, qy - r * 1.3); g.fillStyle = '#ffd24a'; g.fillText(qm, qx + r * 1.2, qy - r * 1.3); g.restore(); }
+      }
       if (R.arena) skull(g, X(q.x + R.w / 2), Y(q.y + R.h / 2), r * 1.15, !G.flags[R.arena.flag]);
+    }
+    // where the quests in hand point: a pulsing gold diamond, in rooms already seen
+    for (const pn of Quests.pins()) {
+      if (!seen(pn.room) || !on(pn.room)) continue;
+      const q = L.pos[pn.room], px = X(q.x + pn.x + 0.5), py = Y(q.y + pn.y), k = 0.5 + 0.5 * Math.sin(t * 5);
+      g.beginPath(); g.arc(px, py, r * (1.5 + 0.5 * k), 0, 7); g.strokeStyle = 'rgba(255,210,74,' + (0.7 - 0.4 * k) + ')'; g.lineWidth = 2; g.stroke();
+      poly(g, [px, py - r * 1.05, px + r * 0.8, py, px, py + r * 1.05, px - r * 0.8, py]); g.fillStyle = '#ffd24a'; g.fill(); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke();
     }
     // the hero
     const cp = L.pos[cur]; pin(g, X(cp.x + clamp(P.cx / 32, 0, cd.w)), Y(cp.y + clamp(P.cy / 32, 0, cd.h)), Math.max(4, r * 0.8), t);
@@ -280,13 +291,13 @@ const MapView = (() => {
     g.restore();
     g.strokeStyle = 'rgba(150,170,200,0.3)'; g.lineWidth = 1; g.strokeRect(VX + 0.5, VY + 0.5, VWd - 1, VHd - 1);
     // key
-    const items = [['bench', sx('مقعد', 'Bench')], ['lantern', sx('فانوس', 'Lantern')], ['merchant', sx('تاجر', 'Merchant')], ['wizard', sx('ساحر', 'Wizard')], ['smith', sx('حدّاد', 'Smith')], ['skull', sx('حارس', 'Guardian')], ['door', sx('باب', 'Door')], ['you', sx('أنت', 'You')]];
+    const items = [['bench', sx('مقعد', 'Bench')], ['lantern', sx('فانوس', 'Lantern')], ['merchant', sx('تاجر', 'Merchant')], ['wizard', sx('ساحر', 'Wizard')], ['smith', sx('حدّاد', 'Smith')], ['skull', sx('حارس', 'Guardian')], ['quest', sx('مهمة', 'Quest')], ['door', sx('باب', 'Door')], ['you', sx('أنت', 'You')]];
     g.font = font(14, '600'); g.textBaseline = 'middle'; g.textAlign = ar ? 'right' : 'left'; g.direction = ar ? 'rtl' : 'ltr';
     const wid = items.map(i => 28 + g.measureText(i[1]).width), tw = wid.reduce((a, b) => a + b + 14, -14);
     let x = (VW - tw) / 2; const y = 484;
     items.forEach((it, i) => {
       const ix = ar ? x + wid[i] - 10 : x + 10;
-      if (it[0] === 'you') pin(g, ix, y, 4.5, t); else if (it[0] === 'door') { g.fillStyle = '#fff1c4'; g.fillRect(ix - 2, y - 7, 4, 14); }
+      if (it[0] === 'you') pin(g, ix, y, 4.5, t); else if (it[0] === 'quest') { poly(g, [ix, y - 7, ix + 5.5, y, ix, y + 7, ix - 5.5, y]); g.fillStyle = '#ffd24a'; g.fill(); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); } else if (it[0] === 'door') { g.fillStyle = '#fff1c4'; g.fillRect(ix - 2, y - 7, 4, 14); }
       else if (it[0] === 'lantern') lantern(g, ix, y, 7, true); else if (it[0] === 'skull') skull(g, ix, y, 7, true); else SIGNS[it[0]](g, ix, y, 7);
       g.fillStyle = '#c3d2ea'; g.fillText(it[1], ar ? ix - 16 : ix + 16, y + 1);
       x += wid[i] + 14;

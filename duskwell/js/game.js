@@ -35,6 +35,7 @@ G.ring = function (x, y, color, flat) { G.fx.push({ type: 'ring', x, y, t: 0, li
 G.slashFx = function (x, y, dir) { G.fx.push({ type: 'slash', x, y, dir: dir || 1, t: 0, life: 0.16 }); };
 // scatter geo as coins of 25, 5 and 1
 G.dropGeo = function (x, y, total) {
+  total = Math.round(total * Quests.geoK());
   let n = 0;
   while (total >= 25 && n < 12) { G.geos.push(new Geo(x - 6, y - 6, 25)); total -= 25; n++; }
   while (total >= 5 && n < 16) { G.geos.push(new Geo(x - 4, y - 4, 5)); total -= 5; n++; }
@@ -96,7 +97,7 @@ function enterRoom(id, spawn) {
   // persistent changes
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.get(x, y); if ((v === T_BREAK || v === T_CRACK) && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR); }
   for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; en.hp = Math.max(1, Math.round(en.hp * Diff.enemyHp(def.area))); Mind.prepare(en, def.area); G.enemies.push(en); }
-  for (const it of def.items) if (!G.flags[it.id]) G.items.push(new Item(it));
+  for (const it of def.items) if (!G.flags[it.id] && (it.kind !== 'quest' || Quests.itemActive(it))) G.items.push(new Item(it));
   Mech.init(def);
   if (G.shade && G.shade.room === id) {
     const s = new ShadeEnemy({ x: 0, y: 0 }, G.shade.geo); s.kind = 'shade';
@@ -142,6 +143,7 @@ function enterRoom(id, spawn) {
   G.zoomNow = G.arena ? 1 : G.zoom; snapCamera();
   if (def.area !== G.lastArea) { G.areaBanner = { key: 'area_' + def.area, t: 0, color: AREA_COLORS[def.area] }; G.lastArea = def.area; }
   G.tileCanvas = null;
+  Quests.entered(id);
 }
 // close an arena gate and shake the screen
 function closeGate(gt, silent) {
@@ -201,6 +203,10 @@ G.collectItem = function (it) {
     P.geo += d.amount; G.flags[d.id] = true; Sound.play('geo'); G.burst(it.x, it.y, 18, { color: '#ffe9a0', speed: 200, life: 0.7, size: 3 });
     G.toastMsg(tr('cache_d') + '  +' + d.amount, 3); return;
   }
+  if (d.kind === 'quest') {
+    G.flags[d.id] = true; Sound.play('geo'); G.ring(it.x, it.y, '#ffd86b', 0.8); G.burst(it.x, it.y, 14, { color: '#ffe9a0', speed: 180, life: 0.6, size: 3 });
+    Quests.collected(d); return;
+  }
   G.flags[d.id] = true;
   if (d.kind === 'seed') { P.maxHp++; P.hp = P.maxHp; G.banner = { title: tr('seed'), desc: tr('seed_d'), t: 0 }; }
   else if (d.kind === 'fang') { P.nail += 3; G.banner = { title: tr('fang'), desc: tr('fang_d'), t: 0, big: true }; }
@@ -259,6 +265,12 @@ function nearest(list, px, range) {
   return best;
 }
 // up pressed: bench, station, npc or sign
+// the greeting of a shop person, then his shop (the wizard greets differently as the player's seals grow, and he is the one to say that the beasts learn)
+function shopDialog(n) {
+  G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : n.type === 'wizard' ? 'wizard' : 'general');
+  const hi = n.type === 'wizard' ? tr(['wizardHi', 'wizardHi2', 'wizardHi3'][Math.min(2, Math.floor(sealCount() / 4))]) : shopGreet(shopDef());
+  return { lines: [hi], i: 0, t: 0, shop: true };
+}
 function interact() {
   const b = nearest(G.benches, P.cx, 54);
   if (b) { P.sit(b); G.bench = { room: G.level.id }; Sound.play('bench'); saveGame(); G.hasSave = true; G.toastMsg(tr('saved'), 1.6); G.burst(b.px, b.py - 40, 16, { color: '#cfe6ff', speed: 90, life: 0.9, size: 3, grav: -90 }); return true; }
@@ -276,10 +288,7 @@ function interact() {
   if (n) {
     if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3'), tr('elder4')], i: 0, t: 0 };
     else {
-      G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : n.type === 'wizard' ? 'wizard' : 'general');
-      // the wizard greets differently as the player's seals grow (and he is the one to say that the beasts learn)
-      const hi = n.type === 'wizard' ? tr(['wizardHi', 'wizardHi2', 'wizardHi3'][Math.min(2, Math.floor(sealCount() / 4))]) : shopGreet(shopDef());
-      G.dialog = { lines: [hi], i: 0, t: 0, shop: true };
+      G.dialog = Quests.talk(n) || shopDialog(n);               // work for the hero (quests.js), or the usual greeting and the shop
     }
     G.state = 'dialog'; Sound.play('select'); return true;
   }
@@ -291,7 +300,7 @@ function interact() {
   return false;
 }
 // ---------------------------------------------------------------- lantern stations (fast travel)
-const STATION_FARE = 25;
+const stationFare = () => Quests.fare();
 // a station works once it has been lit (the town's always does)
 const stationLit = room => room === 'town' || !!G.flags['station_' + room];
 // lit stations the player can travel to
@@ -305,9 +314,9 @@ function updateTravel() {
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'play'; Input.consume('pause'); Input.consume('map'); return; }
   if (menuNav(n)) {
     if (G.menuSel === n - 1) { G.state = 'play'; return; }
-    if (P.geo < STATION_FARE) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
+    if (P.geo < stationFare()) { Sound.play('hurt'); G.toastMsg(tr('noGeo'), 1.5); return; }
     const dest = list[G.menuSel].id;
-    P.geo -= STATION_FARE; Sound.play('confirm');
+    P.geo -= stationFare(); Sound.play('confirm');
     G.fadeTo(() => enterRoom(dest, { station: true }), 0.5, 0.2, 0.5);
   }
   G.menuSel = Math.min(G.menuSel, n - 1);
@@ -508,7 +517,7 @@ function diffLabel() { return sx('الصعوبة: ', 'Difficulty: ') + Diff.MODE
 function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'moves', label: sx('الحركات', 'Moves') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'quests', label: sx('المهام', 'Quests') + (Quests.active().length ? '  (' + Quests.active().length + ')' : '') }, { id: 'moves', label: sx('الحركات', 'Moves') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -524,6 +533,7 @@ function updatePause() {
     else if (id === 'map') G.state = 'map';
     else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
     else if (id === 'gear') { G.state = 'gear'; G.gearSel = 0; G.gearT = 0; }
+    else if (id === 'quests') { G.state = 'quests'; G.questSel = 0; G.questsT = 0; }
     else if (id === 'moves') { G.state = 'moves'; G.moveSel = 0; G.movesT = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
     else if (id === 'music' || id === 'sfx') Sound.cycle(id);
@@ -538,8 +548,18 @@ function updatePause() {
 }
 
 // dialog: advance or close
+// a choice at the end of a dialog: the dialog closes, then what was chosen runs (it may open another)
+function pickChoice(d, i) { const c = d.choices[i]; Sound.play('confirm'); G.dialog = null; G.state = 'play'; c.fn(); }
 function updateDialog(dt) {
   const d = G.dialog; d.t += dt;
+  if (d.choices && d.choices.length && d.i >= d.lines.length - 1) {
+    const n = d.choices.length;
+    if (Input.pressed('left') || Input.pressed('up')) { d.sel = (d.sel + n - 1) % n; Sound.play('select'); }
+    if (Input.pressed('right') || Input.pressed('down')) { d.sel = (d.sel + 1) % n; Sound.play('select'); }
+    if (d.t > 0.2 && Input.pressed('confirm')) pickChoice(d, d.sel);
+    else if (d.t > 0.2 && Input.pressed('attack')) pickChoice(d, n - 1);              // X: the last choice is the way out
+    return;
+  }
   if (Input.pressed('confirm') || Input.pressed('attack') || Input.pressed('up')) {
     Sound.play('select');
     if (d.i < d.lines.length - 1) { d.i++; d.t = 0; }
@@ -580,7 +600,7 @@ function updateBanner(dt) {
 // one logic step, by state
 // the music of the moment: the shops and the menus have a track of their own, played instead of the area's
 const SHOP_MOOD = { wizard: 'wizard', smith: 'forge', outfitter: 'forge' };
-const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'moves', 'bestiary', 'travel'];
+const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'moves', 'quests', 'bestiary', 'travel'];
 function moodNow() {
   const inShop = G.state === 'shop' || (G.state === 'dialog' && G.dialog && G.dialog.shop);
   if (inShop) return SHOP_MOOD[G.shopId] || 'fiddler';
@@ -601,6 +621,7 @@ function update(dt) {
     case 'bestiary': updateBestiary(dt); break;
     case 'gear': updateGear(dt); break;
     case 'moves': updateMoves(dt); break;
+    case 'quests': updateQuests(dt); break;
     case 'trans': updateTrans(dt); break;
     case 'pause': updatePause(); break;
     case 'map': updateMap(); break;
@@ -618,7 +639,7 @@ function update(dt) {
       if (G.hitstopT > 0) { G.hitstopT -= dt; break; }
       let d = dt;
       if (G.slowmo > 0) { G.slowmo -= dt; d = dt * 0.35; }
-      updatePlay(d); updateParticles(d); Coach.update(d);
+      updatePlay(d); updateParticles(d); Coach.update(d); Quests.update(d);
       break;
     }
   }
@@ -821,7 +842,7 @@ const MENU_ICONS = {
   no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
 };
 // which drawing each menu entry uses
-const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', diff: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', quests: 'book', diff: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
 // a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
 function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
@@ -949,6 +970,7 @@ function drawWorld(g) {
   Art.mechFront(gs, t, th);
   for (const b of G.benches) Art.drawBench(gs, b, t, P.sitting === b);
   for (const n of G.npcs) Art.drawNPC(gs, n, t);
+  drawQuestMarks(gs, t);
   for (const s2 of G.stations) Art.drawStation(gs, s2, t, stationLit(s2.room));
   for (const s2 of G.signs) Art.drawSign(gs, s2, t);
   for (const it of G.items) { Art.drawItem(gs, it, t); if (it.locked) { gs.strokeStyle = 'rgba(255,110,110,0.7)'; gs.lineWidth = 2; gs.beginPath(); gs.arc(it.x, it.y, 22 + 2 * Math.sin(t * 5), 0, 7); gs.stroke(); } }
@@ -1135,7 +1157,10 @@ function drawDialog(g) {
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(22, '600');
   const lines = wrapText(g, d.lines[d.i], VW - 220);
   lines.forEach((l, i) => { g.fillStyle = '#eef5ff'; g.fillText(l, VW / 2, 435 - (lines.length - 1) * 16 + i * 32); });
-  g.fillStyle = 'rgba(230,240,255,0.7)'; g.beginPath(); const by = 492 + Math.sin(G.t * 5) * 2; g.moveTo(VW / 2 - 8, by - 6); g.lineTo(VW / 2 + 8, by - 6); g.lineTo(VW / 2, by + 3); g.fill();
+  if (d.choices && d.choices.length && d.i >= d.lines.length - 1) {                  // the choices, as buttons over the panel
+    const n = d.choices.length, w = 190, gap = 14, x0 = (VW - (n * w + (n - 1) * gap)) / 2;
+    d.choices.forEach((c, i) => chip(g, x0 + i * (w + gap), 314, w, 36, c.label, i === d.sel, () => pickChoice(d, i)));
+  } else { g.fillStyle = 'rgba(230,240,255,0.7)'; g.beginPath(); const by = 492 + Math.sin(G.t * 5) * 2; g.moveTo(VW / 2 - 8, by - 6); g.lineTo(VW / 2 + 8, by - 6); g.lineTo(VW / 2, by + 3); g.fill(); }
   g.restore();
 }
 // charm screen
@@ -1182,7 +1207,7 @@ function drawTravel(g) {
   drawPanel(g, 200, 70, VW - 400, 400);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('stationTitle'), VW / 2, 112, '#ffe9b0');
   g.font = font(20, '700'); g.textAlign = 'right'; g.direction = 'ltr'; g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 240, 112);
-  g.font = font(17, '500'); g.textAlign = 'center'; setDir(g); g.fillStyle = '#9db5d6'; g.fillText(tr('stationFare') + ': ' + STATION_FARE + ' ' + tr('price'), VW / 2, 146);
+  g.font = font(17, '500'); g.textAlign = 'center'; setDir(g); g.fillStyle = '#9db5d6'; g.fillText(tr('stationFare') + ': ' + stationFare() + ' ' + tr('price'), VW / 2, 146);
   list.forEach((it, i) => {
     const y = 196 + i * 48, on = G.menuSel === i;
     if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(230, y - 22, VW - 460, 44); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(230.5, y - 21.5, VW - 461, 43); }
@@ -1250,9 +1275,10 @@ function draw() {
         if (G.state === 'bestiary') drawBestiary(g);
         if (G.state === 'gear') drawGear(g);
         if (G.state === 'moves') drawMoves(g);
+        if (G.state === 'quests') drawQuests(g);
         if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
-        if (G.state === 'map' || G.state === 'moves' || G.state === 'gear' || G.state === 'charms' || G.state === 'bestiary') backButton(g);
+        if (G.state === 'map' || G.state === 'moves' || G.state === 'quests' || G.state === 'gear' || G.state === 'charms' || G.state === 'bestiary') backButton(g);
       }
   }
   if (G.fadeA > 0) { g.fillStyle = 'rgba(0,0,0,' + G.fadeA + ')'; g.fillRect(0, 0, VW, VH); }

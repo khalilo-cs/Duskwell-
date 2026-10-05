@@ -27,9 +27,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   // ---- the pause menu opens the screen
   r = await ev(() => {
     const { G } = DW; DW.enterRoom('town', { pos: { x: 200, y: 300 } }); G.state = 'pause'; G.trans = null; G.fadeA = 0; G.areaBanner = null;
-    const items = pauseItems(), i = items.findIndex(q => q.id === 'moves'); return { n: items.length, i, after: items[items.findIndex(q => q.id === 'gear') + 1].id };
+    const items = pauseItems(), i = items.findIndex(q => q.id === 'moves'); return { n: items.length, i, after: items.slice(items.findIndex(q => q.id === 'gear') + 1, i + 1).map(q => q.id).join() };
   });
-  ok('the pause menu has a Moves entry after Equipment', r.i > 0 && r.after === 'moves', r);
+  ok('the pause menu has a Moves entry after Equipment (the Quests entry stands between them)', r.i > 0 && r.after === 'quests,moves', r);
   await ev(() => { DW.G.menuSel = pauseItems().findIndex(q => q.id === 'moves'); });
   await page.keyboard.press('Enter'); await ev(() => DW.step(2));
   r = await ev(() => ({ state: DW.G.state, sel: DW.G.moveSel }));

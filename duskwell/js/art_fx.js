@@ -46,6 +46,14 @@ const FxArt = (() => {
       frame(g, 'dive', i, f.x, f.y + 4, s, 1, 0.5, 1, 1);
       return true;
     },
+    // a strip played over and over inside a box (the Moves screen): frames fitted to the box, a pause on the last one
+    loop(g, k, x, y, w, h, t, ax) {
+      if (!ready()) return false;
+      const n = FX_FRAMES[k].length, i = Math.min(n - 1, Math.floor((t * 9) % (n + 4))), fr = FX_FRAMES[k][i];
+      const s = Math.min(w / maxOf(k, 2), h / maxOf(k, 3));
+      frame(g, k, i, x, y, s, 1, ax == null ? 0.5 : ax, 0.5);
+      return true;
+    },
     // the Comet Heart's trail behind the blazing hero
     comet(g, p, t) {
       if (!ready()) return false;

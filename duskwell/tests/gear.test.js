@@ -209,7 +209,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     return out;
   });
   ok('the smith sells two blades and three arts', r.names.join() === 'duskblade,lance,rush,rend,nova', r.names);
-  ok('Soul Nova is locked behind 3 seals; Dusk Rush is open once you can dash', r.lockedNova === true && r.shownRush === true, r);
+  ok('Soul Nova is locked behind 2 seals; Dusk Rush is open once you can dash', r.lockedNova === true && r.shownRush === true, r);
   // poor: cannot buy
   await ev(() => { DW.P.geo = 100; DW.G.menuSel = 0; });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
@@ -224,10 +224,10 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await ev(() => { DW.G.menuSel = 4; });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ geo: DW.P.geo, own: DW.Gear.hasArt('nova') })); ok('a locked item cannot be bought', r.geo === 1620 && !r.own, r);
-  await ev(() => { DW.G.flags.boss_guardian = DW.G.flags.boss_spore = DW.G.flags.boss_weaver = true; DW.G.menuSel = 4; });
+  await ev(() => { DW.G.flags.boss_guardian = DW.G.flags.boss_spore = true; DW.G.menuSel = 4; });
   await page.keyboard.press('Enter'); await ev(() => DW.step(1));
   r = await ev(() => ({ geo: DW.P.geo, own: DW.Gear.hasArt('nova'), state: DW.G.state }));
-  ok('with 3 seals the Nova can be learned (1300) and a banner teaches it', r.geo === 320 && r.own && r.state === 'banner', r);
+  ok('with 2 seals the Nova can be learned (900) and a banner teaches it', r.geo === 720 && r.own && r.state === 'banner', r);
   await page.screenshot({ path: shot('nova_banner.png') });
 
   // ---------- NPC: who stands where

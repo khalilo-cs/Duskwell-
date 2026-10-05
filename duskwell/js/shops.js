@@ -47,7 +47,7 @@ const SHOPS = {
     title: ['الحدّاد', 'The Smith'], npc: 'smith',
     greet: ['الحدّاد: النصل الجيد يغني عن ألف تعويذة. وإن أردتَ فنون النصل فأنا أعلّمها.', 'Smith: A good blade is worth a thousand spells. And if you want the arts of the nail, I teach them.'],
     items: [gearItem('weapon', 'duskblade', 380), gearItem('weapon', 'lance', 520),
-      gearItem('art', 'rush', 500, needDash), gearItem('art', 'rend', 650), gearItem('art', 'nova', 1300, needSeals(3))],
+      gearItem('art', 'rush', 400, needDash), gearItem('art', 'rend', 300), gearItem('art', 'nova', 900, needSeals(2))],
   },
   outfitter: {
     title: ['الخيّاطة', 'The Outfitter'], npc: 'outfitter',

@@ -503,7 +503,7 @@ function zoomLabel() { return G.zoom === 1 ? sx('بدون', 'Off') : G.zoom === 
 function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'bestiary', label: tr('bestiary') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'moves', label: sx('الحركات', 'Moves') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -519,6 +519,7 @@ function updatePause() {
     else if (id === 'map') G.state = 'map';
     else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
     else if (id === 'gear') { G.state = 'gear'; G.gearSel = 0; G.gearT = 0; }
+    else if (id === 'moves') { G.state = 'moves'; G.moveSel = 0; G.movesT = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
     else if (id === 'music' || id === 'sfx') Sound.cycle(id);
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
@@ -573,7 +574,7 @@ function updateBanner(dt) {
 // one logic step, by state
 // the music of the moment: the shops and the menus have a track of their own, played instead of the area's
 const SHOP_MOOD = { wizard: 'wizard', smith: 'forge', outfitter: 'forge' };
-const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'bestiary', 'travel'];
+const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'moves', 'bestiary', 'travel'];
 function moodNow() {
   const inShop = G.state === 'shop' || (G.state === 'dialog' && G.dialog && G.dialog.shop);
   if (inShop) return SHOP_MOOD[G.shopId] || 'fiddler';
@@ -593,6 +594,7 @@ function update(dt) {
     case 'title': updateTitle(); break;
     case 'bestiary': updateBestiary(dt); break;
     case 'gear': updateGear(dt); break;
+    case 'moves': updateMoves(dt); break;
     case 'trans': updateTrans(dt); break;
     case 'pause': updatePause(); break;
     case 'map': updateMap(); break;
@@ -813,7 +815,7 @@ const MENU_ICONS = {
   no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
 };
 // which drawing each menu entry uses
-const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
 // a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
 function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
@@ -1021,51 +1023,9 @@ function collectLights(cx, cy, skipPlayer, zoom) {
   return out;
 }
 
-// map screen
-// the map: opens zoomed on the room you are in; Z shows the whole world, the arrows move the view
-function updateMap() {
-  const mv = G.mapView || (G.mapView = { zoom: true, px: 0, py: 0 });
-  if (Input.pressed('map') || Input.pressed('pause') || Input.pressed('attack')) { G.state = 'play'; G.mapView = null; Input.consume('map'); Input.consume('pause'); return; }
-  if (Input.pressed('confirm')) { mv.zoom = !mv.zoom; mv.px = mv.py = 0; Sound.play('select'); }
-  if (mv.zoom) { mv.px = clamp(mv.px + Input.axisX() * 0.3, -80, 80); mv.py = clamp(mv.py + Input.axisY() * 0.3, -50, 50); }
-}
-function drawMap(g) {
-  g.fillStyle = '#03050a'; g.fillRect(0, 0, VW, VH);
-  const pic = AreaArt.picture(AreaArt.THEME_OF[G.level.def.area]);
-  if (pic) AreaArt.cover(g, pic, 0, 0, VW, VH, 0.34);        // the picture of the area you are in
-  g.fillStyle = 'rgba(3,5,10,0.82)'; g.fillRect(0, 0, VW, VH);
-  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(34, '700'); textShadow(g, tr('map'), VW / 2, 44, '#eef5ff');
-  let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
-  const ids = WORLD.order.filter(id => G.visited[id]);
-  const all = ids.length ? ids : [G.level.id];
-  for (const id of WORLD.order) { const m = WORLD.rooms[id].map, d = WORLD.rooms[id]; minX = Math.min(minX, m.x); minY = Math.min(minY, m.y); maxX = Math.max(maxX, m.x + Math.ceil(d.w / 8)); maxY = Math.max(maxY, m.y + Math.ceil(d.h / 8)); }
-  let u = Math.min((VW - 120) / (maxX - minX), (VH - 130) / (maxY - minY), 16);
-  let ox = (VW - (maxX - minX) * u) / 2 - minX * u, oy = 90 + ((VH - 130) - (maxY - minY) * u) / 2 - minY * u;
-  const mv = G.mapView;
-  if (mv && mv.zoom) {                                      // zoomed: the room you are in stays in the middle, moved by the arrows
-    u = 13; const cm = G.level.def.map, cx = cm.x + Math.ceil(G.level.def.w / 8) / 2 + mv.px, cy = cm.y + Math.ceil(G.level.def.h / 8) / 2 + mv.py;
-    ox = VW / 2 - cx * u; oy = 90 + (VH - 130) / 2 - cy * u;
-  }
-  g.save(); g.beginPath(); g.rect(0, 80, VW, VH - 120); g.clip();
-  for (const id of WORLD.order) {
-    if (!G.visited[id]) continue;
-    const d = WORLD.rooms[id], m = d.map, w = Math.ceil(d.w / 8) * u, h = Math.ceil(d.h / 8) * u, x = ox + m.x * u, y = oy + m.y * u;
-    const col = AREA_COLORS[d.area];
-    g.fillStyle = rgba(col, 0.22); g.fillRect(x, y, w, h);
-    g.strokeStyle = rgba(col, 0.9); g.lineWidth = 2; g.strokeRect(x + 1, y + 1, w - 2, h - 2);
-    for (const b of d.benches) { g.fillStyle = '#ffffff'; g.fillRect(x + b.x / d.w * w - 2, y + b.y / d.h * h - 2, 5, 5); }
-    for (const sn of d.stations) { const mx = x + sn.x / d.w * w, my = y + sn.y / d.h * h; poly(g, [mx, my - 5, mx + 4, my, mx, my + 5, mx - 4, my]); fs(g, stationLit(id) ? '#ffd98a' : '#4a4030', null); }
-    for (const dr of d.doors) { g.fillStyle = col; g.fillRect(x + dr.x / d.w * w - 2, y + dr.y / d.h * h - 2, 4 + dr.w / d.w * w, 4 + dr.h / d.h * h); }
-    if (id === G.level.id) {
-      const px = x + clamp(P.cx / G.level.pw, 0, 1) * w, py = y + clamp(P.cy / G.level.ph, 0, 1) * h;
-      g.fillStyle = 'rgba(255,255,255,' + (0.6 + 0.4 * Math.sin(G.t * 6)) + ')'; g.beginPath(); g.arc(px, py, 5, 0, 7); g.fill();
-    }
-  }
-  g.restore();
-  g.font = font(20, '600'); g.fillStyle = '#9db5d6';
-  g.fillText(tr('area_' + G.level.def.area), VW / 2, VH - 26);
-  g.font = font(13, '500'); g.fillStyle = 'rgba(190,205,230,0.6)'; g.fillText(tr('mapHint'), VW / 2, VH - 8);
-}
+// map screen (js/mapview.js): opens on the room you are in; Z steps room / area / world, the arrows move the view
+function updateMap() { MapView.update(); }
+function drawMap(g) { MapView.draw(g); }
 
 // title screen over the banner (js/art_title.js): the logo is in the picture, so below it come the Arabic name (in Arabic),
 // the tagline and the menu
@@ -1253,12 +1213,13 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 62, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 108, 34, { w: 340, h: 29 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 24); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 46, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 92, 31, { w: 340, h: 27 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
         if (G.state === 'bestiary') drawBestiary(g);
         if (G.state === 'gear') drawGear(g);
+        if (G.state === 'moves') drawMoves(g);
         if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
       }

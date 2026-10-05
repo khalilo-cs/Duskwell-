@@ -481,6 +481,7 @@ function updateTitle() {
     if (it === 'cont') G.fadeTo(() => startGame(true), 0.5, 0.2, 0.6);
     else if (it === 'new') { if (G.hasSave) { G.confirmNew = true; G.menuSel = 1; } else G.fadeTo(() => startGame(false), 0.5, 0.2, 0.6); }
     else if (it === 'lang') { setLang(LANG.cur === 'ar' ? 'en' : 'ar'); }
+    else if (it === 'diff') Diff.setMode(Diff.nextMode());
   }
 }
 // entries of the title menu
@@ -488,6 +489,7 @@ function titleItems() {
   const a = [];
   if (G.hasSave) a.push({ id: 'cont', label: tr('cont') });
   a.push({ id: 'new', label: tr('newgame') });
+  a.push({ id: 'diff', label: diffLabel() });
   a.push({ id: 'lang', label: tr('lang') });
   return a;
 }
@@ -500,12 +502,14 @@ function gfxLabel() {
 // the zoom the player chose: how close the picture is during play (kept in this browser)
 const ZOOMS = [1, 1.25, 1.5];
 function zoomLabel() { return G.zoom === 1 ? sx('بدون', 'Off') : G.zoom === 1.5 ? sx('قريب', 'Close') : sx('متوسط', 'Medium'); }
+// text of the difficulty setting (title and pause menus)
+function diffLabel() { return sx('الصعوبة: ', 'Difficulty: ') + Diff.MODES[Diff.mode][LANG.cur === 'ar' ? 'ar' : 'en']; }
 function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'moves', label: sx('الحركات', 'Moves') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
-    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 // pause menu input
 function updatePause() {
@@ -525,6 +529,7 @@ function updatePause() {
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
+    else if (id === 'diff') { Diff.setMode(Diff.nextMode()); G.toastMsg(sx('تسري الصعوبة على الغرف التي تدخلها بعد الآن', 'The setting applies to the rooms you enter from now on'), 2.4); }
     else if (id === 'zoom') setZoom({ 1: 1.25, 1.25: 1.5, 1.5: 1 }[G.zoom] || 1.25);
     else if (id === 'gfx' && Lumen.ready()) Lumen.setMode({ auto: 2, 2: 1, 1: 0, 0: 'auto' }[Lumen.mode()]);
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
@@ -815,7 +820,7 @@ const MENU_ICONS = {
   no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
 };
 // which drawing each menu entry uses
-const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', diff: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
 // a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
 function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
@@ -864,6 +869,27 @@ function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   g.restore();
 }
 // a menu of plaque buttons: a column from y0 (step apart), or a row when o.row is set. o.base is added to the index
+// a small button drawn on a screen, with the action a tap on it runs (kept in G.menuHits like the menu buttons)
+function chip(g, x, y, w, h, label, on, fn) {
+  g.save();
+  g.fillStyle = on ? 'rgba(230,240,255,0.2)' : 'rgba(10,16,28,0.85)'; g.fillRect(x, y, w, h);
+  g.strokeStyle = on ? 'rgba(255,233,160,0.95)' : 'rgba(150,170,200,0.4)'; g.lineWidth = on ? 2 : 1; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(15, '700'); g.fillStyle = on ? '#ffffff' : '#a9b9d2'; g.fillText(label, x + w / 2, y + h / 2 + 1);
+  g.restore();
+  (G.menuHits || (G.menuHits = [])).push({ x, y, w, h, fn });
+}
+// the round back button at the top corner of the full-screen pages: the same as Esc
+function backButton(g) {
+  const x = VW - 44, y = 31, r = 19, t = G.t;
+  g.save(); g.beginPath(); g.arc(x, y, r, 0, 7); g.fillStyle = 'rgba(10,16,28,0.9)'; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(230,240,255,0.7)'; g.stroke();
+  g.strokeStyle = '#eef5ff'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 7, y - 7); g.lineTo(x + 7, y + 7); g.moveTo(x + 7, y - 7); g.lineTo(x - 7, y + 7); g.stroke();
+  g.restore();
+  (G.menuHits || (G.menuHits = [])).push({ x: x - r - 6, y: y - r - 6, w: 2 * r + 12, h: 2 * r + 12, fn: backFromScreen });
+}
+function backFromScreen() {
+  Sound.play('select');
+  if (G.state === 'map') { G.state = 'play'; G.mapView = null; } else G.state = 'pause';
+}
 // when a tap picks an entry; the rectangles are kept in G.menuHits for taps and clicks
 function drawMenu(g, items, sel, y0, step, o) {
   o = o || {}; const base = o.base || 0, t = G.t, hits = G.menuHits || (G.menuHits = []);
@@ -1213,7 +1239,7 @@ function draw() {
       if (G.level) {
         drawWorld(g); drawHUD(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 46, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 92, 31, { w: 340, h: 27 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 86, 29, { w: 340, h: 26 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
@@ -1222,6 +1248,7 @@ function draw() {
         if (G.state === 'moves') drawMoves(g);
         if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
+        if (G.state === 'map' || G.state === 'moves' || G.state === 'gear' || G.state === 'charms' || G.state === 'bestiary') backButton(g);
       }
   }
   if (G.fadeA > 0) { g.fillStyle = 'rgba(0,0,0,' + G.fadeA + ')'; g.fillRect(0, 0, VW, VH); }
@@ -1237,7 +1264,7 @@ function resize() {
 function boot() {
   G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
   try { const z = parseFloat(localStorage.getItem('duskwell_zoom')); if (ZOOMS.includes(z)) G.zoom = z; } catch (e) { /* ignore */ }
-  G.zoomNow = G.zoom;
+  G.zoomNow = G.zoom; Diff.loadMode();
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();
   AreaArt.applyColors(AREA_COLORS); AreaArt.preload();
   const wake = () => Sound.init();
@@ -1247,9 +1274,23 @@ function boot() {
     try { G.canvas.focus({ preventScroll: true }); } catch (err) { /* ignore */ }
     const r = G.canvas.getBoundingClientRect(), px = (e.clientX - r.left) * VW / r.width, py = (e.clientY - r.top) * VH / r.height;
     const hit = (G.menuHits || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
-    if (hit) { G.menuSel = hit.i; pressEnter(); return; }
+    if (hit) { if (hit.fn) hit.fn(); else { G.menuSel = hit.i; pressEnter(); } return; }
     if (G.state === 'ending' || G.state === 'dialog' || G.state === 'banner') pressEnter();
+    if (G.state === 'map' && MapView.inView(px, py)) { G.mapDrag = { id: e.pointerId, x: px, y: py }; try { G.canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
   });
+  // a finger dragging the map moves the view; the wheel steps through room, area and world
+  const at = e => { const r = G.canvas.getBoundingClientRect(); return [(e.clientX - r.left) * VW / r.width, (e.clientY - r.top) * VH / r.height]; };
+  G.canvas.addEventListener('pointermove', e => {
+    const d = G.mapDrag; if (!d || d.id !== e.pointerId || G.state !== 'map') return;
+    const [px, py] = at(e); MapView.pan(px - d.x, py - d.y); d.x = px; d.y = py;
+  });
+  const dropDrag = e => { if (G.mapDrag && G.mapDrag.id === e.pointerId) G.mapDrag = null; };
+  G.canvas.addEventListener('pointerup', dropDrag); G.canvas.addEventListener('pointercancel', dropDrag);
+  G.canvas.addEventListener('wheel', e => {
+    if (G.state !== 'map' || !G.mapView) return;
+    e.preventDefault(); MapView.setMode(G.mapView.mode + (e.deltaY > 0 ? 1 : -1));
+  }, { passive: false });
+  G.canvas.style.touchAction = 'none';
   window.addEventListener('keydown', wake); window.addEventListener('pointerdown', wake);
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 0; } });
   Art.ambientInit();

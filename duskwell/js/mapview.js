@@ -180,6 +180,14 @@ const MapView = (() => {
     }
   }
 
+  // taps and drags: the chips choose the view, a finger moves it, the wheel steps through the views
+  const setMode = m => { const mv = G.mapView || (G.mapView = { mode: 0, px: 0, py: 0 }); mv.mode = clamp(m, 0, 2); mv.px = mv.py = 0; Sound.play('select'); };
+  const inView = (x, y) => x >= VX && x <= VX + VWd && y >= VY && y <= VY + VHd;
+  function pan(dx, dy) {                                          // dx, dy: how far the finger moved, in screen pixels
+    const mv = G.mapView; if (!mv || mv.mode > 1) return;
+    const b = base(mv), L = layout();
+    mv.px = clamp(mv.px - dx / b.s, -b.fx, L.w - b.fx); mv.py = clamp(mv.py - dy / b.s, -b.fy, L.h - b.fy);
+  }
   const visitedIn = ids => ids.filter(id => G.visited[id]).length;
   function draw(g) {
     const L = layout(), W = rooms(), mv = G.mapView || (G.mapView = { mode: 0, px: 0, py: 0 }), v = view(mv), s = v.s, t = G.t, ar = LANG.cur === 'ar';
@@ -191,6 +199,8 @@ const MapView = (() => {
     setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('map'), VW / 2, 32, '#eef5ff');
     const total = WORLD.order.length, found = WORLD.order.filter(id => G.visited[id]).length, col0 = AREA_COLORS[cd.area];
     g.font = font(17, '600'); g.fillStyle = col0; g.fillText(tr('area_' + cd.area) + '   ·   ' + sx('الغرف المكتشفة ', 'Rooms found ') + found + ' / ' + total, VW / 2, 58);
+    // the three views as chips, to tap
+    [sx('الغرفة', 'Room'), sx('المنطقة', 'Area'), sx('العالم', 'World')].forEach((name, i) => chip(g, 24 + i * 82, 16, 76, 30, name, mv.mode === i, () => setMode(i)));
     // the window
     g.fillStyle = 'rgba(3,5,10,0.55)'; g.fillRect(VX, VY, VWd, VHd);
     g.save(); g.beginPath(); g.rect(VX, VY, VWd, VHd); g.clip();
@@ -283,5 +293,5 @@ const MapView = (() => {
     });
     g.textAlign = 'center'; g.direction = ar ? 'rtl' : 'ltr'; g.font = font(14, '500'); g.fillStyle = 'rgba(190,205,230,0.65)'; g.fillText(tr('mapHint'), VW / 2, 521);
   }
-  return { layout, mini, update, draw, view, base, edge, backDoor, hits, reset() { lay = null; for (const k of Object.keys(minis)) delete minis[k]; }, SIGNS };
+  return { layout, mini, update, draw, view, base, edge, backDoor, hits, setMode, inView, pan, reset() { lay = null; for (const k of Object.keys(minis)) delete minis[k]; }, SIGNS };
 })();

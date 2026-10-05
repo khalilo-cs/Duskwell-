@@ -52,6 +52,14 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await page.screenshot({ path: shot('moves_ar.png') });
   await page.keyboard.press('Escape'); await ev(() => DW.step(2));
   r = await ev(() => DW.G.state); ok('Esc returns to the pause menu', r === 'pause', r);
+  // ---- touch: a tap on a row picks it, the round button goes back to the pause menu (and from the other pages too)
+  const tap = async (lx, ly) => { const b = await ev(() => { const r = document.querySelector('canvas').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height }; }); await page.mouse.click(b.l + lx * b.w / 960, b.t + ly * b.h / 540); await ev(() => DW.step(1)); };
+  await ev(() => { DW.G.state = 'moves'; DW.G.moveSel = 0; DW.draw(); });
+  await tap(200, 112 + 3 * 82); r = await ev(() => DW.G.moveSel); ok('a tap on the fourth row picks the fourth move', r === 3, r);
+  await ev(() => DW.draw()); await tap(960 - 44, 31); r = await ev(() => DW.G.state); ok('the round button goes back to the pause menu', r === 'pause', r);
+  for (const st of ['gear', 'charms', 'bestiary']) {
+    await ev(st => { DW.G.state = st; DW.draw(); }, st); await tap(960 - 44, 31); r = await ev(() => DW.G.state); ok('and so does the one on the ' + st + ' page', r === 'pause', r);
+  }
   // ---- draws in both languages, learned or not
   r = await ev(() => {
     const out = [], { G } = DW;

@@ -76,6 +76,29 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   r = await ev(() => ({ px: DW.G.mapView.px })); ok('the world view stays put', r.px === 0, r);
   await page.keyboard.press('Escape'); await ev(() => DW.step(2));
   r = await ev(() => ({ state: DW.G.state, view: DW.G.mapView })); ok('Esc closes the map', r.state === 'play' && r.view === null, r);
+  // ---- touch: chips choose the view, a finger drags it, the wheel steps through the views, the round button closes
+  const tap = async (lx, ly) => { const b = await ev(() => { const r = document.querySelector('canvas').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height }; }); await page.mouse.click(b.l + lx * b.w / 960, b.t + ly * b.h / 540); await ev(() => DW.step(1)); };
+  const drag = async (x0, y0, x1, y1) => { const b = await ev(() => { const r = document.querySelector('canvas').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height }; }); const P = (x, y) => [b.l + x * b.w / 960, b.t + y * b.h / 540]; await page.mouse.move(...P(x0, y0)); await page.mouse.down(); await page.mouse.move(...P((x0 + x1) / 2, (y0 + y1) / 2), { steps: 4 }); await page.mouse.move(...P(x1, y1), { steps: 4 }); await page.mouse.up(); await ev(() => DW.step(1)); };
+  const open2 = mode => ev(mode => { const { G } = DW; for (const id of WORLD.order) G.visited[id] = true; DW.enterRoom('cx2', { pos: { x: 300, y: 300 } }); G.trans = null; G.fadeA = 0; G.areaBanner = null; G.state = 'map'; G.mapView = { mode, px: 0, py: 0 }; DW.step(1); DW.draw(); }, mode);
+  await open2(0);
+  await tap(24 + 2 * 82 + 38, 31); r = await ev(() => DW.G.mapView.mode); ok('a tap on the World chip shows the whole world', r === 2, r);
+  await ev(() => DW.draw()); await tap(24 + 82 + 38, 31); r = await ev(() => DW.G.mapView.mode); ok('a tap on the Area chip shows the area', r === 1, r);
+  await ev(() => DW.draw()); await tap(24 + 38, 31); r = await ev(() => DW.G.mapView.mode); ok('a tap on the Room chip shows the room', r === 0, r);
+  await open2(1);
+  await drag(600, 300, 400, 250); r = await ev(() => ({ px: DW.G.mapView.px, py: DW.G.mapView.py, drag: DW.G.mapDrag, s: MapView.base(DW.G.mapView).s }));
+  ok('a finger dragged 200 left and 50 up moves the view 200/s right and 50/s down (the map follows the finger), and lets go', Math.abs(r.px - 200 / r.s) < 2 && Math.abs(r.py - 50 / r.s) < 1 && r.drag === null, r);
+  await open2(2); await drag(600, 300, 400, 250); r = await ev(() => ({ px: DW.G.mapView.px, py: DW.G.mapView.py }));
+  ok('in the world view a drag moves nothing', r.px === 0 && r.py === 0, r);
+  await open2(0);
+  { const b = await ev(() => { const r2 = document.querySelector('canvas').getBoundingClientRect(); return { l: r2.left, t: r2.top, w: r2.width, h: r2.height }; });
+    await page.mouse.move(b.l + b.w / 2, b.t + b.h / 2); await page.mouse.wheel(0, 120); await ev(() => DW.step(1)); const a = await ev(() => DW.G.mapView.mode);
+    await page.mouse.wheel(0, 120); await ev(() => DW.step(1)); const c = await ev(() => DW.G.mapView.mode);
+    await page.mouse.wheel(0, 120); await ev(() => DW.step(1)); const d = await ev(() => DW.G.mapView.mode);
+    await page.mouse.wheel(0, -120); await ev(() => DW.step(1)); const e = await ev(() => DW.G.mapView.mode);
+    ok('the wheel steps room, area, world, and stops at the ends', [a, c, d, e].join() === '1,2,2,1', [a, c, d, e]); }
+  await open2(1); await tap(960 - 44, 31); r = await ev(() => ({ state: DW.G.state, view: DW.G.mapView }));
+  ok('the round button at the corner closes the map', r.state === 'play' && r.view === null, r);
+
   // ---- everything draws: nothing seen but this room, some seen, everything seen; in both languages and all three views
   r = await ev(() => {
     const { G } = DW, out = [], sets = { one: () => { for (const k of Object.keys(G.visited)) delete G.visited[k]; G.visited.cx2 = true; }, half: () => { WORLD.order.forEach((id, i) => { G.visited[id] = i % 2 === 0; }); G.visited.cx2 = true; }, all: () => WORLD.order.forEach(id => { G.visited[id] = true; }) };

@@ -49,6 +49,7 @@ function drawMoves(g) {
   drawPanel(g, 40, 70, 330, 440);
   MOVES.forEach((q, i) => {
     const y = 112 + i * 82, on = i === sel, known = moveKnown(q);
+    (G.menuHits || (G.menuHits = [])).push({ x: 52, y: y - 38, w: 306, h: 76, fn: () => { if (G.moveSel !== i) { G.moveSel = i; Sound.play('select'); } } });
     if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - 38, 306, 76); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - 37.5, 305, 75); }
     g.save(); g.globalAlpha = known ? 1 : 0.4; FxArt.loop(g, q.fx, 104, y, 92, 58, t + i * 0.3); g.restore();
     g.textBaseline = 'middle'; g.textAlign = ar ? 'right' : 'left'; g.direction = ar ? 'rtl' : 'ltr';

@@ -50,9 +50,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
 
   // ---- the hall strikes
   const strikes = (room, mode, secs) => ev(([room, mode, secs]) => {
-    const { G, P } = DW; const seen = new Set(); let n = 0, tele = 0;
+    const { G, P } = DW; const seen = new Set(); let n = 0, tele = 0; const rnd = Math.random; Math.random = () => 0.5;          // the gap between strikes varies by a seventh: held still for the count
     for (let i = 0; i < secs * 60; i++) { DW.step(1); for (const p of G.projs) if (p.kind === 'pillar' && !seen.has(p)) { seen.add(p); n++; tele = Math.max(tele, p.tele || 0); } }
-    return { n, tele, hazT: G.boss && G.boss.hazT };
+    Math.random = rnd; return { n, tele, hazT: G.boss && G.boss.hazT };
   }, [room, mode, secs]);
   await fight('mg3', 'easy'); await ev(() => { DW.G.boss.co = (function* () { while (true) yield; })(); });
   r = await strikes('mg3', 'easy', 16);

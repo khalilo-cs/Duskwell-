@@ -117,6 +117,12 @@
 | ![دمية التدريب](docs/gallery/screens/coach_dummy.jpg) | ![عرض مهمة](docs/gallery/screens/quest_offer.jpg) | ![سجلّ المهام](docs/gallery/screens/quest_log.jpg) |
 | ![الموسيقى](docs/gallery/screens/jukebox_abyss.jpg) | ![حجر الصدى](docs/gallery/screens/echo_stone.jpg) | ![صدى قاسٍ](docs/gallery/screens/echo_fight.jpg) |
 
+**قوى البطل، والغرف الأوعر، وتفتّت الوحوش** (شريط القوى مع غضب العاصفة، وشاشة القوى، وغرفة فيها شريحة أشواك ومنشار على سكّته، ووحوش تتفتّت إلى أجزائها مع القناع المكسور في الزاوية):
+
+| --- | --- | --- |
+| ![شريط القوى](docs/gallery/screens/powers_strip.jpg) | ![شاشة القوى](docs/gallery/screens/powers_page.jpg) | ![غرفة أوعر](docs/gallery/screens/rough_room.jpg) |
+| ![تفتّت الوحوش](docs/gallery/screens/shards_death.jpg) | | |
+
 **مستويات راحة العين** (عادي ثم مريح ثم مريح جداً، من ثلاث مناطق):
 
 ![مستويات راحة العين](docs/gallery/screens/comfort_compare.jpg)

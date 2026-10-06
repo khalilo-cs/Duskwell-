@@ -69,7 +69,12 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await ev(() => { Diff.setMode('normal'); });
 
   // ---- a look
-  await ev(([id]) => { const { G, P } = DW; Diff.setMode('hard'); DW.enterRoom(id, { door: WORLD.rooms[id].doors[0].id }); G.state = 'play'; G.trans = null; G.fadeA = 0; G.areaBanner = null; G.toast = null; const s = Hard.plan(id).spikes[0]; P.place((s.x - 5) * TILE, (s.y + 1) * TILE, 1); P.invuln = 1e9; DW.step(30); DW.draw(); }, [pick]);
+  const look = await ev(() => {                                                              // a room whose strip stands in the middle of the picture
+    let best = null;
+    for (const id of Object.keys(WORLD.rooms)) { const p = Hard.plan(id), d = WORLD.rooms[id]; if (p.saws.length && p.spikes.length && p.spikes[0].y > 9 && p.spikes[0].y < d.h - 6 && d.w >= 50 && (!best || p.spikes.length > best.n)) best = { id, n: p.spikes.length }; }
+    return best && best.id;
+  });
+  await ev(([id]) => { const { G, P } = DW; Diff.setMode('hard'); DW.enterRoom(id, { door: WORLD.rooms[id].doors[0].id }); G.state = 'play'; G.trans = null; G.fadeA = 0; G.areaBanner = null; G.toast = null; const s = Hard.plan(id).spikes[0]; P.place((s.x - 5) * TILE, (s.y + 1) * TILE, 1); P.invuln = 1e9; DW.step(3); snapCamera(); DW.step(30); DW.draw(); }, [look || pick]);
   await page.waitForTimeout(200);
   await page.screenshot({ path: shot('rough_room.png') });
   await ev(() => { Diff.setMode('normal'); });

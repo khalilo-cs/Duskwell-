@@ -1,0 +1,20 @@
+# Puts the Android build of Duskwell on the releases page.
+name: Publish release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/release.yml']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create 3.4 duskwell-android/duskwell.apk duskwell-android/duskwell-apk.zip \
+            --target "$GITHUB_SHA" --title "Duskwell 3.4" --latest \
+            --notes "Android build of Duskwell 3.4 (versionCode 25). Six one-use hero powers (Time Stop, Star Fall, Phoenix Heart, Shadow Twin, Black Hole, Storm Rage), granted by the Elder for seals and renewed at a bench; harder guardians that rage under a quarter of their health and move like living things; rougher rooms (spike strips, rolling blades, stalactites, extra creatures, by difficulty); creatures that fall to their own parts and flash their effect when they strike; a cracked mask on the last mask and the one just lost. It installs over the earlier versions and keeps the save."

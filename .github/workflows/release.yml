@@ -1,0 +1,20 @@
+# Puts the Android build of Duskwell on the releases page.
+name: Publish release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/release.yml']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create 3.1 duskwell-android/duskwell.apk duskwell-android/duskwell-apk.zip \
+            --target "$GITHUB_SHA" --title "Duskwell 3.1" --latest \
+            --notes "Android build of Duskwell 3.1 (versionCode 22). Five new original pieces (title, crossroads, webbed depths and two battle themes, 31 in all), a Music screen in the pause menu to listen to every piece, a soft drum pulse that follows the danger around the hero, and echo stones in the halls of fallen guardians to fight them again against the clock. It installs over the earlier versions and keeps the save."

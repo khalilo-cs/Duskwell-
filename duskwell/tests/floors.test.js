@@ -13,7 +13,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       if (!id) return { missing: true };
       DW.enterRoom(id, { pos: { x: 100, y: 100 } }); DW.G.state = 'play'; DW.G.trans = null;
       const L = DW.G.level, c = Art.renderLevel(L, 1), g = c.getContext('2d');
-      const st = FloorTiles.stats;
+      const sheet = MossTiles.has(THEMES[th]), st = sheet ? MossTiles.stats : FloorTiles.stats;               // four areas are laid from the mossy sheet (moss_tiles.test.js), the rest by the painter
       // colours of the rock tiles: a real texture varies from tile to tile and inside a tile
       const lum = []; let solid = 0;
       for (let y = 1; y < L.h - 1 && lum.length < 400; y++) for (let x = 1; x < L.w - 1; x++) {
@@ -22,13 +22,13 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
         for (let i = 0; i < d.length; i += 4 * 9) lum.push(0.3 * d[i] + 0.6 * d[i + 1] + 0.1 * d[i + 2]);
       }
       const mean = lum.reduce((a, b) => a + b, 0) / (lum.length || 1), sd = Math.sqrt(lum.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (lum.length || 1));
-      return { id, theme: st.theme, tops: st.tops, fringes: st.fringes, solid, sd: +sd.toFixed(2), mean: +mean.toFixed(1) };
+      return { id, sheet, theme: st.theme, tops: st.tops, fringes: st.fringes, solid, sd: +sd.toFixed(2), mean: +mean.toFixed(1) };
     }, th);
-    ok(th + ': the room is laid by the floor painter, with tops and a textured rock', !r.missing && r.theme === th && r.tops > 0 && r.sd > 3, r);
+    ok(th + ': the room is laid (by the floor painter, or from the mossy sheet in its four areas), with tops and a textured rock', !r.missing && r.theme === th && r.tops > 0 && r.sd > 3, r);
   }
   // a room of ledges: they are drawn too
   const led = await ev(() => {
-    const id = DW.WORLD.order.find(i => DW.WORLD.rooms[i].theme === 'moss' && DW.WORLD.rooms[i].t.some(v => v === 2));
+    const id = DW.WORLD.order.find(i => DW.WORLD.rooms[i].theme === 'frost' && DW.WORLD.rooms[i].t.some(v => v === 2));
     DW.enterRoom(id, { pos: { x: 100, y: 100 } }); Art.renderLevel(DW.G.level, 1); return FloorTiles.stats.ledges;
   });
   ok('one-way plates are drawn as ledges', led > 0, led);

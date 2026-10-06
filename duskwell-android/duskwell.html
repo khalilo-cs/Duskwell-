@@ -14391,6 +14391,301 @@ const WorldArt = (() => {
 </script>
 <script>
 'use strict';
+// made by tools/sprites/cut_moss.py: the pieces of the mossy stone tile sheet in art/tiles/moss.webp
+// [x, y, w, h], drawn at 0.6 of their size on the sheet; MOSS_ORIGIN: where each piece's corner was on the sheet
+const MOSS_PACK = 0.6;
+const MOSS_TILES = {"arch_big":[861,179,74,67],"arch_cap":[639,260,72,55],"block_moss":[1312,260,62,53],"cap_roots":[543,260,94,55],"ceiling_wide":[699,179,160,68],"corner_arch_l":[1094,179,53,65],"corner_arch_r":[1149,179,62,65],"corner_rock":[1213,179,53,65],"drip_small":[137,260,50,57],"fill_0":[1681,260,46,46],"fill_1":[1729,260,39,46],"fill_2":[1770,260,44,46],"fill_3":[1965,260,45,45],"fill_4":[1816,260,45,46],"fill_5":[47,260,46,57],"fill_6":[95,260,40,57],"hang_gallows_a":[446,2,86,127],"hang_gallows_b":[943,2,92,98],"hang_lantern_cross":[916,2,25,101],"hang_ring":[290,320,10,40],"hang_swing":[159,2,75,158],"isl_0":[1739,179,62,59],"isl_1":[1450,179,97,63],"isl_10":[1680,179,57,61],"isl_11":[1390,179,58,64],"isl_2":[1803,179,52,59],"isl_3":[1857,179,58,58],"isl_4":[1549,179,49,61],"isl_5":[189,260,50,57],"isl_6":[1600,179,78,61],"isl_7":[399,179,66,74],"isl_8":[1308,2,154,82],"isl_9":[1332,179,56,64],"isl_grave":[742,2,87,123],"isl_shroom":[1268,179,62,65],"lava_0":[996,260,93,55],"lava_1":[1376,260,54,53],"lava_2":[1091,260,85,55],"lava_3":[1178,260,77,55],"ledge_big":[548,179,149,68],"prop_arch_lantern":[276,2,71,143],"prop_barrel_spiked":[1432,260,37,52],"prop_chests":[409,320,65,38],"prop_cliff":[534,2,102,126],"prop_columns":[1037,2,57,97],"prop_crate_cross":[669,320,30,34],"prop_crate_dark":[740,320,31,31],"prop_crate_tall":[503,179,43,70],"prop_cross":[1215,2,20,86],"prop_fence":[1578,260,29,49],"prop_gate_ruin":[467,179,34,74],"prop_panel":[796,320,32,28],"prop_pillar_a":[395,2,49,127],"prop_pillar_b":[349,2,44,134],"prop_pillar_thin":[2,2,29,175],"prop_pillar_vine":[236,2,38,143],"prop_plank_pillar":[1148,2,33,94],"prop_planks":[848,320,38,24],"prop_planks_wall":[831,2,27,121],"prop_ruin_candle":[1096,2,50,96],"prop_ruin_gate":[1183,2,30,92],"prop_ruin_moss":[1464,2,34,82],"prop_slab":[701,320,37,31],"prop_spike_stone":[830,320,16,26],"prop_spire":[33,2,42,172],"prop_stone_s":[773,320,21,29],"prop_thorn_bush":[476,320,26,37],"prop_tree_dead":[1680,2,79,79],"prop_tree_glow":[860,2,54,107],"prop_window_big":[77,2,80,170],"prop_window_small":[638,2,44,124],"spike_catapult":[1863,260,100,46],"spike_rock_a":[369,320,38,40],"spike_rock_b":[201,320,47,41],"spike_rock_c":[250,320,38,41],"spike_stone_a":[504,320,23,37],"spike_stone_b":[529,320,42,37],"spike_stone_c":[573,320,30,37],"spike_tall":[1514,260,62,52],"spike_thorn_a":[2,320,47,44],"spike_thorn_b":[51,320,47,44],"spike_thorn_c":[100,320,48,44],"spike_thorn_d":[150,320,49,44],"spike_wheel_a":[1471,260,41,52],"spike_wheel_b":[1609,260,70,47],"spike_wood_a":[302,320,65,40],"spike_wood_b":[605,320,62,37],"tile_boulder":[937,179,53,66],"tile_hang_a":[302,260,49,56],"tile_hang_b":[353,260,53,56],"tile_hang_c":[992,179,55,66],"tile_roots":[1257,260,53,54],"tile_window":[1049,179,43,65],"top_0":[1500,2,56,82],"top_1":[1761,2,50,79],"top_2":[1813,2,96,79],"top_3":[1911,2,124,79],"top_4":[2,179,96,79],"top_5":[100,179,63,79],"top_6":[165,179,119,79],"top_7":[286,179,62,79],"top_8":[350,179,47,79],"top_9":[1558,2,120,82],"top_roots":[1237,2,69,84],"vines_long":[684,2,56,123],"water_0":[713,260,68,55],"water_1":[783,260,53,55],"water_2":[408,260,64,56],"water_col":[928,260,19,55],"water_fall_0":[838,260,46,55],"water_fall_1":[886,260,40,55],"water_fall_2":[474,260,67,56],"water_fall_3":[949,260,45,55],"water_fall_big":[241,260,59,57],"water_shore":[2,260,43,58],"water_wave":[1917,179,86,58]};
+const MOSS_CAP = {"isl_0":0.031,"isl_1":0.057,"isl_2":0.041,"isl_3":0.031,"isl_4":0.05,"isl_5":0.021,"isl_6":0.04,"isl_7":0.041,"isl_8":0.044,"isl_9":0.038,"isl_10":0.059,"isl_11":0.038,"isl_grave":0.356,"isl_shroom":0.222,"top_0":0.36,"top_1":0.26,"top_2":0.26,"top_3":0.26,"top_4":0.27,"top_5":0.33,"top_6":0.27,"top_7":0.4,"top_8":0.32,"top_9":0.4};
+const MOSS_ORIGIN = {"arch_big":[1408,102],"arch_cap":[1292,3],"block_moss":[1426,4],"cap_roots":[808,4],"ceiling_wide":[1129,100],"corner_arch_l":[395,105],"corner_arch_r":[691,105],"corner_rock":[504,105],"drip_small":[1166,1],"fill_0":[12,12],"fill_1":[113,12],"fill_2":[201,12],"fill_3":[299,11],"fill_4":[402,11],"fill_5":[12,112],"fill_6":[113,112],"hang_gallows_a":[1062,376],"hang_gallows_b":[1198,436],"hang_lantern_cross":[871,356],"hang_ring":[1170,436],"hang_swing":[931,314],"isl_0":[5,232],"isl_1":[123,228],"isl_10":[113,337],"isl_11":[676,339],"isl_2":[296,231],"isl_3":[395,232],"isl_4":[506,230],"isl_5":[599,233],"isl_6":[690,230],"isl_7":[833,230],"isl_8":[965,229],"isl_9":[5,338],"isl_grave":[191,327],"isl_shroom":[345,338],"lava_0":[1008,770],"lava_1":[1168,773],"lava_2":[1256,770],"lava_3":[1400,770],"ledge_big":[809,100],"prop_arch_lantern":[1413,436],"prop_barrel_spiked":[1095,586],"prop_chests":[1223,608],"prop_cliff":[1359,222],"prop_columns":[160,512],"prop_crate_cross":[810,618],"prop_crate_dark":[755,621],"prop_crate_tall":[871,556],"prop_cross":[1212,284],"prop_fence":[950,590],"prop_gate_ruin":[1026,548],"prop_panel":[404,625],"prop_pillar_a":[10,461],"prop_pillar_b":[88,448],"prop_pillar_thin":[806,318],"prop_pillar_vine":[1348,436],"prop_plank_pillar":[1157,518],"prop_planks":[623,636],"prop_planks_wall":[1247,226],"prop_ruin_candle":[395,452],"prop_ruin_gate":[680,457],"prop_ruin_moss":[1298,292],"prop_slab":[690,621],"prop_spike_stone":[478,628],"prop_spire":[470,328],"prop_stone_s":[522,624],"prop_thorn_bush":[572,617],"prop_tree_dead":[248,540],"prop_tree_glow":[308,437],"prop_window_big":[535,328],"prop_window_small":[735,405],"spike_catapult":[141,676],"spike_rock_a":[634,685],"spike_rock_b":[778,684],"spike_rock_c":[865,684],"spike_stone_a":[506,690],"spike_stone_b":[558,690],"spike_stone_c":[706,690],"spike_tall":[388,666],"spike_thorn_a":[1180,682],"spike_thorn_b":[1270,682],"spike_thorn_c":[1358,682],"spike_thorn_d":[1444,682],"spike_wheel_a":[313,666],"spike_wheel_b":[1052,678],"spike_wood_a":[20,687],"spike_wood_b":[940,690],"tile_boulder":[194,104],"tile_hang_a":[608,3],"tile_hang_b":[707,3],"tile_hang_c":[291,104],"tile_roots":[504,5],"tile_window":[609,105],"top_0":[5,875],"top_1":[100,880],"top_2":[186,880],"top_3":[350,880],"top_4":[559,880],"top_5":[720,880],"top_6":[827,880],"top_7":[1027,880],"top_8":[1133,880],"top_9":[1328,876],"top_roots":[1213,872],"vines_long":[1018,4],"water_0":[8,770],"water_1":[122,770],"water_2":[359,768],"water_col":[823,770],"water_fall_0":[212,770],"water_fall_1":[288,770],"water_fall_2":[712,768],"water_fall_3":[855,770],"water_fall_big":[468,766],"water_shore":[933,764],"water_wave":[568,764]};
+</script>
+<script>
+'use strict';
+// The mossy stone tile sheet (art/tiles/moss.webp, tools/sprites/cut_moss.py), laid piece by piece in the rooms of four areas: Mossgrove,
+// Sporewood, the Aqueduct and Cinderdeep. The rock is made of the blocks of the sheet (some with moss, roots, a window, water or lava in
+// them), the floors get the ground tops with their grass and mushrooms, the underside of the rock its hanging moss, one-way plates are the
+// floating stones with their stalactites, and the floors and ceilings carry the standing and hanging things of the sheet (pillars, windows,
+// ruins, trees, crates, lanterns, banners). Spikes are the sheet's too. Hooked in through Art.tileHooks (art_world.js).
+const MossTiles = (() => {
+  const img = new Image();
+  img.onload = () => { if (typeof G !== 'undefined') G.tileCanvas = null; };         // lay the rooms again, now from the pieces
+  img.src = 'art/tiles/moss.webp';
+  const ready = () => typeof MOSS_TILES !== 'undefined' && img.complete && img.naturalWidth > 0;
+  const R = n => MOSS_TILES[n];
+  const K = 0.92;                                           // screen px per atlas px for plates, props and hangings (the atlas holds 0.6 of the sheet)
+  const KF = 1.3;                                           // a rock block of the atlas covers two tiles by two
+  const INK = '#030608';
+  // what was laid in the last room (the tests read it)
+  const stats = { renders: 0, fills: 0, accents: 0, tops: 0, fringes: 0, vines: 0, arches: 0, plates: 0, props: [], hangs: [], theme: '' };
+
+  // ---------------------------------------------------------------- what each area uses
+  const FILLS = ['fill_0', 'fill_1', 'fill_2', 'fill_3', 'fill_4', 'fill_5', 'fill_6'];
+  const ALL_TOPS = ['top_0', 'top_1', 'top_2', 'top_3', 'top_4', 'top_5', 'top_6', 'top_7', 'top_8', 'top_9'];
+  // [piece, weight, glow colour or null]; the props that need a tall room are told apart by their own height
+  const P_SMALL = [['prop_crate_tall', 3], ['prop_fence', 3], ['prop_gate_ruin', 2], ['prop_barrel_spiked', 2], ['prop_chests', 2], ['prop_panel', 2], ['prop_spike_stone', 2], ['prop_stone_s', 2],
+    ['prop_thorn_bush', 2], ['prop_planks', 2], ['prop_slab', 2], ['prop_crate_dark', 2], ['prop_crate_cross', 2], ['prop_ruin_moss', 2], ['prop_cross', 2], ['prop_planks_wall', 1]];
+  const P_TALL = [['prop_pillar_a', 3], ['prop_pillar_b', 3], ['prop_columns', 3], ['prop_tree_dead', 3], ['prop_tree_glow', 2, '#ffb060'], ['prop_ruin_candle', 2, '#ffb060'], ['prop_spire', 2],
+    ['prop_window_big', 1, '#ffb060'], ['prop_ruin_gate', 2], ['prop_window_small', 2, '#ffb060'], ['prop_pillar_thin', 2], ['prop_plank_pillar', 2], ['prop_pillar_vine', 2],
+    ['prop_arch_lantern', 1, '#ffc070'], ['prop_cliff', 2], ['top_roots', 2], ['spike_catapult', 1], ['spike_wheel_a', 1], ['spike_wheel_b', 1]];
+  const HANGS = [['hang_lantern_cross', 3, '#ffc070'], ['hang_swing', 2], ['hang_gallows_a', 2], ['hang_gallows_b', 2, '#ffc070'], ['hang_ring', 2]];
+  const THEMES = {
+    moss: { tint: null, accents: ['tile_roots', 'tile_boulder', 'tile_hang_a', 'tile_hang_b', 'tile_hang_c', 'tile_window', 'block_moss'], tops: ALL_TOPS, props: null, hangs: HANGS,
+      spikes: ['spike_wood_a', 'spike_wood_b'], islands: ['isl_0', 'isl_1', 'isl_2', 'isl_3', 'isl_4', 'isl_5', 'isl_6', 'isl_7', 'isl_9', 'isl_10', 'isl_11', 'isl_shroom', 'isl_grave'] },
+    spore: { tint: null, accents: ['tile_roots', 'tile_boulder', 'tile_hang_a', 'tile_hang_c', 'block_moss'], tops: ['top_3', 'top_4', 'top_6', 'top_7', 'top_8', 'top_9', 'top_0'], props: ['prop_tree_dead', 'top_roots', 'prop_tree_glow', 'prop_ruin_candle',
+      'prop_thorn_bush', 'prop_ruin_moss', 'prop_slab', 'prop_stone_s', 'prop_pillar_vine', 'prop_columns', 'prop_planks'], hangs: [HANGS[0], HANGS[4]],
+      spikes: ['spike_thorn_a', 'spike_thorn_b', 'spike_thorn_c', 'spike_thorn_d'], islands: ['isl_1', 'isl_2', 'isl_4', 'isl_6', 'isl_7', 'isl_10', 'isl_shroom'] },
+    aqueduct: { tint: null, accents: ['water_0', 'water_1', 'water_2', 'water_fall_0', 'water_fall_1', 'water_fall_2', 'water_fall_3', 'water_shore', 'water_col', 'water_fall_big', 'water_wave'],
+      tops: ['top_1', 'top_2', 'top_3', 'top_6', 'top_8'], props: ['prop_pillar_a', 'prop_pillar_b', 'prop_columns', 'prop_window_big', 'prop_window_small', 'prop_ruin_gate', 'prop_arch_lantern', 'prop_spire',
+      'prop_crate_tall', 'prop_fence', 'prop_planks', 'prop_cliff', 'prop_slab', 'prop_stone_s', 'prop_panel'], hangs: [HANGS[0], HANGS[1], HANGS[4]],
+      spikes: ['spike_rock_a', 'spike_rock_b', 'spike_rock_c', 'spike_stone_a', 'spike_stone_b', 'spike_stone_c'], islands: ['isl_0', 'isl_3', 'isl_5', 'isl_6', 'isl_8', 'isl_9'] },
+    ember: { tint: 'rgba(110,26,8,0.42)', accents: ['lava_0', 'lava_1', 'lava_2', 'lava_3'], tops: ['top_0', 'top_1', 'top_2', 'top_5'], props: ['prop_spire', 'prop_pillar_thin', 'prop_ruin_gate', 'prop_crate_dark',
+      'prop_crate_cross', 'prop_chests', 'prop_cliff', 'spike_catapult', 'spike_wheel_a', 'spike_wheel_b', 'prop_stone_s', 'prop_slab', 'prop_spike_stone', 'prop_planks_wall'],
+      hangs: [HANGS[1], HANGS[2], HANGS[3], HANGS[4]], spikes: ['spike_tall', 'spike_wood_b', 'spike_rock_b'], islands: ['isl_1', 'isl_4', 'isl_6', 'isl_7', 'isl_8', 'isl_10'] },
+  };
+  const has = th => !!(th && THEMES[th.name]);
+
+  // a part of piece n (fractions of it) put at (dx, dy, dw, dh); flip mirrors it left to right
+  function part(g, n, fx0, fy0, fx1, fy1, dx, dy, dw, dh, flip) {
+    const r = R(n), sx = r[0] + r[2] * fx0, sy = r[1] + r[3] * fy0, sw = r[2] * (fx1 - fx0), sh = r[3] * (fy1 - fy0);
+    if (flip) { g.save(); g.translate(dx + dw, dy); g.scale(-1, 1); g.drawImage(img, sx, sy, sw, sh, 0, 0, dw, dh); g.restore(); }
+    else g.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+  }
+  const pick = (list, h) => { let tot = 0; for (const e of list) tot += e[1]; let r = h * tot; for (const e of list) { r -= e[1]; if (r <= 0) return e; } return list[list.length - 1]; };
+
+  // ---------------------------------------------------------------- the rock, its sides, its undersides and its tops
+  function solid(g, L, th, isS, seed) {
+    const C = THEMES[th.name]; if (!C) return false;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    stats.renders++; stats.fills = stats.accents = stats.tops = stats.fringes = stats.vines = stats.arches = 0; stats.props = []; stats.hangs = []; stats.theme = th.name;
+    const T = TILE;
+    for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+      if (L.get(x, y) !== T_SOLID) continue;
+      const bx = x >> 1, by = y >> 1, px = x * T, py = y * T;
+      let air = 0;
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (!isS(x + i, y + j)) air++;
+      // deep inside the rock now and then a block with moss, roots, a window, water or lava in it
+      const accent = air === 0 && hash2(bx, by, seed + 90) < 0.1;
+      let name, fx = false, fy = false;
+      if (accent) { name = C.accents[Math.floor(hash2(bx, by, seed + 91) * C.accents.length)]; stats.accents++; }
+      else { name = FILLS[Math.min(FILLS.length - 1, Math.floor(hash2(bx, by, seed + 31) * FILLS.length))]; fx = hash2(bx, by, seed + 57) < 0.5; fy = hash2(bx, by, seed + 58) < 0.5; }
+      const r = R(name), qx = (x & 1) ^ (fx ? 1 : 0), qy = (y & 1) ^ (fy ? 1 : 0);
+      g.save(); g.translate(px + (fx ? T : 0), py + (fy ? T : 0)); g.scale(fx ? -1 : 1, fy ? -1 : 1);
+      g.drawImage(img, r[0] + qx * r[2] / 2, r[1] + qy * r[3] / 2, r[2] / 2, r[3] / 2, -0.25, -0.25, T + 0.5, T + 0.5);
+      g.restore(); stats.fills++;
+      if (C.tint) { g.fillStyle = C.tint; g.fillRect(px - 0.25, py - 0.25, T + 0.5, T + 0.5); }
+      const a = 0.3 * (1 - clamp(air / 10, 0, 1));                  // the deep rock lies darker, the rock at an edge keeps its colour
+      if (a > 0.01) { g.fillStyle = 'rgba(2,6,10,' + a.toFixed(3) + ')'; g.fillRect(px, py, T, T); }
+    }
+    // the sides: ink on the edge, a thin light line inside it, so that the rock reads against any background
+    for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+      if (L.get(x, y) !== T_SOLID) continue;
+      const px = x * T, py = y * T, eT = !isS(x, y - 1), eL = !isS(x - 1, y), eR = !isS(x + 1, y), y0 = py + (eT ? 12 : 0);
+      for (const [on, ex, dirx] of [[eL, px, 1], [eR, px + T, -1]]) {
+        if (!on) continue;
+        g.fillStyle = INK; g.fillRect(dirx > 0 ? ex - 2.5 : ex - 1.5, y0, 4, py + T - y0);
+        g.fillStyle = rgba(th.hi, 0.26); g.fillRect(dirx > 0 ? ex + 1.5 : ex - 3.1, y0, 1.6, py + T - y0);
+      }
+    }
+    // the hanging moss under the rock, and now and then a long vine where there is room for it
+    for (let y = 0; y < L.h; y++) {
+      for (let x = 0; x < L.w; x++) {
+        if (L.get(x, y) !== T_SOLID || isS(x, y + 1)) continue;
+        let x1 = x; while (x1 + 1 < L.w && L.get(x1 + 1, y) === T_SOLID && !isS(x1 + 1, y + 1)) x1++;
+        fringe(g, x * T, (x1 + 1) * T, (y + 1) * T, hash2(x, y, seed + 71) < 0.5); stats.fringes++;
+        for (let vx = x; vx <= x1; vx++) {
+          if (hash2(vx, y, seed + 73) > 0.07) continue;
+          let free = 0; while (free < 6 && L.get(vx, y + 1 + free) === T_AIR) free++;
+          if (free >= 4) { const r = R('vines_long'), w = r[2] * K, h = r[3] * K; part(g, 'vines_long', 0, 0, 1, 1, vx * T + T / 2 - w / 2, (y + 1) * T - 4, w, h, hash2(vx, y, seed + 74) < 0.5); stats.vines++; }
+        }
+        x = x1;
+      }
+    }
+    arches(g, L, isS, seed);
+    // the tops: the ground tops (grass, mushrooms, roots) along every free-standing floor
+    for (let y = 0; y < L.h; y++) {
+      for (let x = 0; x < L.w; x++) {
+        if (L.get(x, y) !== T_SOLID || isS(x, y - 1)) continue;
+        let x1 = x; while (x1 + 1 < L.w && L.get(x1 + 1, y) === T_SOLID && !isS(x1 + 1, y - 1)) x1++;
+        top(g, C, th, x * T, (x1 + 1) * T, y * T, hash2(x, y, seed + 111)); stats.tops++;
+        x = x1;
+      }
+    }
+    return true;
+  }
+  const BAND = 15;                                                // atlas px of stone under the cap line that the top keeps
+  // a run of floor from x0 to x1: ground tops side by side, their stone cap on the floor's line
+  function top(g, C, th, x0, x1, y, h0) {
+    let x = x0, i = 0;
+    while (x < x1 - 0.5) {
+      const name = C.tops[Math.floor(hash2(Math.round(x), Math.round(y), 5 + i * 13) * C.tops.length)], r = R(name), cap = MOSS_CAP[name] || 0.25;
+      const w = r[2] * K, hh = r[3] * K, band = Math.min(1 - cap, BAND / r[3]), cw = Math.min(w, x1 - x), f = cw / w;
+      const flip = hash2(i, Math.round(x), 17) < 0.5, sy0 = 0, sy1 = cap + band, dh = hh * sy1, capY = y - hh * cap + 1;
+      if (flip) part(g, name, 1 - f, sy0, 1, sy1, x, capY, cw, dh, true); else part(g, name, 0, sy0, f, sy1, x, capY, cw, dh, false);
+      if (name === 'top_7') bloom(g, x + w * 0.5, capY + hh * 0.18, 26, '#6fe0d0', 0.2);
+      x += cw; i++;
+    }
+  }
+  // the fringe under a run of rock: the hanging parts of the sheet's overhangs, hung from the rock's lower edge one after the other
+  const FRINGE = [['ceiling_wide', 0.3], ['cap_roots', 0.24], ['arch_cap', 0.24], ['drip_small', 0.2], ['arch_big', 0.26], ['ceiling_wide', 0.3]];
+  function fringe(g, x0, x1, yb, flip0) {
+    let i = flip0 ? 1 : 0, x = x0;
+    while (x < x1 - 0.5) {
+      const [name, f0] = FRINGE[Math.floor(hash2(Math.round(x), Math.round(yb), 41 + i) * FRINGE.length)], r = R(name), k = K * 0.85, w = r[2] * k, h = r[3] * (1 - f0) * k;
+      const cw = Math.min(w, x1 - x), f = cw / w;
+      part(g, name, 0, f0, f, 1, x, yb - r[3] * 0.06 * k, cw, h, !!(i & 1));
+      x += cw; i++;
+    }
+  }
+  // the arches: where a wall meets a ceiling, an arch of the sheet springs from the wall and joins the ceiling
+  function arches(g, L, isS, seed) {
+    const T = TILE;
+    for (let y = 0; y < L.h - 3; y++) for (let x = 1; x < L.w - 1; x++) {
+      if (L.get(x, y) !== T_SOLID || L.get(x, y + 1) !== T_AIR || hash2(x, y, seed + 130) > 0.6) continue;
+      for (const side of [-1, 1]) {
+        if (!isS(x + side, y + 1) || !isS(x + side, y + 2)) continue;                    // a wall on that side, under the ceiling
+        let ok = true; for (let i = 0; i < 2 && ok; i++) for (let j = 1; j <= 2 && ok; j++) if (L.get(x - side * i, y + j) !== T_AIR && !(i === 0 && j === 0)) ok = false;
+        if (!ok) continue;
+        const name = ['corner_arch_l', 'corner_arch_r', 'corner_rock'][Math.floor(hash2(x, y, seed + 131) * 3)], r = R(name), w = r[2] * K * 0.9, h = r[3] * K * 0.9;
+        // the arch springs from the wall (the piece's lower left) and rises to the ceiling (its upper right); on a wall to the right it is mirrored
+        const ax = side < 0 ? x * T : (x + 1) * T;
+        g.save(); g.translate(ax, (y + 1) * T - 2); if (side > 0) g.scale(-1, 1);
+        g.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, w, h);
+        g.restore(); stats.arches++; break;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- one-way plates: the floating stones with their stalactites
+  function plats(g, L, th) {
+    const C = THEMES[th.name]; if (!C) return false;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    const T = TILE; stats.plates = 0;
+    for (let y = 0; y < L.h; y++) {
+      for (let x = 0; x < L.w; x++) {
+        if (L.get(x, y) !== T_ONEWAY) continue;
+        let x1 = x; while (x1 + 1 < L.w && L.get(x1 + 1, y) === T_ONEWAY) x1++;
+        let c = x, left = x1 - x + 1;
+        while (left > 0) {
+          const n = left <= 4 ? left : 3, want = n * T + 8;
+          // the stone whose width is nearest, scaled to the plate
+          let best = null, bd = 1e9;
+          for (const nm of C.islands.concat(n >= 5 ? ['isl_8', 'ledge_big'] : [])) {
+            const r = R(nm), d = Math.abs(r[2] * K - want) + (hash2(c, y, nm.length * 7 + nm.charCodeAt(nm.length - 1)) * 18); if (d < bd) { bd = d; best = nm; }
+          }
+          const name = best, r = R(name), s = clamp(want / (r[2] * K), 0.6, 1.5), dw = want, dh = r[3] * K * s;
+          // the lower part of the stone fades into its stalactites: draw it all but keep the plate no deeper than two tiles
+          part(g, name, 0, 0, 1, Math.min(1, 2.1 * T / dh), c * T - 4, y * T - (MOSS_CAP[name] || 0.04) * dh + 1, dw, Math.min(dh, 2.1 * T), hash2(c, y, 5) < 0.5);
+          c += n; left -= n; stats.plates++;
+        }
+        x = x1;
+      }
+    }
+    return true;
+  }
+
+  // ---------------------------------------------------------------- the standing and the hanging things
+  // places where something else stands: doors, benches, stations, signs, people, things to find, machines
+  function keepOut(L) {
+    const def = L.def, keep = [];
+    for (const d of def.doors || []) keep.push([d.x - 2, d.y - 1, d.w + 4, d.h + 2]);
+    for (const q of [].concat(def.benches || [], def.stations || [], def.signs || [], def.npcs || [], def.items || [], def.mech || [])) keep.push([q.x - 3, q.y - 4, 7, 6]);
+    if (def.arena && def.arena.reward) keep.push([def.arena.reward.x - 3, def.arena.reward.y - 4, 7, 6]);
+    return keep;
+  }
+  function scenery(g, L, th, isS, seed) {
+    const C = THEMES[th.name]; if (!C) return;
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    const T = TILE, keep = keepOut(L), used = [], boss = !!L.def.arena;
+    const pool = C.props ? C.props.map(n => [n, 2, (P_TALL.find(e => e[0] === n) || P_SMALL.find(e => e[0] === n) || [])[2] || null]) : null;
+    const all = pool || P_SMALL.concat(P_TALL);
+    const small = all.filter(e => R(e[0])[3] * K < 70), tall = all.filter(e => R(e[0])[3] * K >= 70);
+    // floor things
+    for (let y = 2; y < L.h - 1; y++) {
+      for (let x = 2; x < L.w - 2; x++) {
+        if (L.get(x, y) !== T_SOLID || isS(x, y - 1) || hash2(x, y, seed + 200) > 0.11) continue;
+        let list = boss || hash2(x, y, seed + 203) < 0.55 || !tall.length ? (small.length ? small : tall) : tall;
+        for (let tries = 0; tries < 3; tries++) {
+          const e = pick(list, hash2(x, y, seed + 201 + tries)), name = e[0], pr = R(name), w = pr[2] * K, h = pr[3] * K, fw = Math.max(1, Math.ceil(w / T)), x0 = x - Math.floor(fw / 2), nh = Math.ceil(h / T) + 1;
+          let fits = x0 >= 1 && x0 + fw < L.w - 1;
+          for (let i = 0; fits && i < fw; i++) {
+            if (L.get(x0 + i, y) !== T_SOLID || isS(x0 + i, y - 1)) fits = false;
+            for (let j = 1; fits && j <= nh; j++) if (L.get(x0 + i, y - j) !== T_AIR) fits = false;
+          }
+          if (fits) for (const q of keep) if (x0 < q[0] + q[2] && x0 + fw > q[0] && y - nh < q[1] + q[3] && y > q[1]) { fits = false; break; }
+          if (fits) for (const u of used) if (u[2] === y && x0 < u[1] + 1 && x0 + fw > u[0] - 1) { fits = false; break; }
+          if (!fits) { if (list === tall && small.length) list = small; else break; continue; }
+          used.push([x0, x0 + fw, y]); stats.props.push({ name, x0, fw, y, nh });
+          const cx = (x0 + fw / 2) * T, flip = hash2(x, y, seed + 202) < 0.5, glow = e[2];
+          if (glow) bloom(g, cx, y * T - h * 0.4, h * 0.75, glow, 0.2);
+          g.save(); g.translate(cx, y * T + 3); if (flip) g.scale(-1, 1);
+          g.drawImage(img, pr[0], pr[1], pr[2], pr[3], -w / 2, -h, w, h);
+          g.restore();
+          break;
+        }
+      }
+    }
+    // things that hang from a ceiling: chains with lanterns, banners, a swing
+    if (boss) return;
+    for (let y = 0; y < L.h - 5; y++) {
+      for (let x = 3; x < L.w - 3; x++) {
+        if (L.get(x, y) !== T_SOLID || L.get(x, y + 1) !== T_AIR || hash2(x, y, seed + 220) > 0.06) continue;
+        const e = pick(C.hangs, hash2(x, y, seed + 221)), name = e[0], pr = R(name), w = pr[2] * K, h = pr[3] * K, fw = Math.max(1, Math.ceil(w / T)), x0 = x - Math.floor(fw / 2), nh = Math.ceil(h / T) + 1;
+        let fits = x0 >= 1 && x0 + fw < L.w - 1;
+        for (let i = 0; fits && i < fw; i++) {
+          if (L.get(x0 + i, y) !== T_SOLID) fits = false;
+          for (let j = 1; fits && j <= nh; j++) if (L.get(x0 + i, y + j) !== T_AIR) fits = false;
+        }
+        if (fits) for (const q of keep) if (x0 < q[0] + q[2] && x0 + fw > q[0] && y + nh > q[1] && y < q[1] + q[3] + 2) { fits = false; break; }
+        if (fits) for (const u of used) if (u[2] <= y + nh && u[2] >= y && x0 < u[1] + 1 && x0 + fw > u[0] - 1) { fits = false; break; }
+        if (!fits) continue;
+        used.push([x0, x0 + fw, y + nh]); stats.hangs.push({ name, x0, fw, y, nh });
+        const cx = (x0 + fw / 2) * T, flip = hash2(x, y, seed + 222) < 0.5;
+        g.save(); g.translate(cx, (y + 1) * T - 3); if (flip) g.scale(-1, 1);
+        g.drawImage(img, pr[0], pr[1], pr[2], pr[3], -w / 2, 0, w, h);
+        g.restore();
+        if (e[2]) bloom(g, cx, (y + 1) * T + h * 0.8, 34, e[2], 0.22);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- the floors that only a dive breaks: the same rock, with the glowing cracks
+  const oldCrack = Art.drawCrack;
+  Art.drawCrack = function (g, x, y, th, t) {
+    if (!(has(th) && ready())) return oldCrack(g, x, y, th, t);
+    const px = x * TILE, py = y * TILE, v = hash2(x, y, 51), r = R(FILLS[(x + y) % FILLS.length]);
+    g.save(); g.imageSmoothingEnabled = true; g.drawImage(img, r[0] + (x & 1) * r[2] / 2, r[1] + (y & 1) * r[3] / 2, r[2] / 2, r[3] / 2, px - 0.4, py - 0.4, TILE + 0.8, TILE + 0.8); g.restore();
+    g.strokeStyle = th.edge; g.lineWidth = 3; g.strokeRect(px + 1.5, py + 1.5, TILE - 3, TILE - 3);
+    g.strokeStyle = rgba(th.glow, 0.55 + 0.3 * Math.sin(t * 2 + x)); g.lineWidth = 2.2;
+    g.beginPath(); g.moveTo(px + 2, py + 10 + v * 8); g.lineTo(px + 12, py + 16); g.lineTo(px + 20, py + 8 + v * 6); g.lineTo(px + 30, py + 18); g.moveTo(px + 12, py + 16); g.lineTo(px + 14, py + 30); g.stroke();
+  };
+
+  // ---------------------------------------------------------------- spikes: one tile's width of the sheet's spikes, a different stretch of the piece for each tile
+  const oldSpikes = drawSpikes;
+  drawSpikes = function (g, th, px, py, v) {
+    const C = has(th) && ready() && THEMES[th.name];
+    if (!C) return oldSpikes(g, th, px, py, v);
+    const name = C.spikes[Math.floor(hash2(px >> 5, py >> 5, 9) * C.spikes.length)], r = R(name), H = 33, k = H / r[3], sw = TILE / k;
+    const sx = r[0] + (((px / k) % Math.max(1, r[2] - sw)) + Math.max(1, r[2] - sw)) % Math.max(1, r[2] - sw);
+    g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(img, sx, r[1], Math.min(sw, r[2]), r[3], px - 0.3, py + TILE - H, TILE + 0.6, H);
+    g.restore();
+  };
+
+  // an area drawn from this tileset registers its own hook (replacing the procedural floors of art_floors.js)
+  for (const n of Object.keys(THEMES)) Art.tileHooks[n] = { ready, solid, plats, scenery };
+  // every piece of the sheet that the rooms can show: the shared ones and each area's own
+  function used() {
+    const u = new Set(FILLS.concat(['vines_long', 'isl_8', 'ledge_big', 'corner_arch_l', 'corner_arch_r', 'corner_rock']));
+    for (const f of FRINGE) u.add(f[0]);
+    for (const e of P_SMALL.concat(P_TALL, HANGS)) u.add(e[0]);
+    for (const C of Object.values(THEMES)) for (const k of ['accents', 'tops', 'props', 'spikes', 'islands']) for (const n of C[k] || []) u.add(n);
+    for (const C of Object.values(THEMES)) for (const e of C.hangs) u.add(e[0]);
+    return u;
+  }
+  return { ready, R, stats, THEMES, has, used };
+})();
+</script>
+<script>
+'use strict';
 // made by tools/sprites/cut_hero_anims.py: hero frames in art/hero/hero_frames.webp
 // [x, y, w, h, ax, ay]: (ax, ay) is the point under the body that stands on the ground
 const HERO_FRAMES = {"idle":[[1619,180,92,111,50.2,109.5],[1713,180,86,111,46.5,109.5],[1453,180,89,112,46.5,109.5],[1801,180,81,111,47.2,109.5],[1544,180,73,112,45.0,109.5],[1884,180,88,111,46.5,108.8]],"run":[[1333,307,97,105,51.8,102.8],[1523,307,92,104,53.2,102.0],[874,307,101,106,54.8,105.0],[977,307,103,106,57.8,105.0],[1082,307,99,106,57.8,105.8],[269,420,96,101,60.0,99.8],[367,420,100,101,58.5,101.2],[981,420,92,100,53.2,98.2],[1354,420,100,98,55.5,95.2]],"jump":[[839,525,78,80,41.2,80.2],[1740,420,78,95,40.5,95.2],[1728,307,70,103,39.8,102.8],[329,525,74,92,37.5,92.2],[405,525,90,92,51.0,92.2],[1432,307,89,105,54.0,105.0]],"slash1":[[469,420,104,101,63.0,98.2],[96,180,129,124,62.2,121.5],[1199,180,132,115,63.8,112.5],[1456,420,115,98,58.5,95.2],[497,525,90,92,57.0,88.5]],"slash2":[[2,525,79,94,37.5,91.5],[1851,2,125,130,60.8,127.5],[729,180,146,120,69.8,117.0],[575,420,91,101,58.5,98.2],[83,525,87,94,47.2,91.5]],"hit":[[702,307,89,108,45.0,106.5],[793,307,79,108,39.0,107.2],[172,525,72,94,27.8,93.0],[589,525,67,91,33.8,90.0]],"death":[[2,307,76,111,51.8,108.8],[246,525,81,94,50.2,91.5],[658,525,84,84,54.8,82.5],[744,525,93,82,57.8,78.8],[919,525,100,58,45.0,54.8],[1145,525,99,40,48.8,40.5],[1246,525,99,34,51.8,34.5],[1021,525,122,42,68.2,42.0]],"sit":[[635,307,65,109,44.2,105.8],[1617,307,109,104,67.5,100.5]],"up":[[1333,180,118,115,57.8,114.8],[2,2,204,176,58.5,176.2],[686,2,196,165,78.8,165.0],[353,2,199,170,86.2,169.5],[227,180,200,124,95.2,124.5]],"down":[[1158,2,154,152,59.2,54.8],[208,2,143,172,49.5,59.2],[554,2,130,166,52.5,61.5],[1028,2,128,157,63.0,54.8]],"wall":[[1606,2,77,142,27.8,75.8],[2,180,92,125,30.0,66.0]],"dash":[[80,307,220,111,124.5,45.0],[2,420,265,103,138.8,41.2]],"double":[[884,2,142,158,78.8,72.8],[1462,2,142,145,81.8,66.8],[1685,2,164,140,92.2,70.5],[1314,2,146,148,77.2,55.5]],"focus":[[1075,420,135,100,63.8,100.5],[1212,420,140,100,74.2,99.8],[1055,180,142,116,71.2,115.5],[1183,307,148,106,72.8,105.8]],"cast":[[302,307,161,111,74.2,111.0],[465,307,168,111,75.8,111.0],[877,180,176,117,80.2,117.0],[429,180,298,122,82.5,122.2]],"rest":[[668,420,147,101,70.5,101.2],[817,420,162,101,82.5,101.2],[1573,420,165,96,83.2,96.0],[1820,420,176,95,80.2,95.2]]};

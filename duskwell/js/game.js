@@ -501,6 +501,7 @@ function updateTitle() {
     else if (it === 'new') { if (G.hasSave) { G.confirmNew = true; G.menuSel = 1; } else G.fadeTo(() => startGame(false), 0.5, 0.2, 0.6); }
     else if (it === 'lang') { setLang(LANG.cur === 'ar' ? 'en' : 'ar'); }
     else if (it === 'diff') Diff.setMode(Diff.nextMode());
+    else if (it === 'comfort') Comfort.next();
   }
 }
 // entries of the title menu
@@ -509,6 +510,7 @@ function titleItems() {
   if (G.hasSave) a.push({ id: 'cont', label: tr('cont') });
   a.push({ id: 'new', label: tr('newgame') });
   a.push({ id: 'diff', label: diffLabel() });
+  a.push({ id: 'comfort', label: comfortLabel() });
   a.push({ id: 'lang', label: tr('lang') });
   return a;
 }
@@ -523,12 +525,14 @@ const ZOOMS = [1, 1.25, 1.5];
 function zoomLabel() { return G.zoom === 1 ? sx('بدون', 'Off') : G.zoom === 1.5 ? sx('قريب', 'Close') : sx('متوسط', 'Medium'); }
 // text of the difficulty setting (title and pause menus)
 function diffLabel() { return sx('الصعوبة: ', 'Difficulty: ') + Diff.MODES[Diff.mode][LANG.cur === 'ar' ? 'ar' : 'en']; }
+// text of the eye comfort setting (title and pause menus)
+function comfortLabel() { return sx('راحة العين: ', 'Eye comfort: ') + Comfort.label(); }
 function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'quests', label: sx('المهام', 'Quests') + (Quests.active().length ? '  (' + Quests.active().length + ')' : '') }, { id: 'moves', label: sx('الحركات', 'Moves') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
-    { id: 'music', label: sx('الموسيقى: ', 'Music: ') + Math.round(Sound.levels().music * 100) + '%' }, { id: 'sfx', label: sx('المؤثرات: ', 'Effects: ') + Math.round(Sound.levels().sfx * 100) + '%' },
-    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'music', label: sx('الموسيقى والصوت', 'Music and sound') },
+    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'comfort', label: comfortLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
 // pause menu input
 function updatePause() {
@@ -546,7 +550,7 @@ function updatePause() {
     else if (id === 'moves') { G.state = 'moves'; G.moveSel = 0; G.movesT = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
     else if (id === 'music') { G.state = 'jukebox'; G.jukeSel = Math.max(0, JUKEBOX.findIndex(e => e[0] === Sound.track())); G.jukePlay = null; G.jukeT = 0; }
-    else if (id === 'sfx') Sound.cycle(id);
+    else if (id === 'comfort') Comfort.next();
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
@@ -861,6 +865,7 @@ const MENU_ICONS = {
   note(g) { g.beginPath(); g.ellipse(-4, 6, 4, 3, -0.4, 0, 7); g.fill(); g.lineWidth = 2.2; g.beginPath(); g.moveTo(-0.5, 5); g.lineTo(-0.5, -9); g.lineTo(7, -6); g.stroke(); },
   speaker(g) { g.beginPath(); g.moveTo(-9, -3); g.lineTo(-4, -3); g.lineTo(2, -8); g.lineTo(2, 8); g.lineTo(-4, 3); g.lineTo(-9, 3); g.closePath(); g.fill(); g.lineWidth = 2; g.beginPath(); g.arc(3, 0, 5, -1, 1); g.stroke(); g.beginPath(); g.arc(3, 0, 9, -1, 1); g.stroke(); },
   mask(g) { g.beginPath(); g.moveTo(-8, -9); g.lineTo(8, -9); g.lineTo(9, 1); g.lineTo(0, 11); g.lineTo(-9, 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,0.6)'; g.beginPath(); g.ellipse(-3.5, -1, 1.8, 3, 0, 0, 7); g.ellipse(3.5, -1, 1.8, 3, 0, 0, 7); g.fill(); },
+  eye(g) { g.lineWidth = 2; g.beginPath(); g.moveTo(-10, 0); g.quadraticCurveTo(0, -9, 10, 0); g.quadraticCurveTo(0, 9, -10, 0); g.closePath(); g.stroke(); g.beginPath(); g.arc(0, 0, 3.5, 0, 7); g.fill(); },
   sun(g) { g.beginPath(); g.arc(0, 0, 5, 0, 7); g.fill(); g.lineWidth = 2; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.beginPath(); g.moveTo(Math.cos(a) * 8, Math.sin(a) * 8); g.lineTo(Math.cos(a) * 11, Math.sin(a) * 11); g.stroke(); } },
   frame(g) { g.lineWidth = 2; g.strokeRect(-9, -7, 18, 14); g.beginPath(); g.moveTo(-7, 5); g.lineTo(-2, -1); g.lineTo(2, 3); g.lineTo(5, 0); g.lineTo(8, 5); g.stroke(); g.beginPath(); g.arc(4, -3, 1.6, 0, 7); g.fill(); },
   door(g) { g.lineWidth = 2; g.beginPath(); g.moveTo(-3, -9); g.lineTo(-9, -9); g.lineTo(-9, 9); g.lineTo(-3, 9); g.stroke(); g.beginPath(); g.moveTo(-2, 0); g.lineTo(9, 0); g.moveTo(5, -4); g.lineTo(9, 0); g.lineTo(5, 4); g.stroke(); },
@@ -868,7 +873,7 @@ const MENU_ICONS = {
   no(g) { g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-7, -7); g.lineTo(7, 7); g.moveTo(7, -7); g.lineTo(-7, 7); g.stroke(); },
 };
 // which drawing each menu entry uses
-const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', quests: 'book', diff: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
+const MENU_ICON_OF = { cont: 'play', new: 'sword', lang: 'globe', resume: 'play', map: 'map', charms: 'charm', gear: 'shield', moves: 'sword', quests: 'book', diff: 'shield', bestiary: 'book', sound: 'speaker', music: 'note', sfx: 'speaker', look: 'mask', gfx: 'sun', comfort: 'eye', zoom: 'frame', skins: 'frame', quit: 'door', yes: 'yes', no: 'no', leave: 'door' };
 // a menu button: a dark plaque with pointed ends and a metal rim; the chosen one turns gold, glows and shines
 function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
   const ar = LANG.cur === 'ar', x0 = cx - w / 2, x1 = cx + w / 2, tip = h * 0.38;
@@ -968,7 +973,7 @@ function drawWorld(g) {
   Art.drawBackground(gs, L, G.cam.x + VW / (2 * Z) - VW / 2, G.cam.y + VH / (2 * Z) - VH / 2, t);
   gs.restore();
   let sx = 0, sy = 0;
-  if (G.shakeT > 0) { const a = G.shakeA * Math.min(1, G.shakeT * 3); sx = rand(-a, a); sy = rand(-a, a); }
+  if (G.shakeT > 0) { const a = G.shakeA * Comfort.shake * Math.min(1, G.shakeT * 3); sx = rand(-a, a); sy = rand(-a, a); }
   const cx = Math.round(G.cam.x + sx), cy = Math.round(G.cam.y + sy);
   gs.save(); gs.scale(Z, Z); gs.translate(-cx, -cy);
   if (ge !== gs) { ge.save(); ge.scale(Z, Z); ge.translate(-cx, -cy); }
@@ -1019,8 +1024,8 @@ function drawWorld(g) {
     const sun = L.def.theme === 'town' ? { x: VW * 0.72 - G.cam.x * 0.02, y: 200, k: 0.28 } : L.def.theme === 'throne' ? { x: VW * 0.5 - G.cam.x * 0.04, y: 190, k: 0.3 } : null;
     const img = lum.render({
       lights: collectLights(cx, cy), cx, cy, zoom: Z, time: t,
-      dark: Math.max(0.05, (DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme]) - G.bolt * 0.32), tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
-      aberr: clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01), haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
+      dark: Math.max(0.05, (DARKNESS[L.def.theme] == null ? 0.45 : DARKNESS[L.def.theme]) - G.bolt * Comfort.bolt * 0.32), tint: fogc, spec: SHINE[L.def.theme] == null ? 0.22 : SHINE[L.def.theme],
+      aberr: (clamp(P.hurtT / 0.28, 0, 1) * 0.012 + Math.min(0.01, G.flash * 0.01)) * Comfort.aberr, bloom: Comfort.bloom, haze: L.def.theme === 'foundry' ? 1 : L.def.theme === 'aqueduct' ? 0.5 : 0, caustic: L.def.theme === 'aqueduct' ? 1 : 0, shaft: sun,
     });
     if (img) g.drawImage(img, 0, 0, VW, VH);
     else { const [sc, ec] = lum.layers(); g.drawImage(sc, 0, 0, VW, VH); g.drawImage(ec, 0, 0, VW, VH); lumFailed = true; }     // WebGL failed this frame: show the layers plainly
@@ -1062,8 +1067,8 @@ function drawWorld(g) {
   const vg = g.createRadialGradient(VW / 2, VH / 2, VH * 0.45, VW / 2, VH / 2, VW * 0.62);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = vg; g.fillRect(0, 0, VW, VH);
-  if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, G.flash) + ')'; g.fillRect(0, 0, VW, VH); }
-  if (G.bolt > 0) { g.fillStyle = 'rgba(200,215,255,' + 0.26 * G.bolt * G.bolt + ')'; g.fillRect(0, 0, VW, VH); }
+  if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, G.flash) * Comfort.flash + ')'; g.fillRect(0, 0, VW, VH); }
+  if (G.bolt > 0) { g.fillStyle = 'rgba(200,215,255,' + 0.26 * Comfort.bolt * G.bolt * G.bolt + ')'; g.fillRect(0, 0, VW, VH); }
   if (P.hp === 1 && P.hp < P.maxHp && G.state === 'play') { const a = 0.08 + 0.05 * Math.sin(G.t * 6); g.fillStyle = 'rgba(140,0,20,' + a + ')'; g.fillRect(0, 0, VW, VH); }
 }
 

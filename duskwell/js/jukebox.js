@@ -1,6 +1,6 @@
 'use strict';
 // The Jukebox (pause menu, Music): every piece of the score in one list, with its name, where it plays and how long it lasts. Confirm
-// plays the chosen one (and again stops it), Left and Right set the volume, and F turns the combat pulse (see audio.js) on or off. The bars
+// plays the chosen one (and again stops it), Left and Right set the music volume, C the volume of the effects, and F turns the combat pulse (see audio.js) on or off. The bars
 // are the music itself, measured as it plays. The pieces the areas no longer use are here too, so none is lost.
 // [file, Arabic name, English name, where (Arabic), where (English)]
 const JUKEBOX = [
@@ -53,6 +53,7 @@ function updateJuke(dt) {
   if (Input.pressed('down')) { G.jukeSel = (G.jukeSel + 1) % n; Sound.play('select'); }
   if (Input.pressed('confirm')) playJuke(G.jukeSel);
   if (Input.pressed('left') || Input.pressed('right')) Sound.cycle('music');
+  if (Input.pressed('dash')) Sound.cycle('sfx');
   if (Input.pressed('cast')) Sound.setPulse(!Sound.pulseOn());
 }
 function drawJuke(g) {
@@ -90,9 +91,10 @@ function drawJuke(g) {
     g.fillStyle = c; g.fillRect(bx + i * bw + 1, by - h + 20, bw - 2, h);
   }
   // the buttons
-  const lvl = Math.round(Sound.levels().music * 100);
-  chip(g, 470, 384, 200, 34, sx('الصوت: ', 'Volume: ') + lvl + '%', false, () => { Sound.cycle('music'); });
-  chip(g, 690, 384, 210, 34, sx('طبقة القتال: ', 'Combat pulse: ') + (Sound.pulseOn() ? sx('تعمل', 'on') : sx('متوقفة', 'off')), Sound.pulseOn(), () => { Sound.setPulse(!Sound.pulseOn()); Sound.play('select'); });
-  chip(g, 470, 430, 430, 40, G.jukePlay === e[0] ? sx('■  إيقاف', '■  Stop') : sx('▶  تشغيل', '▶  Play'), G.jukePlay === e[0], () => playJuke(G.jukeSel));
-  g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(sx('↑ ↓ اختيار    Z تشغيل    ← → الصوت    F طبقة القتال    Esc رجوع', '↑ ↓ choose    Z play    ← → volume    F combat pulse    Esc back'), VW / 2, VH - 16);
+  const lv = Sound.levels();
+  chip(g, 470, 372, 205, 32, sx('الموسيقى: ', 'Music: ') + Math.round(lv.music * 100) + '%', false, () => { Sound.cycle('music'); });
+  chip(g, 695, 372, 205, 32, sx('المؤثرات: ', 'Effects: ') + Math.round(lv.sfx * 100) + '%', false, () => { Sound.cycle('sfx'); Sound.play('hit'); });
+  chip(g, 470, 412, 430, 32, sx('طبقة القتال: ', 'Combat pulse: ') + (Sound.pulseOn() ? sx('تعمل', 'on') : sx('متوقفة', 'off')), Sound.pulseOn(), () => { Sound.setPulse(!Sound.pulseOn()); Sound.play('select'); });
+  chip(g, 470, 452, 430, 44, G.jukePlay === e[0] ? sx('■  إيقاف', '■  Stop') : sx('▶  تشغيل', '▶  Play'), G.jukePlay === e[0], () => playJuke(G.jukeSel));
+  g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(sx('↑ ↓ اختيار    Z تشغيل    ← → الموسيقى    C المؤثرات    F طبقة القتال    Esc رجوع', '↑ ↓ choose    Z play    ← → music    C effects    F combat pulse    Esc back'), VW / 2, VH - 16);
 }

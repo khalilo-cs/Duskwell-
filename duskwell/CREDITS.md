@@ -68,3 +68,6 @@ The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `ro
 
 ## The Jukebox, the combat pulse and the echo stones
 `js/jukebox.js`, `js/echo.js` and the pulse in `js/audio.js` are original code. The pulse is a synthesised drum (a sine that falls an octave and a half and a little band-passed noise); no recording is used for it.
+
+## Eye comfort
+`js/comfort.js` is original code: a CSS filter on the canvas and a few factors; no image or library is involved.

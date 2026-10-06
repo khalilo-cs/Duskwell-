@@ -54,6 +54,13 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await key('ArrowRight');
   r = await ev(() => Sound.levels().music); ok('Right changes the music volume', r !== v0, [v0, r]);
   await ev(() => { while (Sound.levels().music !== 1) Sound.cycle('music'); });
+  const e0 = await ev(() => Sound.levels().sfx);
+  await key('KeyC');
+  r = await ev(() => Sound.levels().sfx); ok('C changes the volume of the effects', r !== e0, [e0, r]);
+  await ev(() => { while (Sound.levels().sfx !== 1) Sound.cycle('sfx'); });
+  await tap(787, 388);
+  r = await ev(() => Sound.levels().sfx); ok('a tap on the effects chip changes it too', r !== 1, r);
+  await ev(() => { while (Sound.levels().sfx !== 1) Sound.cycle('sfx'); });
   await ev(() => { DW.G.jukePlay = 'frost'; });
   await key('Escape');
   r = await ev(() => { const { G } = DW; return { state: G.state, play: G.jukePlay }; });
@@ -66,13 +73,13 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await tap(200, 70 + 16 + 52 * 2 + 26);
   r = await ev(() => DW.G.jukePlay); ok('a second tap on it plays it', r === 'adventure', r);
   await ev(() => { DW.G.menuHits = []; DW.draw(); });
-  await tap(685, 450);
+  await tap(685, 474);
   r = await ev(() => DW.G.jukePlay); ok('the play button stops it', r === null, r);
-  await tap(685, 450);
+  await tap(685, 474);
   r = await ev(() => DW.G.jukePlay); ok('and starts it', r !== null, r);
-  await tap(780, 401);
+  await tap(685, 428);
   r = await ev(() => Sound.pulseOn()); ok('the pulse chip switches the pulse off', r === false, r);
-  await tap(780, 401);
+  await tap(685, 428);
   await ev(() => { const { G } = DW; G.jukePlay = null; G.state = 'play'; });
 
   // ---- both languages draw, every row

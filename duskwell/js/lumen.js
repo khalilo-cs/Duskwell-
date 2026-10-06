@@ -336,7 +336,7 @@ void main() {
     // 4) the final image
     u = pass(P.final, null, W, H);
     bindTex(0, F.lit.t); gl.uniform1i(u.uLit, 0); bindTex(1, F.bC.t); gl.uniform1i(u.uBloom, 1);
-    gl.uniform2f(u.uLog, VW, VH); gl.uniform1f(u.uBloomK, 0.5); gl.uniform1f(u.uAberr, o.aberr || 0); gl.uniform1f(u.uHaze, o.haze || 0); gl.uniform1f(u.uTime, o.time);
+    gl.uniform2f(u.uLog, VW, VH); gl.uniform1f(u.uBloomK, 0.5 * (o.bloom == null ? 1 : o.bloom)); gl.uniform1f(u.uAberr, o.aberr || 0); gl.uniform1f(u.uHaze, o.haze || 0); gl.uniform1f(u.uTime, o.time);
     const sh = o.shaft; gl.uniform4f(u.uShaft, sh ? sh.x : 0, sh ? sh.y : 0, 0, sh ? sh.k : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return canvas;

@@ -16,7 +16,7 @@ const BossPoses = (() => {
     queen:       { idle: 0, atk: [1, 2], hurt: 0, face: 1, hm: 1.9, wm: 3.4, heavy: 1.2, glow: '#bfe8ff', fly: true },
     colossus:    { idle: 0, atk: [0], hurt: 1, face: 1, hm: 1.6, wm: 2.6, heavy: 0.7, glow: '#ff9a40' },
     thunderhoof: { idle: 0, atk: [1], hurt: 0, face: -1, hm: 2.3, wm: 2.0, heavy: 0.85, glow: '#a8c0ff' },
-    roc:         { idle: 0, atk: [1], hurt: 1, face: 1, hm: 2.4, wm: 2.7, heavy: 1.1, glow: '#a8c0ff', fly: true },
+    roc:         { idle: 0, atk: [0], hurt: 0, face: 1, hm: 2.4, wm: 2.7, heavy: 1.1, glow: '#a8c0ff', fly: true },
     regent:      { idle: 0, atk: [1, 2], hurt: 0, face: 1, hm: 1.55, wm: 2.8, heavy: 1.0, glow: '#c8a0ff', fly: true },
     wraith:      { idle: 0, atk: [1], hurt: 0, face: 1, hm: 2.4, wm: 3.0, heavy: 1.2, glow: '#9fd0ff', fly: true },
     duelist:     { idle: 0, atk: [1], hurt: 0, face: -1, hm: 2.1, wm: 6, heavy: 1.4, glow: '#d4ccff', dash: true },
@@ -82,6 +82,7 @@ const BossPoses = (() => {
   function draw(g, b, key, t) {
     const c = CFG[key], poses = BOSS_POSES[key]; if (!c || !poses || !ready()) return false;
     const r = b._pr || (b._pr = new Rig(c)), dt = update(b, c, r, t), s = r.s;
+    if (!poses[r.pose]) r.pose = c.idle; if (!poses[r.prev]) r.prev = c.idle;           // a drawing the boss does not have: its first one
     const ref = poses[c.idle], sc = Math.min(b.h * c.hm / ref[3], b.w * c.wm / ref[2]), fly = !!c.fly;
     const white = b.flash > 0, dying = b.state === 'dying', intro = b.state === 'intro';
     let alpha = 1, rise = 1;
@@ -90,7 +91,8 @@ const BossPoses = (() => {
     const flipped = (b.face || 1) * c.face < 0 ? -1 : 1;
     const baseY = fly ? b.cy : b.y + b.h, anchorY = fly ? 0.5 : 1;
     const one = (pi, a) => {
-      const p = poses[pi], w = p[2] * sc, h = p[3] * sc;
+      const p = poses[pi]; if (!p) return;
+      const w = p[2] * sc, h = p[3] * sc;
       g.save(); g.globalAlpha *= a;
       g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
       g.drawImage(img, p[0], p[1], p[2], p[3], -w / 2, -h * anchorY, w, h);

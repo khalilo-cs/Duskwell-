@@ -217,6 +217,7 @@ void main() {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 255, 0]));
       sceneC = document.createElement('canvas'); entC = document.createElement('canvas');
       sceneG = sceneC.getContext('2d', { alpha: false }); entG = entC.getContext('2d');
+      Guard.track(sceneG); Guard.track(entG);
       ok = true;
     } catch (e) { console.error('Lumen: ' + e.message); ok = false; }
     return ok;
@@ -229,6 +230,7 @@ void main() {
     W = w; H = h; S = s;
     for (const k2 of Object.keys(F)) { gl.deleteTexture(F[k2].t); gl.deleteFramebuffer(F[k2].f); delete F[k2]; }
     sceneC.width = entC.width = canvas.width = w; sceneC.height = entC.height = canvas.height = h;
+    Guard.forget(sceneG); Guard.forget(entG);
     const hw = Math.ceil(w * HALF), hh = Math.ceil(h * HALF), qw = Math.ceil(w / 4), qh = Math.ceil(h / 4);
     F.hA = target(hw, hh); F.hB = target(hw, hh); F.lit = target(w, h); F.bA = target(qw, qh); F.bB = target(qw, qh); F.bC = target(qw, qh);
   }
@@ -360,6 +362,7 @@ void main() {
     // sizes the layers and returns their 2D contexts, already scaled to logical coordinates and cleared
     begin(k) {
       resize(k);
+      Guard.unwind(sceneG); Guard.unwind(entG);                   // what a failed drawing left open is closed
       sceneG.setTransform(S, 0, 0, S, 0, 0); entG.setTransform(1, 0, 0, 1, 0, 0); entG.clearRect(0, 0, W, H); entG.setTransform(S, 0, 0, S, 0, 0);
       return { sg: sceneG, eg: entG };
     },

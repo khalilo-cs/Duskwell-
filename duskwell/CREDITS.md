@@ -71,3 +71,6 @@ The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `ro
 
 ## Eye comfort
 `js/comfort.js` is original code: a CSS filter on the canvas and a few factors; no image or library is involved.
+
+## The draw guard
+`js/guard.js` is original code.

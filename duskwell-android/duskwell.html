@@ -165,6 +165,37 @@ function smoothDamp(cur, target, vel, smoothTime, dt) {
 </script>
 <script>
 'use strict';
+// A drawing that fails must not leave the picture broken. save() and restore() of the contexts are counted, so whatever a failing drawing
+// left open can be closed again (a saved state holds the alpha, the transform and the clip as they were), the frame goes on with the next
+// thing, and the failure is told once in the console. (A boss drawing that threw between its save() and restore() once left the alpha
+// near 0 on the layer the hero and the creatures are drawn on, and they stayed invisible for the rest of the game.)
+const Guard = (() => {
+  const told = new Set();
+  const track = g => {
+    if (!g || g.__open !== undefined) return g;
+    g.__open = 0;
+    const save = g.save, restore = g.restore;
+    g.save = function () { this.__open++; return save.call(this); };
+    g.restore = function () { if (this.__open > 0) this.__open--; return restore.call(this); };
+    return g;
+  };
+  const open = g => (g && g.__open) || 0;
+  // close what is open above the level to (0 = everything)
+  const unwind = (g, to) => { to = to || 0; for (let n = 0; open(g) > to && n < 5000; n++) g.restore(); };
+  // the canvas was resized: its saved states are gone
+  const forget = g => { if (g && g.__open !== undefined) g.__open = 0; };
+  const report = (what, e) => {
+    const k = what + ': ' + (e && e.message);
+    if (told.has(k) || told.size > 20) return;
+    told.add(k); console.error('Draw: ' + k);
+  };
+  // run one drawing; if it throws, close what it left open, say so once, and go on
+  const run = (g, what, fn) => { const d = open(g); try { fn(); } catch (e) { unwind(g, d); report(what, e); } };
+  return { track, open, unwind, forget, run, report };
+})();
+</script>
+<script>
+'use strict';
 // Arabic / English strings. Default language is Arabic; toggle with L on the title screen.
 const LANG = { cur: 'ar' };
 try { const l = localStorage.getItem('duskwell_lang'); if (l === 'en' || l === 'ar') LANG.cur = l; } catch (e) { /* storage blocked */ }
@@ -4443,6 +4474,7 @@ void main() {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 255, 0]));
       sceneC = document.createElement('canvas'); entC = document.createElement('canvas');
       sceneG = sceneC.getContext('2d', { alpha: false }); entG = entC.getContext('2d');
+      Guard.track(sceneG); Guard.track(entG);
       ok = true;
     } catch (e) { console.error('Lumen: ' + e.message); ok = false; }
     return ok;
@@ -4455,6 +4487,7 @@ void main() {
     W = w; H = h; S = s;
     for (const k2 of Object.keys(F)) { gl.deleteTexture(F[k2].t); gl.deleteFramebuffer(F[k2].f); delete F[k2]; }
     sceneC.width = entC.width = canvas.width = w; sceneC.height = entC.height = canvas.height = h;
+    Guard.forget(sceneG); Guard.forget(entG);
     const hw = Math.ceil(w * HALF), hh = Math.ceil(h * HALF), qw = Math.ceil(w / 4), qh = Math.ceil(h / 4);
     F.hA = target(hw, hh); F.hB = target(hw, hh); F.lit = target(w, h); F.bA = target(qw, qh); F.bB = target(qw, qh); F.bC = target(qw, qh);
   }
@@ -4586,6 +4619,7 @@ void main() {
     // sizes the layers and returns their 2D contexts, already scaled to logical coordinates and cleared
     begin(k) {
       resize(k);
+      Guard.unwind(sceneG); Guard.unwind(entG);                   // what a failed drawing left open is closed
       sceneG.setTransform(S, 0, 0, S, 0, 0); entG.setTransform(1, 0, 0, 1, 0, 0); entG.clearRect(0, 0, W, H); entG.setTransform(S, 0, 0, S, 0, 0);
       return { sg: sceneG, eg: entG };
     },
@@ -11047,7 +11081,7 @@ const BossPoses = (() => {
     queen:       { idle: 0, atk: [1, 2], hurt: 0, face: 1, hm: 1.9, wm: 3.4, heavy: 1.2, glow: '#bfe8ff', fly: true },
     colossus:    { idle: 0, atk: [0], hurt: 1, face: 1, hm: 1.6, wm: 2.6, heavy: 0.7, glow: '#ff9a40' },
     thunderhoof: { idle: 0, atk: [1], hurt: 0, face: -1, hm: 2.3, wm: 2.0, heavy: 0.85, glow: '#a8c0ff' },
-    roc:         { idle: 0, atk: [1], hurt: 1, face: 1, hm: 2.4, wm: 2.7, heavy: 1.1, glow: '#a8c0ff', fly: true },
+    roc:         { idle: 0, atk: [0], hurt: 0, face: 1, hm: 2.4, wm: 2.7, heavy: 1.1, glow: '#a8c0ff', fly: true },
     regent:      { idle: 0, atk: [1, 2], hurt: 0, face: 1, hm: 1.55, wm: 2.8, heavy: 1.0, glow: '#c8a0ff', fly: true },
     wraith:      { idle: 0, atk: [1], hurt: 0, face: 1, hm: 2.4, wm: 3.0, heavy: 1.2, glow: '#9fd0ff', fly: true },
     duelist:     { idle: 0, atk: [1], hurt: 0, face: -1, hm: 2.1, wm: 6, heavy: 1.4, glow: '#d4ccff', dash: true },
@@ -11113,6 +11147,7 @@ const BossPoses = (() => {
   function draw(g, b, key, t) {
     const c = CFG[key], poses = BOSS_POSES[key]; if (!c || !poses || !ready()) return false;
     const r = b._pr || (b._pr = new Rig(c)), dt = update(b, c, r, t), s = r.s;
+    if (!poses[r.pose]) r.pose = c.idle; if (!poses[r.prev]) r.prev = c.idle;           // a drawing the boss does not have: its first one
     const ref = poses[c.idle], sc = Math.min(b.h * c.hm / ref[3], b.w * c.wm / ref[2]), fly = !!c.fly;
     const white = b.flash > 0, dying = b.state === 'dying', intro = b.state === 'intro';
     let alpha = 1, rise = 1;
@@ -11121,7 +11156,8 @@ const BossPoses = (() => {
     const flipped = (b.face || 1) * c.face < 0 ? -1 : 1;
     const baseY = fly ? b.cy : b.y + b.h, anchorY = fly ? 0.5 : 1;
     const one = (pi, a) => {
-      const p = poses[pi], w = p[2] * sc, h = p[3] * sc;
+      const p = poses[pi]; if (!p) return;
+      const w = p[2] * sc, h = p[3] * sc;
       g.save(); g.globalAlpha *= a;
       g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
       g.drawImage(img, p[0], p[1], p[2], p[3], -w / 2, -h * anchorY, w, h);
@@ -17175,14 +17211,14 @@ function drawWorld(g) {
   for (const it of G.items) { Art.drawItem(gs, it, t); if (it.locked) { gs.strokeStyle = 'rgba(255,110,110,0.7)'; gs.lineWidth = 2; gs.beginPath(); gs.arc(it.x, it.y, 22 + 2 * Math.sin(t * 5), 0, 7); gs.stroke(); } }
   for (const c of G.geos) Art.drawGeo(gs, c, t);
   if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true, 1), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
-  for (const e of G.enemies) {
+  for (const e of G.enemies) Guard.run(ge, e.isBoss ? 'boss ' + e.bossKey : 'enemy ' + e.kind, () => {      // one that fails to draw must not hide the rest
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
     if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
     else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](ge, e, t); }
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](ge, e, t);
     if (e.frozenT > 0) Art.frozenFx(ge, e, t);
-  }
-  Art.drawPlayer(ge, P, t);
+  });
+  Guard.run(ge, 'hero', () => Art.drawPlayer(ge, P, t));
   if (lum) Pixel.setFlat(false);
   gs.restore(); if (ge !== gs) ge.restore();
   if (lum) {
@@ -17457,6 +17493,7 @@ function drawEnding(g) {
 // draw the current state
 function draw() {
   const g = G.g;
+  Guard.unwind(g);                                        // what a failed drawing left open last frame is closed
   G.menuHits = [];                                        // the buttons drawn this frame, for taps
   g.setTransform(G.k, 0, 0, G.k, 0, 0);
   g.fillStyle = '#000'; g.fillRect(0, 0, VW, VH);
@@ -17466,7 +17503,7 @@ function draw() {
     case 'ending': drawEnding(g); break;
     default:
       if (G.level) {
-        drawWorld(g); drawHUD(g); drawCoach(g);
+        Guard.run(g, 'world', () => drawWorld(g)); drawHUD(g); drawCoach(g);
         if (G.state === 'map') drawMap(g);
         if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 86, 29, { w: 340, h: 26 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);
@@ -17493,7 +17530,7 @@ function resize() {
 }
 // start: input, sound, fixed-step loop
 function boot() {
-  G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
+  G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d'); Guard.track(G.g);
   try { const z = parseFloat(localStorage.getItem('duskwell_zoom')); if (ZOOMS.includes(z)) G.zoom = z; } catch (e) { /* ignore */ }
   G.zoomNow = G.zoom; Diff.loadMode();
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();

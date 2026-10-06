@@ -1008,14 +1008,14 @@ function drawWorld(g) {
   for (const it of G.items) { Art.drawItem(gs, it, t); if (it.locked) { gs.strokeStyle = 'rgba(255,110,110,0.7)'; gs.lineWidth = 2; gs.beginPath(); gs.arc(it.x, it.y, 22 + 2 * Math.sin(t * 5), 0, 7); gs.stroke(); } }
   for (const c of G.geos) Art.drawGeo(gs, c, t);
   if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true, 1), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
-  for (const e of G.enemies) {
+  for (const e of G.enemies) Guard.run(ge, e.isBoss ? 'boss ' + e.bossKey : 'enemy ' + e.kind, () => {      // one that fails to draw must not hide the rest
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
     if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
     else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](ge, e, t); }
     else if (Art.enemy[e.kind]) Art.enemy[e.kind](ge, e, t);
     if (e.frozenT > 0) Art.frozenFx(ge, e, t);
-  }
-  Art.drawPlayer(ge, P, t);
+  });
+  Guard.run(ge, 'hero', () => Art.drawPlayer(ge, P, t));
   if (lum) Pixel.setFlat(false);
   gs.restore(); if (ge !== gs) ge.restore();
   if (lum) {
@@ -1290,6 +1290,7 @@ function drawEnding(g) {
 // draw the current state
 function draw() {
   const g = G.g;
+  Guard.unwind(g);                                        // what a failed drawing left open last frame is closed
   G.menuHits = [];                                        // the buttons drawn this frame, for taps
   g.setTransform(G.k, 0, 0, G.k, 0, 0);
   g.fillStyle = '#000'; g.fillRect(0, 0, VW, VH);
@@ -1299,7 +1300,7 @@ function draw() {
     case 'ending': drawEnding(g); break;
     default:
       if (G.level) {
-        drawWorld(g); drawHUD(g); drawCoach(g);
+        Guard.run(g, 'world', () => drawWorld(g)); drawHUD(g); drawCoach(g);
         if (G.state === 'map') drawMap(g);
         if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 86, 29, { w: 340, h: 26 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);
@@ -1326,7 +1327,7 @@ function resize() {
 }
 // start: input, sound, fixed-step loop
 function boot() {
-  G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d');
+  G.canvas = document.getElementById('c'); G.g = G.canvas.getContext('2d'); Guard.track(G.g);
   try { const z = parseFloat(localStorage.getItem('duskwell_zoom')); if (ZOOMS.includes(z)) G.zoom = z; } catch (e) { /* ignore */ }
   G.zoomNow = G.zoom; Diff.loadMode();
   Lumen.init(); Input.init(); resize(); window.addEventListener('resize', resize); refreshTouchLabels();

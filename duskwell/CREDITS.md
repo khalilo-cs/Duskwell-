@@ -84,3 +84,6 @@ The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `ro
 ## The mossy stone tile sheet
 `art/tiles/moss.webp` is cut from the owner's sheet (`art/source/tiles_hd/sheet_moss_tiles.png`) by `tools/sprites/cut_moss.py`; `js/art_moss.js` lays the pieces in the rooms of Mossgrove, Sporewood, the Aqueduct and Cinderdeep.
 
+## Movement feel
+The movement of the hero and the creatures (`js/entities.js`, `js/art_hero_frames.js`, `js/game.js`) is original code tuned to the feel of games of this kind; no picture, sound or code of another game is used.
+

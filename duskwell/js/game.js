@@ -157,6 +157,16 @@ function openGates() {
   for (const gt of G.gates) { L.set(gt.x, gt.y, T_AIR); G.burst(gt.x * TILE + 16, gt.y * TILE + 16, 8, { color: '#8d97a3', speed: 160, life: 0.6, size: 4 }); }
   G.gates = []; Sound.play('door');
 }
+// the guardian of the hall comes in: its health by the setting and the depth, times hpK, and its clock times tempoK (echoes use both)
+function spawnArenaBoss(a, hpK, tempoK) {
+  const B = BOSS_TYPES[a.def.boss], area = G.level.def.area;
+  const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
+  boss.hp = boss.maxHp = Math.round(boss.hp * Diff.bossHp(area) * hpK); Mind.prepare(boss, area);
+  if (tempoK !== 1) boss.tempo = (boss.tempo || 1) * tempoK;
+  G.enemies.push(boss); G.boss = boss;
+  Sound.boss(true, a.def.boss);
+  return boss;
+}
 // put the camera on the player at once
 function snapCamera() {
   const c = cameraTarget(); G.cam.x = c.x; G.cam.y = c.y; G.camV = { x: 0, y: 0 };
@@ -229,6 +239,7 @@ G.onBossDying = function (b) { G.bossBarShow = true; };
 // boss died: open the gates, give the reward, or start the ending
 G.onBossDeath = function (b) {
   const a = G.arena; if (!a) return;
+  if (a.trial) { Echo.won(b); return; }                       // an echo (echo.js): no seal, no gift, only the time
   Mind.killed(b, b.lastHow);
   a.state = 'won'; G.flags[a.def.flag] = true; G.boss = null; G.bossBarShow = false;
   for (const e of G.enemies) if (e.kind === 'brood_child') e.dead = true;
@@ -284,6 +295,7 @@ function interact() {
     if (!stationList().length) { G.toastMsg(tr('stationNone'), 2.6); return true; }
     G.state = 'travel'; G.menuSel = 0; Sound.play('select'); return true;
   }
+  if (Echo.near()) { G.dialog = Echo.talk(); G.state = 'dialog'; Sound.play('select'); return true; }
   const n = nearest(G.npcs, P.cx, 70);
   if (n) {
     if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3'), tr('elder4')], i: 0, t: 0 };
@@ -400,11 +412,7 @@ function updatePlay(dt) {
   if (a && a.state === 'idle' && ((a.def.triggerDir || 1) > 0 ? P.cx > a.def.trigger * TILE : P.cx < a.def.trigger * TILE) && P.onGround) {
     a.state = 'fight';
     for (const gt of a.def.gates) if (gt.close === 'start') closeGate(gt);
-    const B = BOSS_TYPES[a.def.boss];
-    const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
-    boss.hp = boss.maxHp = Math.round(boss.hp * Diff.bossHp(G.level.def.area)); Mind.prepare(boss, G.level.def.area);
-    G.enemies.push(boss); G.boss = boss;
-    Sound.boss(true, a.def.boss);
+    spawnArenaBoss(a, 1, 1);
   }
 
   // doors
@@ -455,9 +463,10 @@ function updateDying(dt) {
   G.dyingT += dt;
   if (G.dyingT > 1.3 && !G.trans) {
     G.fadeTo(() => {
-      G.deaths++;
-      const dropGeo = P.geo;
-      G.shade = dropGeo > 0 ? { room: G.level.id, x: clamp(P.cx, 40, G.level.pw - 40), y: clamp(P.cy, 40, G.level.ph - 60), geo: dropGeo } : (G.shade && G.shade.room ? G.shade : null);
+      const echo = G.arena && G.arena.trial;                  // a fall in an echo costs nothing
+      if (!echo) G.deaths++;
+      const dropGeo = echo ? 0 : P.geo;
+      G.shade = echo ? G.shade : dropGeo > 0 ? { room: G.level.id, x: clamp(P.cx, 40, G.level.pw - 40), y: clamp(P.cy, 40, G.level.ph - 60), geo: dropGeo } : (G.shade && G.shade.room ? G.shade : null);
       if (dropGeo > 0) P.geo = 0;
       P.hp = P.maxHp; P.soul = 0; P.dead = false;
       enterRoom(G.bench.room, { bench: true });
@@ -536,7 +545,8 @@ function updatePause() {
     else if (id === 'quests') { G.state = 'quests'; G.questSel = 0; G.questsT = 0; }
     else if (id === 'moves') { G.state = 'moves'; G.moveSel = 0; G.movesT = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
-    else if (id === 'music' || id === 'sfx') Sound.cycle(id);
+    else if (id === 'music') { G.state = 'jukebox'; G.jukeSel = Math.max(0, JUKEBOX.findIndex(e => e[0] === Sound.track())); G.jukePlay = null; G.jukeT = 0; }
+    else if (id === 'sfx') Sound.cycle(id);
     else if (id === 'lang') setLang(LANG.cur === 'ar' ? 'en' : 'ar');
     else if (id === 'skins') Skins.open();
     else if (id === 'look') HeroStyle.next();
@@ -600,14 +610,28 @@ function updateBanner(dt) {
 // one logic step, by state
 // the music of the moment: the shops and the menus have a track of their own, played instead of the area's
 const SHOP_MOOD = { wizard: 'wizard', smith: 'forge', outfitter: 'forge' };
-const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'moves', 'quests', 'bestiary', 'travel'];
+const MENU_STATES = ['pause', 'map', 'charms', 'gear', 'moves', 'quests', 'jukebox', 'bestiary', 'travel'];
 function moodNow() {
   const inShop = G.state === 'shop' || (G.state === 'dialog' && G.dialog && G.dialog.shop);
+  if (G.state === 'jukebox' && G.jukePlay) return G.jukePlay;                   // the Jukebox plays what was chosen
   if (inShop) return SHOP_MOOD[G.shopId] || 'fiddler';
   return MENU_STATES.includes(G.state) ? 'rest' : null;
 }
+// how much danger there is around the hero, 0 to 1: creatures that are after him and near, and a last mask. The music's pulse follows it.
+function combatK() {
+  if (G.state !== 'play' || P.dead) return 0;
+  let k = 0;
+  for (const e of G.enemies) {
+    if (e.dead || e.dummy || e.ghostly || e.isBoss) continue;
+    const d = Math.hypot(e.cx - P.cx, e.cy - P.cy); if (d > 560) continue;
+    const st = e.currentState; if (st === ST.CHASE || st === ST.ANTICIPATION || st === ST.ATTACK) k += 0.34 * (1 - d / 760);
+  }
+  if (P.maxHp > 1 && P.hp <= 1) k += 0.25;
+  return Math.min(1, k);
+}
 function update(dt) {
   Sound.setMood(moodNow());
+  Sound.setIntensity(combatK());
   G.t += dt;
   if (G.toast) { G.toast.t += dt; if (G.toast.t > G.toast.dur) G.toast = null; }
   if (G.areaBanner) { G.areaBanner.t += dt; if (G.areaBanner.t > 3.6) G.areaBanner = null; }
@@ -622,6 +646,7 @@ function update(dt) {
     case 'gear': updateGear(dt); break;
     case 'moves': updateMoves(dt); break;
     case 'quests': updateQuests(dt); break;
+    case 'jukebox': updateJuke(dt); break;
     case 'trans': updateTrans(dt); break;
     case 'pause': updatePause(); break;
     case 'map': updateMap(); break;
@@ -639,7 +664,7 @@ function update(dt) {
       if (G.hitstopT > 0) { G.hitstopT -= dt; break; }
       let d = dt;
       if (G.slowmo > 0) { G.slowmo -= dt; d = dt * 0.35; }
-      updatePlay(d); updateParticles(d); Coach.update(d); Quests.update(d);
+      updatePlay(d); updateParticles(d); Coach.update(d); Quests.update(d); Echo.update(d);
       break;
     }
   }
@@ -764,6 +789,7 @@ function drawHUD(g) {
     g.fillStyle = b.flash > 0 ? '#ffffff' : '#e6eef7'; g.fillRect(x, y - 3, w * k, 8);
     g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(x - 6, y - 8, w + 12, 18);
     setDir(g); g.textAlign = 'center'; g.font = font(20, '700'); textShadow(g, tr('boss_' + b.bossKey), VW / 2, y - 22, '#f2f7ff');
+    Echo.hud(g);
   }
   if (b && b.state === 'intro') {
     const k = clamp((2.4 - b.introT) / 0.7, 0, 1) * clamp(b.introT / 0.6, 0, 1);
@@ -806,7 +832,7 @@ function drawHUD(g) {
   // interaction hint
   if (G.state === 'play' && !P.sitting) {
     const ns = nearest(G.stations, P.cx, 54);
-    const t = nearest(G.benches, P.cx, 54) ? 'rest' : ns ? (stationLit(ns.room) ? 'travel' : 'light') : nearest(G.npcs, P.cx, 70) ? 'talk' : nearest(G.signs, P.cx, 54) ? 'read' : null;
+    const t = nearest(G.benches, P.cx, 54) ? 'rest' : ns ? (stationLit(ns.room) ? 'travel' : 'light') : Echo.near() ? 'echo' : nearest(G.npcs, P.cx, 70) ? 'talk' : nearest(G.signs, P.cx, 54) ? 'read' : null;
     if (t) {
       const sx = (P.cx - G.cam.x) * G.zoomNow, sy = (P.y - G.cam.y - 30) * G.zoomNow;
       g.save(); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(18, '700');
@@ -910,7 +936,7 @@ function backButton(g) {
 }
 function backFromScreen() {
   Sound.play('select');
-  if (G.state === 'map') { G.state = 'play'; G.mapView = null; } else G.state = 'pause';
+  if (G.state === 'map') { G.state = 'play'; G.mapView = null; } else { if (G.state === 'jukebox') G.jukePlay = null; G.state = 'pause'; }
 }
 // when a tap picks an entry; the rectangles are kept in G.menuHits for taps and clicks
 function drawMenu(g, items, sel, y0, step, o) {
@@ -973,6 +999,7 @@ function drawWorld(g) {
   drawQuestMarks(gs, t);
   for (const s2 of G.stations) Art.drawStation(gs, s2, t, stationLit(s2.room));
   for (const s2 of G.signs) Art.drawSign(gs, s2, t);
+  Echo.draw(gs, t);
   for (const it of G.items) { Art.drawItem(gs, it, t); if (it.locked) { gs.strokeStyle = 'rgba(255,110,110,0.7)'; gs.lineWidth = 2; gs.beginPath(); gs.arc(it.x, it.y, 22 + 2 * Math.sin(t * 5), 0, 7); gs.stroke(); } }
   for (const c of G.geos) Art.drawGeo(gs, c, t);
   if (lum) Pixel.setFlat(true, gs); else Pixel.setScene(collectLights(cx, cy, true, 1), cx, cy, L.def.theme);       // lights for the 3D-lit pixel sprites
@@ -1051,6 +1078,7 @@ function collectLights(cx, cy, skipPlayer, zoom) {
     else if (d.type === 'light') add(d.x * TILE + 16, d.y * TILE + 16, d.r || 220, d.a || 0.8, d.c || th.glow);
   }
   for (const b of G.benches) add(b.px, b.py - 40, 200, 0.85, '#ffe2a8');
+  const es = Echo.stone(); if (es) add(es.px, es.py - 56, 190, 0.8, '#9fe0d8');
   for (const n of G.npcs) add(n.px, n.py - 40, 170, 0.8, '#ffd98a');
   for (const s of G.stations) if (stationLit(s.room)) add(s.px, s.py - 70, 230, 0.9, '#ffd98a');
   for (const it of G.items) add(it.x, it.y, 190, 0.9, '#e6f3ff');
@@ -1276,9 +1304,10 @@ function draw() {
         if (G.state === 'gear') drawGear(g);
         if (G.state === 'moves') drawMoves(g);
         if (G.state === 'quests') drawQuests(g);
+        if (G.state === 'jukebox') drawJuke(g);
         if (G.state === 'travel') drawTravel(g);
         if (G.state === 'banner') drawBanner(g);
-        if (G.state === 'map' || G.state === 'moves' || G.state === 'quests' || G.state === 'gear' || G.state === 'charms' || G.state === 'bestiary') backButton(g);
+        if (G.state === 'map' || G.state === 'moves' || G.state === 'quests' || G.state === 'jukebox' || G.state === 'gear' || G.state === 'charms' || G.state === 'bestiary') backButton(g);
       }
   }
   if (G.fadeA > 0) { g.fillStyle = 'rgba(0,0,0,' + G.fadeA + ')'; g.fillRect(0, 0, VW, VH); }

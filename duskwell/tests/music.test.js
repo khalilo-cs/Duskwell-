@@ -1,5 +1,5 @@
-// The score: every track the game can ask for exists, and the new dark pieces (the merchant's waltz, the forge, the wizard, the road, the menu piece)
-// are played where they belong and give way to a boss.
+// The score: every track the game can ask for exists, the dark pieces (the merchant's waltz, the forge, the wizard, the road, the menu piece) and
+// the five newest (the title, the crossroads, the webbed depths and two battle themes) are played where they belong, and a boss takes the music.
 const fs = require('fs'), path = require('path');
 const { open } = require('./lib');
 let fails = 0;
@@ -7,8 +7,11 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
 (async () => {
   const dir = path.join(__dirname, '..', 'audio', 'music'), meta = JSON.parse(fs.readFileSync(path.join(dir, 'music.json'), 'utf8'));
   const fresh = ['fiddler', 'forge', 'wizard', 'road', 'rest'];
+  const newest = ['legend', 'adventure', 'abyss', 'boss_abyss', 'boss_march'];
+  ok('the five newest pieces are rendered, with a loop, a gain, a tempo, a bar length and a key', newest.every(n => fs.existsSync(path.join(dir, n + '.mp3')) && meta[n] && meta[n].loop > 40 && meta[n].gain > 0.3 && meta[n].gain <= 1 && meta[n].bpm >= 40 && meta[n].bpm <= 200 && [3, 4].includes(meta[n].bpb) && meta[n].tonic >= 0 && meta[n].tonic < 12), newest.map(n => meta[n]));
+  ok('every piece knows its tempo and key (the combat pulse and the Jukebox read them)', Object.values(meta).every(m => m.bpm > 0 && m.bpb > 0 && m.tonic >= 0), Object.entries(meta).filter(([, m]) => !(m.bpm > 0 && m.bpb > 0 && m.tonic >= 0)).map(e => e[0]));
   ok('the five new pieces are rendered, with a loop length and a gain', fresh.every(n => fs.existsSync(path.join(dir, n + '.mp3')) && meta[n] && meta[n].loop > 30 && meta[n].gain > 0.3 && meta[n].gain <= 1), fresh.map(n => meta[n]));
-  ok('there are twenty-six pieces now', Object.keys(meta).length === 26 && Object.keys(meta).every(n => fs.existsSync(path.join(dir, n + '.mp3'))), Object.keys(meta).length);
+  ok('there are thirty-one pieces now', Object.keys(meta).length === 31 && Object.keys(meta).every(n => fs.existsSync(path.join(dir, n + '.mp3'))), Object.keys(meta).length);
   const { browser, page, errors } = await open({});
   const ev = (f, a) => page.evaluate(f, a);
   // every room asks for a track that exists
@@ -37,7 +40,19 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('talking to the elder keeps the area\'s theme, and leaving a menu brings it back', r.elder === r.back && r.back !== 'rest' && r.back !== 'fiddler', r);
   // a boss takes the music from a shop-less moment, and a mood does not outlast it
   r = await ev(() => { Sound.boss(true, 'guardian'); const a = Sound.track(); Sound.setMood('rest'); const b = Sound.track(); Sound.boss(false); Sound.setMood(null); return { a, b }; });
-  ok('a boss fight keeps its own track whatever the mood', r.a === 'boss' && r.b === 'boss', r);
+  ok('a boss fight keeps its own track whatever the mood', r.a === 'boss_march' && r.b === 'boss_march', r);
+  // the title, the crossroads and the webbed depths have new pieces; every guardian fights to a theme that exists
+  r = await ev(() => { const out = {}; for (const th of ['title', 'cave', 'webbed']) { Sound.setTheme(th); Sound.setMood(null); out[th] = Sound.track(); } return out; });
+  ok('the title plays the Legend, the crossroads the Roads, the webbed depths the Abyss', r.title === 'legend' && r.cave === 'adventure' && r.webbed === 'abyss', r);
+  r = await ev(() => {
+    const out = {}; for (const id of WORLD.order) { const d = WORLD.rooms[id]; if (d.arena) { Sound.boss(true, d.arena.boss); out[d.arena.boss] = Sound.track(); } }
+    Sound.boss(true); out.none = Sound.track(); Sound.boss(false); Sound.setMood(null); return out;
+  });
+  const want = { guardian: 'boss_march', duelist: 'boss_march', twin: 'boss_march', thunderhoof: 'boss_march', roc: 'boss_march', brood: 'boss_abyss', weaver: 'boss_abyss', drowned: 'boss_abyss', wraith: 'boss_abyss', colossus: 'boss_abyss', queen: 'boss_abyss', bonewright: 'boss_bone', marrow: 'boss_bone', stargazer: 'boss_moon', regent: 'boss_moon', king: 'king', spore: 'boss', none: 'boss' };
+  ok('every guardian fights to its own theme (the rest to the common one), and each theme exists', Object.entries(want).every(([k, v]) => r[k] === v && meta[v]), r);
+  // the Jukebox plays what it is told, and menus give way to it
+  r = await ev(() => { const { G } = DW; G.state = 'jukebox'; G.jukePlay = 'abyss'; DW.step(1); const a = Sound.track(); G.jukePlay = null; DW.step(1); const b = Sound.track(); G.state = 'play'; G.jukePlay = null; DW.step(1); return { a, b }; });
+  ok('the Jukebox plays the chosen piece, and the quiet piece when none is chosen', r.a === 'abyss' && r.b === 'rest', r);
   ok('no page errors', errors.length === 0, errors.slice(0, 3));
   await browser.close();
   process.exit(fails ? 1 : 0);

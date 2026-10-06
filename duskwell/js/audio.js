@@ -6,7 +6,7 @@
 // and failing that to the old procedural ambience, so the game always has music.
 const Sound = (() => {
   // web audio nodes: master -> effects bus, recorded music bus, synth fallback bus
-  let ctx = null, master = null, sfxBus = null, musicBus = null, fileBus = null, delay = null;
+  let ctx = null, master = null, sfxBus = null, musicBus = null, fileBus = null, delay = null, analyser = null;
   // current state: mute, area theme, boss music, fallback score timer
   let muted = false, theme = 'title', mood = null, bossMode = false, bossTrack = 'boss', timer = null, step = 0;
   try { muted = localStorage.getItem('duskwell_mute') === '1'; } catch (e) { /* ignore */ }
@@ -16,9 +16,11 @@ const Sound = (() => {
   // scale steps used by the fallback score
   const SCALE = [0, 3, 5, 7, 10, 12, 15, 17];
   // area theme -> music file
-  const TRACK = { ending: 'ending', title: 'overture', road: 'road', town: 'hushvale', cave: 'crossroads', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'webbed', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
+  const TRACK = { ending: 'ending', title: 'legend', road: 'road', town: 'hushvale', cave: 'adventure', moss: 'moss', crystal: 'crystal', throne: 'throne', spore: 'spore', aqueduct: 'aqueduct', webbed: 'abyss', foundry: 'foundry', frost: 'frost', ember: 'ember', storm: 'storm', mirror: 'mirror', bone: 'ossuary', lunar: 'lunar' };
   // which battle theme each boss fights to (a boss key, or true for the last one); anything else gets the common one
-  const BOSS_TRACKS = { king: 'king', bonewright: 'boss_bone', marrow: 'boss_bone', stargazer: 'boss_moon', regent: 'boss_moon' };
+  const BOSS_TRACKS = { king: 'king', bonewright: 'boss_bone', marrow: 'boss_bone', stargazer: 'boss_moon', regent: 'boss_moon',
+    guardian: 'boss_march', duelist: 'boss_march', twin: 'boss_march', thunderhoof: 'boss_march', roc: 'boss_march',
+    brood: 'boss_abyss', weaver: 'boss_abyss', drowned: 'boss_abyss', wraith: 'boss_abyss', colossus: 'boss_abyss', queen: 'boss_abyss' };
   const bossTrackOf = which => (which === true ? 'king' : (typeof which === 'string' && BOSS_TRACKS[which]) || 'boss');
   // folders of the recorded music and effects
   const MUSIC_DIR = 'audio/music/', SFX_DIR = 'audio/sfx/';
@@ -41,6 +43,7 @@ const Sound = (() => {
     sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9 * sfxLvl; sfxBus.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = 0.32 * musicLvl; musicBus.connect(master);
     fileBus = ctx.createGain(); fileBus.gain.value = MUSIC_VOL * musicLvl; fileBus.connect(master);
+    try { analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.8; fileBus.connect(analyser); } catch (e) { analyser = null; }       // a branch only: it feeds the Jukebox's bars
     // soft echo for the procedural fallback score
     delay = ctx.createDelay(1.5); delay.delayTime.value = 0.42;
     const fb = ctx.createGain(); fb.gain.value = 0.42;
@@ -121,7 +124,7 @@ const Sound = (() => {
       gain.gain.linearRampToValueAtTime(info.gain, t + fade);
       src.start(t, lead);
       this.fadeOut(this.cur, bossMode ? 0.5 : 2.2);
-      this.cur = { name, src, gain };
+      this.cur = { name, src, gain, t0: t };                                  // the beat grid of the pulse (below) counts from t0
     },
     playElement(name) {
       const old = this.el;
@@ -141,6 +144,54 @@ const Sound = (() => {
       }, 50);
     },
   };
+
+  const Info = { tried: false, data: null };           // music.json read for the Jukebox before the score has started
+
+  // ------------------------------------------------------------------ the combat pulse
+  // Soft drum thumps laid on the beat grid of the piece that is playing (its tempo and key are in music.json): none when all is quiet, the
+  // first beat of each bar when danger is near, more beats as it grows, and little taps between them when it is greatest. A boss fight has
+  // its own drums, so the pulse stays out of it. It needs the buffer player (the beat grid is the buffer's own clock).
+  const Pulse = {
+    on: true, k: 0, target: 0, timer: null, cur: null, last: 0,
+    start() { if (!this.timer) this.timer = setInterval(() => this.tick(), 100); },
+    tick() {
+      if (!ctx || ctx.state !== 'running') return;
+      this.k += (this.target - this.k) * (this.target > this.k ? 0.4 : 0.07);                    // quick to rise, slow to fall
+      const cur = Score.cur, info = cur && Score.meta && Score.meta[cur.name];
+      if (!this.on || !info || !info.bpm || bossMode || muted || this.k < 0.12) { this.cur = null; return; }
+      const half = 30 / info.bpm, bpb = info.bpb || 4, now = ctx.currentTime, horizon = now + 0.3;
+      if (this.cur !== cur) { this.cur = cur; this.last = Math.floor((now - cur.t0) / half); }       // a new piece: start from the half beat now
+      const f0 = 65.41 * Math.pow(2, (info.tonic || 0) / 12) / (info.tonic > 6 ? 2 : 1);              // the tonic, around the second octave of the keyboard
+      for (let m = this.last + 1; cur.t0 + m * half < horizon; m++) {
+        const time = cur.t0 + m * half; this.last = m; if (time < now + 0.01) continue;
+        const onBeat = m % 2 === 0, beat = (m / 2) % bpb;
+        if (onBeat && beat === 0) this.thump(time, 0.35 + 0.45 * this.k, f0);
+        else if (onBeat && this.k > 0.5 && (bpb === 3 || beat === bpb / 2)) this.thump(time, 0.22 + 0.35 * this.k, f0);
+        else if (onBeat && this.k > 0.8) this.thump(time, 0.18, f0 * 1.2);
+        else if (!onBeat && this.k > 0.85) this.tap(time, 0.12 + 0.1 * (this.k - 0.85) / 0.15);
+      }
+    },
+    // a timpani: a sine that falls an octave and a half, a skin of low noise
+    thump(time, level, f0) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(f0 * 2.4, time); o.frequency.exponentialRampToValueAtTime(f0, time + 0.1);
+      g.gain.setValueAtTime(0.0001, time); g.gain.exponentialRampToValueAtTime(level, time + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, time + 0.5);
+      o.connect(g); g.connect(fileBus); o.start(time); o.stop(time + 0.55);
+      this.skin(time, level * 0.5, 170, 0.09);
+    },
+    tap(time, level) { this.skin(time, level, 520, 0.05); },
+    skin(time, level, freq, len) {
+      if (!noiseBuf) {                                                                          // the noise the effects use, made here if none has played yet
+        noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      n.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 1.1;
+      g.gain.setValueAtTime(level, time); g.gain.exponentialRampToValueAtTime(0.0001, time + len);
+      n.connect(f); f.connect(g); g.connect(fileBus); n.start(time, Math.random() * 0.5); n.stop(time + len + 0.02);
+    },
+  };
+  try { Pulse.on = localStorage.getItem('duskwell_pulse') !== '0'; } catch (e) { /* ignore */ }
 
   // ------------------------------------------------------------------ recorded effects and ambience
   // CC0 recordings (see CREDITS.md) that replace or sit under the synthesised effects. They need
@@ -332,6 +383,24 @@ const Sound = (() => {
       Score.update();
     },
     prefetch(which) { Score.prefetch(bossTrackOf(which)); },
+    // how much danger there is, 0 to 1 (the game says it every step); the pulse follows it
+    setIntensity(k) { Pulse.target = k < 0 ? 0 : k > 1 ? 1 : k; Pulse.start(); },
+    // the loop length, tempo and key of a piece (the Jukebox shows the length): from the score's own list, or fetched once for itself
+    trackInfo(name) {
+      if (!Score.meta && !Info.tried && location.protocol !== 'file:') { Info.tried = true; fetch(MUSIC_DIR + 'music.json').then(r => r.json()).then(m => { Info.data = m; }).catch(() => {}); }
+      return ((Score.meta || Info.data) || {})[name] || null;
+    },
+    pulseOn: () => Pulse.on,
+    setPulse(on) { Pulse.on = !!on; try { localStorage.setItem('duskwell_pulse', on ? '1' : '0'); } catch (e) { /* ignore */ } },
+    pulseState: () => ({ on: Pulse.on, k: Pulse.k, target: Pulse.target, running: !!Pulse.timer, playing: !!Pulse.cur }),
+    // the bars the Jukebox draws: n values from 0 to 1, from low to high pitch, or null when nothing can be measured
+    spectrum(n) {
+      if (!analyser) return null;
+      const d = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d);
+      const out = [], top = Math.floor(d.length * 0.55);
+      for (let i = 0; i < n; i++) { const a = Math.floor(Math.pow(i / n, 1.6) * top), b = Math.max(a + 1, Math.floor(Math.pow((i + 1) / n, 1.6) * top)); let m = 0; for (let j = a; j < b; j++) m = Math.max(m, d[j]); out.push(m / 255); }
+      return out;
+    },
     toggle() {
       muted = !muted;
       try { localStorage.setItem('duskwell_mute', muted ? '1' : '0'); } catch (e) { /* ignore */ }

@@ -80,7 +80,7 @@ class Song:
         ch = len(self.tracks)
         if ch >= 9:
             ch += 1                       # channel 10 is reserved for GM drums
-        self.tracks[name] = dict(program=program, ch=ch, vol=vol, pan=pan, reverb=reverb, chorus=chorus, notes=[])
+        self.tracks[name] = dict(program=program, ch=ch, vol=vol, pan=pan, reverb=reverb, chorus=chorus, notes=[], cc=[])
 
     def note(self, tr, start, dur, p, vel, human=True):
         if human:
@@ -88,6 +88,16 @@ class Song:
             start += self.rng.uniform(-0.012, 0.012) if start > 0 else 0
         self.tracks[tr]['notes'].append((max(0.0, start), max(0.05, dur), int(p), int(max(1, min(127, vel)))))
         self.length_beats = max(self.length_beats, start + dur)
+
+    def level(self, tr, bar, value):
+        """Expression (CC 11) set at a bar: how loud a part is allowed to be from there on."""
+        self.tracks[tr]['cc'].append((self.bar(bar), 11, int(value)))
+
+    def expr(self, tr, bar0, bar1, v0, v1):
+        """A swell: expression ramped from v0 to v1 between two bars."""
+        steps = max(4, int((bar1 - bar0) * 4))
+        for k in range(steps + 1):
+            self.tracks[tr]['cc'].append((self.bar(bar0) + (self.bar(bar1) - self.bar(bar0)) * k / steps, 11, int(round(v0 + (v1 - v0) * k / steps))))
 
     # ---- patterns -------------------------------------------------------------
     def bar(self, b):
@@ -148,13 +158,17 @@ class Song:
             for rep in range(2):                                  # two passes of the loop
                 for s, d, p, v in t['notes']:
                     s2 = s + rep * loop
-                    ev.append((int(s2 * tpb), 1, p, v))
+                    ev.append((int(s2 * tpb), 2, p, v))
                     ev.append((int((s2 + d) * tpb), 0, p, 0))
-            ev.sort(key=lambda e: (e[0], e[1]))
+                for tt, cc, val in t.get('cc', []):
+                    ev.append((int((tt + rep * loop) * tpb), 1, cc, val))
+            ev.sort(key=lambda e: (e[0], e[1]))                   # at one tick: notes end, controllers move, notes begin
             now = 0
-            for tick, on, p, v in ev:
-                msg = 'note_on' if on else 'note_off'
-                tr.append(mido.Message(msg, channel=ch, note=p, velocity=v, time=tick - now))
+            for tick, kind, a, b in ev:
+                if kind == 1:
+                    tr.append(mido.Message('control_change', channel=ch, control=a, value=b, time=tick - now))
+                else:
+                    tr.append(mido.Message('note_on' if kind == 2 else 'note_off', channel=ch, note=a, velocity=b, time=tick - now))
                 now = tick
             mid.tracks.append(tr)
         mid.save(path)
@@ -1084,17 +1098,328 @@ def forge():
     return s, len(prog)
 
 
+
+# =============================================================================== the long pieces
+# Five pieces of two to two and a half minutes, each with an arc: it begins quiet and low, gathers, reaches a full orchestra and ebbs
+# back into what it began with (so the loop has no seam). All in C minor, and all quote one small tune (MOTIF: a rising minor triad,
+# then a step-by-step fall), so that the title, the crossroads and the battles sound like parts of one story.
+MOTIF = 'G4:1.5 C5:0.5 Eb5:2  F5:1 Eb5:1 D5:1 C5:1'
+
+
+def mel_bars(text):
+    """How many 4-beat bars a melody string fills (checked, so a typo cannot shift a whole section)."""
+    return sum(float(t.split(':')[1]) for t in text.split()) / 4.0
+
+
+def legend():
+    """The title piece: a drone, a celesta that remembers the tune, then the tune grows into a full orchestra and returns to the drone."""
+    s = Song('legend', 76, seed=31)
+    s.track('bass', CONTRABASS, vol=100, pan=60, reverb=60)
+    s.track('cello', CELLO, vol=104, pan=48, reverb=80)
+    s.track('piano', PIANO, vol=100, pan=62, reverb=85)
+    s.track('harp', HARP, vol=96, pan=54, reverb=80)
+    s.track('celesta', CELESTA, vol=88, pan=76, reverb=95)
+    s.track('strings', STRINGS, vol=100, pan=58, reverb=80)
+    s.track('violin', VIOLIN, vol=104, pan=74, reverb=85)
+    s.track('horn', HORN, vol=104, pan=46, reverb=80)
+    s.track('brass', BRASS, vol=104, pan=68, reverb=75)
+    s.track('trumpet', TRUMPET, vol=96, pan=40, reverb=80)
+    s.track('choir', CHOIR, vol=100, pan=64, reverb=100)
+    s.track('oohs', OOHS, vol=92, pan=60, reverb=100)
+    s.track('timpani', TIMPANI, vol=108, pan=64, reverb=60)
+    s.track('taiko', TAIKO, vol=100, pan=64, reverb=60)
+    INTRO = ['Cm', 'Cm', 'Ab', 'Ab', 'Fm', 'Fm', 'G', 'G']
+    A = ['Cm', 'Ab', 'Eb', 'Bb', 'Cm', 'Ab', 'Fm', 'G']
+    B = ['Fm', 'Cm', 'Ab', 'Eb', 'Fm', 'Db', 'G', 'G']
+    C = ['Cm', 'Ab', 'Eb', 'Bb', 'Cm', 'Ab', 'Fm', 'G', 'Ab', 'Bb', 'G', 'G']
+    D = ['Cm', 'Ab', 'Eb', 'Bb', 'Fm', 'Ab', 'G', 'Cm']
+    prog = INTRO + A + B + C + D                               # 44 bars
+    for b, c in enumerate(prog):
+        sec = 0 if b < 8 else 1 if b < 16 else 2 if b < 24 else 3 if b < 36 else 4
+        s.bass('bass', b, 'Cm' if sec == 0 else c, low=24 if sec == 0 else 28, rhythm=((0, 3.9),), vel=(38, 50, 62, 80, 46)[sec])
+        if sec in (0, 4):                                        # the drone's fifth over the intro and the outro
+            s.pad('strings', b, 'Cm', bars=1, low=43, count=2, vel=30 if sec == 0 else 34)
+        if sec >= 1:
+            s.arp('piano', b, c, [0, 2, 3, 2, 1, 2, 3, 2], step=0.5, low=48, vel=(0, 46, 54, 60, 38)[sec], dur=0.9)
+        if sec in (2, 3):
+            s.arp('harp', b, c, [0, 1, 2, 3, 2, 1], step=0.5, low=60, vel=50 if sec == 2 else 58, dur=1.4)
+            s.pad('strings', b, c, low=48, count=4, vel=58 if sec == 2 else 78)
+        if sec == 2:
+            s.hits('timpani', b, bass_note(c, 36), (0, 2), dur=0.9, vel=74)
+        if sec == 3:
+            s.hits('timpani', b, bass_note(c, 36), (0, 1.5, 2), dur=0.6, vel=96)
+            s.hits('taiko', b, 48, (0, 2, 2.75, 3.5), dur=0.3, vel=80)
+            s.pad('choir', b, c, low=55, count=3, vel=76)
+            s.pad('brass', b, c, low=48, count=3, vel=62)
+        if sec == 4:
+            s.pad('oohs', b, c, low=55, count=3, vel=36)
+    # intro: the celesta recalls the tune, bar by bar further from silence
+    for b0, v in ((2, 40), (6, 46)):
+        s.melody('celesta', b0, 'G5:1.5 C6:0.5 Eb6:2', vel=v)
+    s.melody('cello', 4, 'C3:4 Ab2:4 F2:4 G2:4', vel=44)
+    # A: the tune, on the cello, the piano's arpeggio beneath
+    A_MEL = 'G4:1.5 C5:0.5 Eb5:2  Eb5:1.5 C5:0.5 Ab4:2  G4:1.5 Bb4:0.5 Eb5:2  D5:1.5 F5:0.5 D5:1 Bb4:1  C5:1.5 Eb5:0.5 G5:2  F5:1 Eb5:1 C5:2  Ab4:1 C5:1 F5:2  D5:2 B4:1 G4:1'
+    assert mel_bars(A_MEL) == 8
+    s.melody('cello', 8, A_MEL, vel=78)
+    s.melody('violin', 8, 'r:32', vel=1)
+    # B: the horn lifts it, strings and timpani gather
+    B_MEL = 'C5:2 F5:1 Ab5:1  G5:1.5 Eb5:0.5 C5:2  C5:1 Eb5:1 Ab5:2  G5:2 Eb5:1 Bb4:1  Ab5:1.5 F5:0.5 C5:2  Db5:1 F5:1 Ab5:2  B4:1 D5:1 G5:2  F5:2 D5:2'
+    assert mel_bars(B_MEL) == 8
+    s.melody('horn', 16, B_MEL, vel=86)
+    s.melody('violin', 16, B_MEL, vel=70, shift=12)
+    # C: the whole orchestra, the tune an octave up in the violins and in the brass
+    C_MEL = 'G5:1.5 C6:0.5 Eb6:2  Eb6:1.5 C6:0.5 Ab5:2  G5:1.5 Bb5:0.5 Eb6:2  D6:1.5 F6:0.5 D6:1 Bb5:1  C6:1.5 Eb6:0.5 Eb6:2  C6:1 Ab5:1 F5:2  Ab5:1 C6:1 F6:2  D6:2 B5:1 G5:1  Ab5:2 C6:2  Bb5:2 D6:2  B5:4  D6:4'
+    assert mel_bars(C_MEL) == 12
+    s.melody('violin', 24, C_MEL, vel=98)
+    s.melody('brass', 24, C_MEL, vel=92, shift=-12)
+    s.melody('trumpet', 28, 'C6:1.5 Eb6:0.5 G6:2  F6:1 Eb6:1 C6:2  Ab5:1 C6:1 F6:2  D6:2 B5:1 G5:1', vel=86)
+    # D: back to the cello and the celesta, the drone returns
+    D_MEL = 'G4:1.5 C5:0.5 Eb5:2  Eb5:1.5 C5:0.5 Ab4:2  G4:1.5 Bb4:0.5 Eb5:2  D5:1.5 F5:0.5 D5:1 Bb4:1  C5:1 Ab4:1 F4:2  Ab4:2 C5:2  D5:2 B4:2  C5:4'
+    assert mel_bars(D_MEL) == 8
+    s.melody('cello', 36, D_MEL, vel=64)
+    s.melody('celesta', 40, 'G5:1.5 C6:0.5 Eb6:2  r:4  C6:8', vel=36)
+    # the swells: strings and choir rise through the build, ebb through the end
+    s.level('strings', 0, 70); s.expr('strings', 8, 16, 60, 84); s.expr('strings', 16, 24, 84, 108); s.expr('strings', 24, 36, 108, 127); s.expr('strings', 36, 44, 127, 60)
+    s.level('choir', 24, 96); s.expr('choir', 24, 30, 70, 127); s.expr('choir', 30, 36, 127, 127)
+    s.level('brass', 24, 100); s.expr('brass', 24, 28, 80, 127); s.expr('brass', 32, 36, 127, 70)
+    s.level('oohs', 36, 60); s.expr('oohs', 36, 44, 100, 40)
+    return s, len(prog)
+
+
+def adventure():
+    """The crossroads: a travelling piece, plucked strings and a flute, the tune turned bright in the middle."""
+    s = Song('adventure', 84, seed=32)
+    s.track('pizz', PIZZ, vol=100, pan=50, reverb=70)
+    s.track('harp', HARP, vol=100, pan=60, reverb=80)
+    s.track('flute', FLUTE, vol=104, pan=72, reverb=85)
+    s.track('oboe', OBOE, vol=96, pan=42, reverb=85)
+    s.track('cello', CELLO, vol=100, pan=46, reverb=75)
+    s.track('bass', CONTRABASS, vol=96, pan=58, reverb=55)
+    s.track('horn', HORN, vol=100, pan=66, reverb=80)
+    s.track('strings', SLOW_STRINGS, vol=90, pan=62, reverb=90)
+    s.track('glock', GLOCK, vol=84, pan=78, reverb=90)
+    s.track('timpani', TIMPANI, vol=100, pan=64, reverb=60)
+    s.track('taiko', TAIKO, vol=92, pan=64, reverb=60)
+    A = ['Cm', 'Bb', 'Ab', 'Bb', 'Cm', 'Eb', 'Fm', 'G']
+    B = ['Ab', 'Eb', 'Bb', 'Cm', 'Ab', 'Eb', 'Fm', 'G']
+    Cb = ['Fm', 'Fm', 'Db', 'Db', 'Ab', 'Ab', 'G', 'G']
+    Dd = ['Ab', 'Bb', 'Cm', 'Cm', 'Fm', 'G', 'Cm', 'Cm']
+    prog = A + B + Cb + A + Dd                                  # 40 bars
+    for b, c in enumerate(prog):
+        sec = b // 8
+        s.arp('pizz', b, c, [0, 1, 2, 1, 3, 2, 1, 2], step=0.5, low=48, vel=(58, 64, 40, 66, 46)[sec], dur=0.3, accent=10)
+        s.bass('bass', b, c, low=30, rhythm=((0, 1.5), (2, 1.5)) if sec != 2 else ((0, 3.8),), vel=(60, 68, 56, 68, 56)[sec])
+        if sec in (1, 3):
+            s.arp('harp', b, c, [0, 2, 1, 3, 2, 1], step=0.5, low=60, vel=52, dur=1.2)
+            s.hits('timpani', b, bass_note(c, 36), (0, 2), dur=0.6, vel=70)
+        if sec == 1:
+            s.hits('taiko', b, 48, (1, 3), dur=0.25, vel=66)
+        if sec in (1, 2, 3):
+            s.pad('strings', b, c, low=48, count=4, vel=44 if sec == 2 else 54)
+        if sec == 1 or sec == 3:
+            s.pad('horn', b, c, low=43, count=3, vel=48)
+    FL_A = 'G5:1 Eb5:0.5 F5:0.5 G5:1 C6:1  Bb5:1 G5:1 F5:1 D5:1  Eb5:1 F5:0.5 G5:0.5 Ab5:1 G5:1  F5:1.5 D5:0.5 Bb4:2  C5:1 Eb5:1 G5:1 Eb5:1  Eb5:1.5 G5:0.5 Bb5:2  Ab5:1 G5:0.5 F5:0.5 Ab5:1 C6:1  B5:2 D6:1 B5:1'
+    FL_B = 'Eb6:1.5 C6:0.5 Ab5:2  G5:1 Bb5:1 Eb6:2  D6:1.5 Bb5:0.5 F5:2  Eb5:1 G5:1 C6:2  C6:1 Eb6:1 Ab5:2  Bb5:1.5 G5:0.5 Eb5:2  Ab5:1 C6:1 F6:2  D6:2 B5:1 G5:1'
+    OB_C = 'Ab4:2 C5:2  F5:3 r:1  F5:2 Ab5:2  Db5:4  C5:2 Eb5:2  Eb5:3 r:1  D5:2 B4:2  G4:4'
+    HN_D = 'C5:2 Eb5:2  D5:2 F5:2  Eb5:4  r:4  C5:2 Ab4:2  B4:2 D5:2  C5:4  r:4'
+    for t in (FL_A, FL_B, OB_C, HN_D):
+        assert mel_bars(t) == 8, t
+    s.melody('flute', 0, FL_A, vel=80)
+    s.melody('flute', 8, FL_B, vel=88)
+    s.melody('oboe', 16, OB_C, vel=74)
+    s.melody('cello', 16, 'C3:4 C3:4 Db3:4 Db3:4 Ab2:4 Ab2:4 G2:4 G2:4', vel=60)
+    s.melody('flute', 24, FL_A, vel=84)
+    s.melody('oboe', 24, FL_A, vel=60, shift=-12)
+    s.melody('horn', 32, HN_D, vel=76)
+    s.melody('glock', 32, 'G5:1.5 C6:0.5 Eb6:2  r:12  G5:1.5 C6:0.5 Eb6:2  r:12', vel=48)
+    s.level('strings', 0, 60); s.expr('strings', 8, 16, 70, 100); s.expr('strings', 16, 24, 50, 80); s.expr('strings', 24, 32, 100, 120); s.expr('strings', 32, 40, 100, 50)
+    return s, len(prog)
+
+
+def abyss():
+    """The webbed depths: a low drone, tolling bells, a heartbeat that quickens, a swell of brass and choir, and the ebb."""
+    s = Song('abyss', 66, seed=33)
+    s.track('bass', CONTRABASS, vol=108, pan=60, reverb=55)
+    s.track('trombone', TROMBONE, vol=96, pan=54, reverb=70)
+    s.track('pad', 89, vol=90, pan=64, reverb=100)             # warm pad
+    s.track('sweep', 95, vol=80, pan=64, reverb=100)           # sweep pad
+    s.track('trem', TREMOLO, vol=96, pan=70, reverb=95)
+    s.track('bells', TUBULAR, vol=92, pan=74, reverb=100)
+    s.track('cello', CELLO, vol=100, pan=46, reverb=80)
+    s.track('choir', CHOIR, vol=100, pan=64, reverb=100)
+    s.track('horn', HORN, vol=100, pan=44, reverb=85)
+    s.track('brass', BRASS, vol=104, pan=68, reverb=80)
+    s.track('violin', VIOLIN, vol=96, pan=76, reverb=90)
+    s.track('timpani', TIMPANI, vol=108, pan=64, reverb=60)
+    s.track('taiko', TAIKO, vol=100, pan=64, reverb=60)
+    P1 = ['Cm', 'Cm', 'Cm', 'Cm', 'Db', 'Db', 'Cm', 'Cm']
+    P2 = ['Cm', 'Db', 'Cm', 'Db', 'Ab', 'Bb', 'Cdim', 'G']
+    P3 = ['Cm', 'Db', 'Bb', 'Ab', 'Cm', 'Db', 'Fm', 'G']
+    P4 = ['Cm', 'Cm', 'Db', 'Db', 'Ab', 'Bb', 'Cdim', 'G']
+    P5 = ['Cm', 'Ab', 'Fm', 'Db', 'Cm', 'Db', 'Cm', 'Cm']
+    prog = P1 + P2 + P3 + P4 + P5                               # 40 bars
+    for b, c in enumerate(prog):
+        sec = b // 8
+        s.bass('bass', b, 'Cm', low=24, rhythm=((0, 3.95),), vel=(46, 56, 64, 82, 50)[sec])
+        s.bass('bass', b, 'Cm', low=36, rhythm=((0, 3.95),), vel=(0, 40, 50, 70, 36)[sec]) if sec else None
+        s.pad('pad', b, c, low=48, count=4, vel=(40, 46, 54, 66, 40)[sec])
+        s.pad('sweep', b, c, low=60, count=3, vel=(0, 30, 40, 52, 30)[sec]) if sec else None
+        if b >= 4:
+            s.pad('trem', b, c, low=67, count=3, vel=(30, 36, 44, 60, 34)[sec])
+        if sec >= 1:                                            # a heartbeat, from the second section on
+            s.hits('timpani', b, bass_note('Cm', 36), (0,), dur=0.8, vel=(0, 66, 78, 100, 60)[sec])
+            s.hits('timpani', b, bass_note('Cm', 36), (0.75,), dur=0.6, vel=(0, 46, 56, 78, 40)[sec])
+        if sec in (2, 3):
+            s.hits('timpani', b, bass_note('Cm', 36), (2, 2.75), dur=0.6, vel=70 if sec == 2 else 90)
+        if sec == 3:
+            s.hits('taiko', b, 46, (0, 1, 2, 3), dur=0.4, vel=84)
+            s.pad('brass', b, c, low=48, count=3, vel=70)
+            s.pad('horn', b, c, low=43, count=3, vel=68)
+        if sec in (2, 3):
+            s.pad('choir', b, c, low=55, count=3, vel=52 if sec == 2 else 74)
+        if sec in (1, 2, 3) and b % 2 == 0:
+            s.note('trombone', s.bar(b), s.bar(2) - 0.1, bass_note('Cm', 36), 60 if sec < 3 else 84)
+    # the tolling bells over the first two sections, then the tune once, low, in the cello and the horn
+    s.melody('bells', 0, 'C5:8 Eb5:8 Db5:8 C5:8', vel=50)
+    s.melody('bells', 16, 'C5:4 Eb5:4 G5:4 Db5:4', vel=56)
+    CE = 'C3:3 Eb3:1 Db3:4  C3:3 Ab2:1 G2:4  C3:2 Eb3:2 G3:2 F3:2  Eb3:3 D3:1 C3:4'
+    assert mel_bars(CE) == 8
+    s.melody('cello', 16, CE, vel=70)
+    s.melody('horn', 24, CE, vel=96, shift=12)
+    s.melody('violin', 28, 'G5:1.5 C6:0.5 Eb6:2  F6:1 Eb6:1 D6:1 C6:1  Ab5:4  G5:4', vel=82)
+    s.melody('bells', 32, 'C5:8 Eb5:8 C5:16', vel=48)
+    s.level('trem', 0, 40); s.expr('trem', 4, 16, 40, 90); s.expr('trem', 16, 28, 90, 127); s.expr('trem', 28, 40, 127, 40)
+    s.level('choir', 16, 60); s.expr('choir', 16, 28, 60, 127); s.expr('choir', 28, 36, 127, 50)
+    s.level('brass', 24, 70); s.expr('brass', 24, 32, 70, 127); s.expr('brass', 32, 36, 127, 60)
+    s.level('horn', 24, 70); s.expr('horn', 24, 32, 70, 127); s.expr('horn', 32, 36, 127, 60)
+    return s, len(prog)
+
+
+def boss_abyss():
+    """A deep guardian: a driving low ostinato, brass in the old tune bent dark, a choir, a breakdown and a climax."""
+    s = Song('boss_abyss', 100, seed=34)
+    s.track('bass', CONTRABASS, vol=104, pan=60, reverb=50)
+    s.track('cello', CELLO, vol=108, pan=46, reverb=65)
+    s.track('strings', STRINGS, vol=100, pan=56, reverb=70)
+    s.track('violin', VIOLIN, vol=104, pan=76, reverb=75)
+    s.track('trombone', TROMBONE, vol=104, pan=52, reverb=70)
+    s.track('horn', HORN, vol=104, pan=44, reverb=75)
+    s.track('brass', BRASS, vol=108, pan=68, reverb=70)
+    s.track('trumpet', TRUMPET, vol=96, pan=38, reverb=75)
+    s.track('choir', CHOIR, vol=100, pan=64, reverb=95)
+    s.track('hit', 55, vol=96, pan=64, reverb=70)               # orchestra hit
+    s.track('timpani', TIMPANI, vol=110, pan=64, reverb=55)
+    s.track('taiko', TAIKO, vol=104, pan=64, reverb=55)
+    A = ['Cm', 'Cm', 'Db', 'Db', 'Cm', 'Cm', 'Bb', 'G']
+    B = ['Ab', 'Ab', 'Fm', 'G', 'Ab', 'Bb', 'Cm', 'G']
+    C = ['Cm', 'Db', 'Cm', 'Db', 'Ab', 'Bb', 'G', 'G']
+    D = ['Cm', 'Cm', 'Cm', 'G']
+    E = ['Ab', 'Ab', 'Fm', 'G', 'Ab', 'Bb', 'Cm', 'G', 'Cm', 'Db', 'Bb', 'G']
+    F = ['Cm', 'Cm', 'Db', 'Db', 'Cm', 'Cm', 'Bb', 'G']
+    prog = A + B + C + D + E + F                                # 48 bars
+    riff = [0, 0, 3, 0, 0, 7, 5, 0]                              # semitones above the root, in eighths
+    for b, c in enumerate(prog):
+        sec = 0 if b < 8 else 1 if b < 16 else 2 if b < 24 else 3 if b < 28 else 4 if b < 40 else 5
+        root = bass_note(c, 36)
+        if sec != 3:
+            for k, off in enumerate(riff):                      # the ostinato in eighths, the accents on the first and the fifth
+                s.note('cello', s.bar(b) + 0.5 * k, 0.4, root + off, 96 if k in (0, 5) else 70)
+                s.note('bass', s.bar(b) + 0.5 * k, 0.4, root - 12 + off if off in (0, 7) else root - 12, 84 if k in (0, 5) else 62)
+        s.hits('timpani', b, root, (0, 1.5, 2.5) if sec in (0, 5) else (0, 1, 2, 3), dur=0.5, vel=96)
+        if sec in (1, 2, 4):
+            s.hits('taiko', b, 46, (0, 0.75, 2, 2.75, 3.5), dur=0.3, vel=88)
+        if sec in (1, 2, 4, 5):
+            s.pad('strings', b, c, low=48, count=4, vel=70)
+        if sec in (2, 4):
+            s.pad('choir', b, c, low=55, count=3, vel=82)
+            s.pad('brass', b, c, low=48, count=3, vel=66)
+        if sec == 3:
+            s.pad('strings', b, c, low=48, count=4, vel=56)
+            s.pad('choir', b, c, low=55, count=3, vel=50)
+        if sec != 3 and b % 2 == 0:
+            s.note('hit', s.bar(b), 0.8, root + 12, 92 if sec in (2, 4) else 78)
+        if sec in (1, 4):
+            s.pad('trombone', b, c, low=36, count=3, vel=76)
+    B_MEL = 'C5:2 Eb5:1 G5:1  Ab5:3 G5:1  F5:2 Ab5:2  B4:1 D5:1 G5:2  Ab5:2 C6:2  Bb5:2 D6:2  Eb6:3 C6:1  D6:2 B5:2'
+    assert mel_bars(B_MEL) == 8
+    s.melody('brass', 8, B_MEL, vel=96, shift=-12)
+    s.melody('violin', 8, B_MEL, vel=84)
+    s.melody('horn', 16, 'C5:3 Db5:1 C5:3 Db5:1  C5:3 Db5:1 Ab4:4  Ab4:2 Bb4:2 B4:4  G4:8', vel=92)
+    s.melody('trumpet', 20, 'G5:2 Ab5:2  Bb5:2 B5:2  C6:4  B5:4', vel=88)
+    s.melody('cello', 24, 'C3:4 C3:4 C3:4 G2:4', vel=80)
+    s.melody('brass', 28, B_MEL + ' ' + 'Eb6:2 C6:2  Ab5:2 C6:2  F6:3 Ab5:1  G5:4', vel=100)
+    s.melody('violin', 28, B_MEL + ' ' + 'Eb6:2 C6:2  Ab5:2 C6:2  F6:3 Ab5:1  G5:4', vel=96, shift=12)
+    s.level('choir', 16, 80); s.expr('choir', 16, 24, 80, 127)
+    s.level('brass', 16, 90)
+    return s, len(prog)
+
+
+def boss_march():
+    """A guardian in armour: a march in C minor, trumpets and horns on the tune, plucked and bowed strings beneath."""
+    s = Song('boss_march', 88, seed=35)
+    s.track('bass', CONTRABASS, vol=104, pan=60, reverb=50)
+    s.track('cello', CELLO, vol=100, pan=46, reverb=65)
+    s.track('strings', STRINGS, vol=100, pan=56, reverb=70)
+    s.track('pizz', PIZZ, vol=96, pan=50, reverb=60)
+    s.track('violin', VIOLIN, vol=104, pan=76, reverb=75)
+    s.track('horn', HORN, vol=104, pan=44, reverb=75)
+    s.track('trumpet', TRUMPET, vol=100, pan=38, reverb=75)
+    s.track('brass', BRASS, vol=104, pan=68, reverb=70)
+    s.track('choir', CHOIR, vol=92, pan=64, reverb=95)
+    s.track('timpani', TIMPANI, vol=108, pan=64, reverb=55)
+    s.track('taiko', TAIKO, vol=104, pan=64, reverb=55)
+    A = ['Cm', 'Cm', 'Ab', 'Bb', 'Cm', 'Cm', 'Fm', 'G']
+    B = ['Eb', 'Bb', 'Ab', 'Fm', 'Eb', 'Bb', 'Fm', 'G']
+    A2 = A
+    Cc = ['Ab', 'Ab', 'Bb', 'Bb', 'Cm', 'Cm', 'G', 'G']
+    Ee = ['Cm', 'Ab', 'Fm', 'G', 'Cm', 'Ab', 'G', 'Cm']
+    prog = A + B + A2 + Cc + Ee                                 # 40 bars
+    for b, c in enumerate(prog):
+        sec = b // 8
+        root = bass_note(c, 36)
+        s.bass('bass', b, c, low=28, rhythm=((0, 0.9), (1, 0.9), (2, 0.9), (3, 0.9)), vel=(80, 88, 92, 84, 76)[sec])
+        s.arp('pizz', b, c, [0, 2, 1, 2], step=0.5, low=48, vel=(60, 66, 66, 52, 58)[sec], dur=0.25, accent=14)
+        s.hits('timpani', b, root, (0, 2), dur=0.6, vel=(86, 94, 96, 80, 86)[sec])
+        s.hits('taiko', b, 46, (1, 3), dur=0.25, vel=(76, 86, 90, 70, 76)[sec])
+        if sec in (1, 2, 3):
+            s.pad('strings', b, c, low=48, count=4, vel=66)
+        if sec in (2, 4):
+            s.pad('choir', b, c, low=55, count=3, vel=66)
+            s.pad('brass', b, c, low=48, count=3, vel=58)
+    TR_A = 'C5:1.5 Eb5:0.5 G5:1 Eb5:1  Eb5:1.5 C5:0.5 Ab4:2  F5:1 Ab5:1 G5:1 F5:1  D5:3 r:1  C5:1.5 Eb5:0.5 G5:1 C6:1  C6:1.5 Ab5:0.5 F5:2  Ab5:1 G5:1 F5:1 Ab5:1  B4:1 D5:1 G5:2'
+    TR_B = 'Eb5:2 G5:2  Bb5:2 D6:2  C6:2 Eb6:2  Ab5:3 r:1  Eb5:2 G5:2  F5:2 Bb5:2  Ab5:2 C6:2  D6:2 B5:2'
+    BR_C = 'Ab4:4 C5:4  Bb4:4 D5:4  Eb5:4 G5:4  D5:4 B4:4'
+    EE = 'G4:1.5 C5:0.5 Eb5:2  F5:1 Eb5:1 D5:1 C5:1  C5:1.5 Ab4:0.5 F4:2  D5:2 B4:2  G4:1.5 C5:0.5 Eb5:2  Ab5:2 F5:2  D5:2 B4:2  C5:4'
+    for t in (TR_A, TR_B, BR_C, EE):
+        assert mel_bars(t) == 8, t
+    s.melody('trumpet', 0, TR_A, vel=90)
+    s.melody('horn', 0, TR_A, vel=80, shift=-12)
+    s.melody('trumpet', 8, TR_B, vel=94)
+    s.melody('violin', 8, TR_B, vel=84, shift=12)
+    s.melody('trumpet', 16, TR_A, vel=96)
+    s.melody('violin', 16, TR_A, vel=88, shift=12)
+    s.melody('brass', 24, BR_C, vel=92)
+    s.melody('cello', 24, 'Ab2:4 Ab2:4 Bb2:4 Bb2:4 C3:4 C3:4 G2:4 G2:4', vel=76)
+    s.melody('horn', 32, EE, vel=84)
+    s.melody('violin', 32, EE, vel=76, shift=12)
+    s.level('choir', 16, 70); s.expr('choir', 16, 24, 70, 120); s.expr('choir', 32, 40, 120, 60)
+    return s, len(prog)
+
+
 PIECES = [overture, hushvale, crossroads, spore, moss, aqueduct, crystal, webbed, throne, foundry, frost, ember, storm, mirror, ossuary, lunar, boss, boss_bone, boss_moon, king, ending,
-          fiddler, wizard, rest, road, forge]
+          fiddler, wizard, rest, road, forge, legend, adventure, abyss, boss_abyss, boss_march]
 
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'build'
     os.makedirs(out, exist_ok=True)
-    loops = {}
+    loops, beats = {}, {}
     for fn in PIECES:
         song, bars = fn()
         seconds = song.save(os.path.join(out, song.name + '.mid'), bars)
         loops[song.name] = round(seconds, 4)
+        beats[song.name] = {'bpm': song.bpm, 'bpb': song.bpb}
         print('%-10s %3d bars  %5.1f s  %d tracks' % (song.name, bars, seconds, len(song.tracks)))
     with open(os.path.join(out, 'loops.json'), 'w') as f:
         json.dump(loops, f, indent=1)
+    with open(os.path.join(out, 'beats.json'), 'w') as f:                 # the tempo and the beats to a bar, for the game's pulse layer
+        json.dump(beats, f, indent=1)

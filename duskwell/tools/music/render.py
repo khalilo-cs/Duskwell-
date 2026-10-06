@@ -66,12 +66,19 @@ def main():
     with tempfile.TemporaryDirectory() as work:
         run(sys.executable, os.path.join(HERE, 'compose.py'), work)
         loops = json.load(open(os.path.join(work, 'loops.json')))
-        only = set(sys.argv[2:])
+        beats = json.load(open(os.path.join(work, 'beats.json')))
+        args = sys.argv[2:]
+        meta_only = '--meta' in args                    # only refresh the tempo of every piece in music.json, render nothing
+        only = set(a for a in args if not a.startswith('--'))
         meta_path = os.path.join(out, 'music.json')
-        meta = json.load(open(meta_path)) if only and os.path.exists(meta_path) else {}
+        meta = json.load(open(meta_path)) if (only or meta_only) and os.path.exists(meta_path) else {}
         for name, sec in sorted(loops.items()):
-            if not only or name in only:
+            if meta_only:
+                if name in meta:
+                    meta[name].update(beats[name])
+            elif not only or name in only:
                 meta[name] = render(name, sec, work, out)
+                meta[name].update(beats[name])
         meta = dict(sorted(meta.items()))
     with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=1)

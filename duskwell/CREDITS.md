@@ -62,3 +62,9 @@ fantasy and Metroidvania motifs; only the ideas are shared.
 
 ## The shop, forge, wizard, road and menu pieces
 The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `road.mp3`, `rest.mp3`) are original compositions written in `tools/music/compose.py` and played with the FluidR3 GM SoundFont as above. Their tunes are written from scratch; none of them is taken from, or arranged from, an existing song.
+
+## The title, crossroads, abyss and two battle pieces
+`audio/music/legend.mp3`, `adventure.mp3`, `abyss.mp3`, `boss_abyss.mp3` and `boss_march.mp3` are original compositions written in `tools/music/compose.py` and played with the FluidR3 GM SoundFont as above. Their tunes are written from scratch; none of them is taken from, or arranged from, an existing song. `tools/music/tonic.py` only measures the bass of the rendered pieces to find the key the combat pulse is tuned to.
+
+## The Jukebox, the combat pulse and the echo stones
+`js/jukebox.js`, `js/echo.js` and the pulse in `js/audio.js` are original code. The pulse is a synthesised drum (a sine that falls an octave and a half and a little band-passed noise); no recording is used for it.

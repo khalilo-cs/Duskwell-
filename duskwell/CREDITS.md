@@ -80,3 +80,7 @@ The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `ro
 
 ## The loose parts of the creatures and the cracked mask
 `art/creatures/shards.webp` is cut from the owner's sheet of creatures (`art/source/creatures/_sheet_creatures2_states.png`, the "Parts" area and the effect picture of each panel) by `tools/sprites/cut_shards.py`; `js/art_shards.js` makes the parts fly and flashes the effect when a creature strikes. The cracked mask is the owner's icon sheet (`art/source/icons/weapons_cloaks_charms_ui.png`), cut by `tools/sprites/cut_icons.py`.
+
+## The mossy stone tile sheet
+`art/tiles/moss.webp` is cut from the owner's sheet (`art/source/tiles_hd/sheet_moss_tiles.png`) by `tools/sprites/cut_moss.py`; `js/art_moss.js` lays the pieces in the rooms of Mossgrove, Sporewood, the Aqueduct and Cinderdeep.
+

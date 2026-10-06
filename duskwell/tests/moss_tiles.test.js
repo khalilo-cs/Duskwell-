@@ -1,4 +1,4 @@
-// The mossy stone tile sheet: all 116 pieces are cut into the atlas and every one of them is used by the rooms of four areas (Mossgrove,
+// The mossy stone tile sheet: all 117 pieces are cut into the atlas and every one of them is used by the rooms of four areas (Mossgrove,
 // Sporewood, the Aqueduct, Cinderdeep). What is laid in a room: rock blocks, ground tops, hanging moss, arches, plates, standing and
 // hanging things, spikes; none of it on a door, a bench or a pickup, every standing thing on rock with free air above, every hanging thing
 // under rock with free air below, the same each time, and the other areas are left as they were.
@@ -20,7 +20,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     };
     probe.complete ? go() : probe.onload = go;
   }));
-  ok('116 pieces of the sheet are in the atlas, all inside the picture', r.n === 116 && r.bad.length === 0, r);
+  ok('117 pieces of the sheet are in the atlas, all inside the picture', r.n === 117 && r.bad.length === 0, r);
   ok('they are the sheet\'s groups: 7 blocks, 6 tiles, 14 plates, 11 ground tops, 16 spike pieces, 11 water and 4 lava tiles, 5 hangings', r.groups.fill === 7 && r.groups.tile === 6 && r.groups.isl === 14 && r.groups.top === 11 && r.groups.spike === 16 && r.groups.water === 11 && r.groups.lava === 4 && r.groups.hang === 5, r.groups);
   ok('every ground top and plate has the line where its stone begins', r.topsWithCap && r.caps >= 24, r.caps);
   r = await ev(() => { const u = MossTiles.used(); return { missing: Object.keys(MOSS_TILES).filter(n => !u.has(n)), extra: [...u].filter(n => !MOSS_TILES[n]) }; });

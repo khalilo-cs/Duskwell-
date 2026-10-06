@@ -20,7 +20,7 @@ const MossTiles = (() => {
   const FILLS = ['fill_0', 'fill_1', 'fill_2', 'fill_3', 'fill_4', 'fill_5', 'fill_6'];
   const ALL_TOPS = ['top_0', 'top_1', 'top_2', 'top_3', 'top_4', 'top_5', 'top_6', 'top_7', 'top_8', 'top_9'];
   // [piece, weight, glow colour or null]; the props that need a tall room are told apart by their own height
-  const P_SMALL = [['prop_crate_tall', 3], ['prop_fence', 3], ['prop_gate_ruin', 2], ['prop_barrel_spiked', 2], ['prop_chests', 2], ['prop_panel', 2], ['prop_spike_stone', 2], ['prop_stone_s', 2],
+  const P_SMALL = [['prop_crate_tall', 3], ['prop_fence', 3], ['prop_gate_ruin', 2], ['prop_barrel_spiked', 2], ['prop_chests', 2], ['prop_panel', 2], ['prop_spike_stone', 2], ['prop_spire_small', 2], ['prop_stone_s', 2],
     ['prop_thorn_bush', 2], ['prop_planks', 2], ['prop_slab', 2], ['prop_crate_dark', 2], ['prop_crate_cross', 2], ['prop_ruin_moss', 2], ['prop_cross', 2], ['prop_planks_wall', 1]];
   const P_TALL = [['prop_pillar_a', 3], ['prop_pillar_b', 3], ['prop_columns', 3], ['prop_tree_dead', 3], ['prop_tree_glow', 2, '#ffb060'], ['prop_ruin_candle', 2, '#ffb060'], ['prop_spire', 2],
     ['prop_window_big', 1, '#ffb060'], ['prop_ruin_gate', 2], ['prop_window_small', 2, '#ffb060'], ['prop_pillar_thin', 2], ['prop_plank_pillar', 2], ['prop_pillar_vine', 2],

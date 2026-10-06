@@ -11,11 +11,12 @@ const Diff = (() => {
   const tier = area => Math.max(0, ORDER.indexOf(area));
   // the three settings the player picks (title and pause menus); every number below is for 'normal' and these factors scale it:
   // hp and boss for health, tempo and sight for how fast and how far the creatures act, innate for the cleverness they are born with
-  // (added to the depth's own level), flinch for how far a blow pushes them, grace for the seconds of safety after a wound, fill for the soul a blow gathers
+  // (added to the depth's own level), flinch for how far a blow pushes them, grace for the seconds of safety after a wound, fill for the soul a blow gathers,
+  // pace for how long a guardian waits between and inside its attacks (smaller is quicker), haz for how often the hall itself strikes during its fight
   const MODES = {
-    easy:   { ar: 'سهل', en: 'Easy', hp: 0.75, boss: 0.8, tempo: 0.94, sight: 0.9, innate: -1, flinch: 1.15, grace: 1.35, fill: 1.25 },
-    normal: { ar: 'عادي', en: 'Normal', hp: 1, boss: 1, tempo: 1, sight: 1, innate: 0, flinch: 1, grace: 1, fill: 1 },
-    hard:   { ar: 'صعب', en: 'Hard', hp: 1.3, boss: 1.25, tempo: 1.07, sight: 1.12, innate: 1, flinch: 0.85, grace: 0.9, fill: 0.7 },
+    easy:   { ar: 'سهل', en: 'Easy', hp: 0.75, boss: 0.8, tempo: 0.94, sight: 0.9, innate: -1, flinch: 1.15, grace: 1.35, fill: 1.25, pace: 1, haz: 0 },
+    normal: { ar: 'عادي', en: 'Normal', hp: 1, boss: 1, tempo: 1, sight: 1, innate: 0, flinch: 1, grace: 1, fill: 1, pace: 0.88, haz: 1 },
+    hard:   { ar: 'صعب', en: 'Hard', hp: 1.3, boss: 1.25, tempo: 1.07, sight: 1.12, innate: 1, flinch: 0.85, grace: 0.9, fill: 0.7, pace: 0.8, haz: 1.5 },
   };
   const ORDER_OF_MODES = ['easy', 'normal', 'hard'];
   let mode = 'normal';
@@ -29,7 +30,11 @@ const Diff = (() => {
     nextMode() { return ORDER_OF_MODES[(ORDER_OF_MODES.indexOf(mode) + 1) % ORDER_OF_MODES.length]; },
     // multiplier on the health of the enemies and bosses of an area
     enemyHp: area => (1.25 + 0.025 * tier(area)) * M().hp,
-    bossHp: area => (1.2 + 0.02 * tier(area)) * M().boss,
+    bossHp: area => (1.55 + 0.03 * tier(area)) * M().boss,
+    // a guardian acts quicker than the creatures of its hall, its pauses and wind-ups are shorter (pace, 1 = the old speed), and the hall itself fights back (haz: 0 none)
+    bossTempo: area => (1.06 + 0.012 * tier(area)) * M().tempo,
+    get bossPace() { return M().pace; },
+    get hazard() { return M().haz; },
     // how fast the creatures of an area act (their clocks run this much faster) and how far they notice the hero
     tempo: area => (1 + 0.01 * tier(area)) * M().tempo,
     sight: area => (1.05 + 0.01 * tier(area)) * M().sight,

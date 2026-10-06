@@ -188,10 +188,10 @@ class Drip {
 // ------------------------------------------------------------------ registry
 const Mech = {
   // build the machines of a room when it is entered
-  init(def) {
+  init(def, more) {
     const L = G.level, m = { crumbles: [], movers: [], saws: [], levers: [], drips: [] };
     G.mech = m;
-    for (const o of def.mech || []) {
+    for (const o of (def.mech || []).concat(more || [])) {
       if (o.type === 'mover') m.movers.push(new Mover(o));
       else if (o.type === 'saw') m.saws.push(new Saw(o));
       else if (o.type === 'drip') m.drips.push(new Drip(o));

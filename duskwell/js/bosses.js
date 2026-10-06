@@ -77,7 +77,23 @@ class Boss extends Enemy {
     if (!burn) G.slashFx(this.cx, this.cy, dir);
     if (this.hp <= 0) { this.hp = 0; this.kill(); return; }
     const th = this.phases[this.phase - 1];
-    if (th !== undefined && this.hp < this.maxHp * th) { this.phase++; this.spd = Math.max(0.55, this.spd * 0.78); this.co = this.shiftRoutine(); }
+    if (th !== undefined && this.hp < this.maxHp * th) { this.phase++; this.spd = Math.max(0.42, this.spd * 0.78); this.co = this.shiftRoutine(); }
+    else if (!this.enraged && this.hp < this.maxHp * 0.22) this.enrage();
+  }
+  // the last fifth of its health: it roars once more and fights quicker, and the hall strikes more often
+  enrage() {
+    this.enraged = true; this.spd = Math.max(0.42, this.spd * 0.84); this.tempo = Math.min(1.5, (this.tempo || 1) * 1.08); this.co = this.shiftRoutine();
+    G.toastMsg(sx('الزعيم غاضب!', 'It rages!'), 2);
+  }
+  // the hall itself strikes while the guardian fights: a column of its own colour, shown a moment before it rises, near the hero
+  hallStrikes(dt) {
+    if (!(Diff.hazard > 0) || !G.arena || G.arena.state !== 'fight' || G.player.dead) return;
+    this.hazT = (this.hazT === undefined ? 5 : this.hazT) - dt;
+    if (this.hazT > 0) return;
+    this.hazT = Math.max(2.2, 7.2 - this.phase * 1.3 - (this.enraged ? 1.4 : 0)) / Diff.hazard * rand(0.85, 1.15);
+    const L = G.level, pal = { frost: ICE, storm: BOLT, mirror: GLASS, ember: SLAG }[L.def.theme];
+    const x = clamp(G.player.cx + rand(-110, 110), 3 * TILE, L.pw - 3 * TILE);
+    spawnPillar(x, this.floorY, 1.0, 0.45, 250, pal);
   }
   // phase change: roar, clear the projectiles, become hittable again
   *shiftRoutine() {
@@ -110,6 +126,8 @@ class Boss extends Enemy {
       if (this.dyingT > 2.2) { this.dead = true; G.onBossDeath(this); }
       return;
     }
+    this.hallStrikes(dt);
+    if (this.enraged && Math.random() < 0.3) G.burst(this.cx + rand(-this.w / 2, this.w / 2), this.cy + rand(-this.h / 2, this.h / 2), 1, { color: pick(['#ff8a3a', '#ff4a3a']), speed: 60, life: 0.55, size: 3, grav: -90 });
     if (this.co) { const r = this.co.next(); if (r.done) this.co = this.brain(); }
     if (this.melee) {
       this.melee.t -= dt;

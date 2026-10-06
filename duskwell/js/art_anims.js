@@ -129,6 +129,7 @@ const AnimArt = (() => {
     const kind = ALIAS[e.kind] || e.kind; if (e.isBoss || !CFG[kind] || !CREATURE_ANIMS[kind] || !ready()) return;
     if (typeof Skins !== 'undefined' && Skins.get(e.kind)) return;                                    // a picture chosen in "Your images" replaces it
     const c = CFG[kind], sc = scaleOf(kind, e), A = CREATURE_ANIMS[kind], idle = (A[c.ref] || A.idle)[0];
+    if (typeof Shards !== 'undefined') Shards.burst(e, kind, idle[3] * sc, e.cx, e.cy);               // its own parts fly off
     if (c.noCorpse) return;
     const y0 = c.fly ? e.cy + (idle[5] - idle[3] * 0.5) * sc : e.y + e.h + 1;
     const L = G.level, tx = Math.floor(e.cx / TILE); let ty = Math.floor((y0 - 2) / TILE);

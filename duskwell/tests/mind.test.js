@@ -14,7 +14,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await setup();
   // ---- difficulty
   let r = await ev(() => ({ hp0: Diff.enemyHp('hushvale'), hp14: Diff.enemyHp('throne'), boss0: Diff.bossHp('hushvale'), t: Diff.tempo('throne'), s: Diff.sight('throne'), grace: Diff.grace }));
-  ok('creatures are tougher, quicker and sharper-eyed, more so the deeper the area', r.hp0 === 1.25 && Math.abs(r.hp14 - 1.6) < 1e-9 && r.boss0 === 1.2 && r.t > 1.1 && r.s > 1.15 && r.grace === 1.1, r);
+  ok('creatures are tougher, quicker and sharper-eyed, more so the deeper the area', r.hp0 === 1.25 && Math.abs(r.hp14 - 1.6) < 1e-9 && r.boss0 === 1.55 && r.t > 1.1 && r.s > 1.15 && r.grace === 1.1, r);
   // ---- born clever: the depth gives a level before the player has taught anything
   r = await ev(() => ({ a: Diff.innate('hushvale'), b: Diff.innate('crossroads'), c: Diff.innate('crystal'), d: Diff.innate('frost'), e: Diff.innate('lunar'), f: Diff.innate('throne'),
     fresh: (Mind.reset(), Mind.level({ kind: 'husk', area: 'throne' })), shallow: Mind.level({ kind: 'husk', area: 'crossroads' }), taught: (G.mind = { husk: { k: 100, w: 0, d: 0, sp: 0 } }, Mind.level({ kind: 'husk', area: 'crystal' })) }));

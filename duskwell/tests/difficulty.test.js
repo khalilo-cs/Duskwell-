@@ -16,7 +16,7 @@ const near = (a, b) => Math.abs(a - b) < 1e-9;
     Diff.setMode('normal'); return out;
   });
   const n = r.normal;
-  ok('normal is what the game has always played at', near(n.hp, 1.25) && near(n.boss, 1.2) && near(n.tempo, 1) && near(n.sight, 1.05) && n.inn0 === 0 && n.inn14 === 2 && near(n.fl, 1) && near(n.grace, 1.1) && near(n.fill, 0.75) && near(n.hpDeep, 1.25 + 0.025 * 14), n);
+  ok('normal is what the game has always played at', near(n.hp, 1.25) && near(n.boss, 1.55) && near(n.tempo, 1) && near(n.sight, 1.05) && n.inn0 === 0 && n.inn14 === 2 && near(n.fl, 1) && near(n.grace, 1.1) && near(n.fill, 0.75) && near(n.hpDeep, 1.25 + 0.025 * 14), n);
   ok('easy: weaker, slower and less sharp-eyed creatures, no cleverness to begin with, a longer grace and a faster soul', r.easy.hp < n.hp && r.easy.boss < n.boss && r.easy.tempo < 1 && r.easy.sight < n.sight && r.easy.inn0 === 0 && r.easy.inn14 === 1 && r.easy.grace > n.grace && r.easy.fill > n.fill && r.easy.fl > n.fl, r.easy);
   ok('hard: tougher, quicker, born cleverer, a shorter grace and a slower soul', r.hard.hp > n.hp && r.hard.boss > n.boss && r.hard.tempo > 1 && r.hard.sight > n.sight && r.hard.inn0 === 1 && r.hard.inn14 === 3 && r.hard.grace < n.grace && r.hard.fill < n.fill && r.hard.flDeep < n.flDeep, r.hard);
   ok('easy is a quarter lighter than normal in health and hard a third heavier', near(r.easy.hp / n.hp, 0.75) && near(r.hard.hp / n.hp, 1.3), [r.easy.hp / n.hp, r.hard.hp / n.hp]);

@@ -46,7 +46,16 @@ def soft(img, kind):
         a = a * a * (3 - 2 * a)
     out = img.convert('RGBA'); out.putalpha(Image.fromarray((a * 255).astype(np.uint8))); return out
 
-pieces = {n: (keyed(sheet.crop(b[:4])) if n.startswith(('weapon_', 'cloak_')) else soft(sheet.crop(b[:4]), b[4])) for n, b in boxes.items()}
+KEYED = ('weapon_', 'cloak_', 'mask_', 'orb_', 'geo', 'bench', 'lantern_')            # cut out of the sheet's ground; the charm medallions keep their round soft edge
+def edged(img):
+    # the soul orb's glow runs past its crop: let the picture fade out at the crop's edge
+    w, h = img.size; yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    f = np.clip(np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy)) / 14.0, 0, 1)
+    a = np.asarray(img.getchannel('A')).astype(np.float32) * (f * f * (3 - 2 * f)); out = img.copy(); out.putalpha(Image.fromarray(a.astype(np.uint8))); return out
+def piece(n, b):
+    if not n.startswith(KEYED): return soft(sheet.crop(b[:4]), b[4])
+    k = keyed(sheet.crop(b[:4])); return edged(k) if n.startswith('orb_') else k
+pieces = {n: piece(n, b) for n, b in boxes.items()}
 W, x, y, row, pos = 1024, 2, 2, 0, {}
 for n, p in sorted(pieces.items(), key=lambda k: -k[1].height):
     if x + p.width + 2 > W: x, y, row = 2, y + row + 2, 0

@@ -119,9 +119,9 @@ class Player {
   spellCost() { return (Charms.has('thrift') ? 24 : 33) - (G.flags.buy_rune ? 5 : 0); }          // the wizard's rune takes five off
   // numbers that charms and gear change: heal time, damage, spell power, strike gap, reach
   focusTime() { return 0.9 * (Charms.has('focus') ? 0.62 : 1) * (Charms.has('deep') ? 1.6 : 1) * Gear.focusK(); }
-  nailDamage() { return Math.max(1, Math.round(this.nail * Gear.dmgK() * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1))); }
+  nailDamage() { return Math.max(1, Math.round(this.nail * Gear.dmgK() * Powers.dmgK() * (Charms.has('fury') && this.hp <= 1 && this.maxHp > 1 ? 1.75 : 1))); }          // (powers) Storm Rage and Time Stop
   spellDmg(base) { return Math.round(base * (Charms.has('mage') ? 1.4 : 1) * (G.flags.buy_ink ? 1.25 : 1) * Quests.spellK()); }          // the wizard's ink adds a quarter
-  strikeGap() { const c = Gear.atkCD(); return Charms.has('swift') ? Math.min(0.21, c * 0.62) : c; }
+  strikeGap() { const c = Gear.atkCD(); return (Charms.has('swift') ? Math.min(0.21, c * 0.62) : c) * Powers.strikeK(); }
   reachK() { return (Charms.has('reach') ? 1.35 : 1) * Gear.reachK(); }
 
   // is there a wall on this side
@@ -376,6 +376,7 @@ class Player {
           this.gainSoul(Math.round((this.soulGain + (Charms.has('siphon') ? 6 : 0) + Gear.soulBonus()) * Gear.soulK()));
           if (Charms.has('cinder') && !e.dead) e.burnT = 0.6;        // Cinder Edge: a burn lands a moment after the blow
           if (Gear.bleeds() && !e.dead) e.bleedT = 1.1;              // Bone Saw: the wound keeps bleeding
+          Powers.onNailHit(e);                                       // (powers) Storm Rage: lightning to the nearest two
         }
         connected = true;
       }
@@ -573,7 +574,7 @@ class Player {
     try { if (navigator.vibrate) navigator.vibrate(45); } catch (e) { /* no vibration here */ }
     G.burst(this.cx, this.cy, 16, { color: '#e9f3ff', speed: 240, life: 0.5, size: 3 });
     G.burst(this.cx, this.cy, 10, { color: '#1a2230', speed: 200, life: 0.5, size: 4 });
-    if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }
+    if (this.hp <= 0) { if (Powers.phoenixSaves()) return true; this.hp = 0; this.dead = true; G.onPlayerDeath(); return true; }          // (powers) the Phoenix rises
     if (Charms.has('spirit')) this.gainSoul(18);
     if (Charms.has('thorn')) this.thornBurst();
     if (Gear.frost()) this.frostBurst();
@@ -601,7 +602,7 @@ class Player {
   spikeHurt() {
     this.hp -= 1; this.invuln = 1.4; this.focusT = 0; this.dashT = 0; this.atkT = 0; this.sd = null; this.riding = null;
     Sound.play('hurt'); G.hitstop(0.12); G.shake(8, 0.3);
-    if (this.hp <= 0) { this.hp = 0; this.dead = true; G.onPlayerDeath(); return; }
+    if (this.hp <= 0) { if (Powers.phoenixSaves()) { G.respawnFade(this.safe.x, this.safe.y); return; } this.hp = 0; this.dead = true; G.onPlayerDeath(); return; }
     G.respawnFade(this.safe.x, this.safe.y);
   }
   // Returns true while the Comet Heart owns the frame (charging or flying).
@@ -667,7 +668,7 @@ class Player {
   sit(bench) {
     this.sitting = bench; this.vx = 0; this.vy = 0; this.x = bench.px - this.w / 2; this.y = bench.py - this.h;
     this.hp = this.maxHp; this.soul = this.maxSoul;
-    Charms.rest();
+    Charms.rest(); Powers.rest();
   }
 }
 
@@ -846,7 +847,7 @@ class Enemy {
   hb() { return { x: this.x, y: this.y, w: this.w, h: this.h }; }
   body() { return this.hb(); }
   // change state and restart its timer
-  setState(s) { this.currentState = s; this.stateT = 0; }
+  setState(s) { this.currentState = s; this.stateT = 0; if (s === ST.ATTACK && typeof Shards !== 'undefined') Shards.cue(this); }
   // advance the clocks
   tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; }
   // take a hit: damage, knockback, flash, souls for the player
@@ -1708,6 +1709,7 @@ class Icicle extends Enemy {
   // break into pieces
   shatter() {
     G.burst(this.cx, this.cy, 14, { color: this.blood, speed: 240, life: 0.5, size: 3 }); Sound.play('break');
+    Shards.burst(this, 'icicle', this.h * 1.3, this.cx, this.cy);
     this.gone = true; this.ghostly = true; this.vx = this.vy = 0; this.setState('gone');
   }
   kill() { this.shatter(); }                    // struck: it breaks (and grows back)

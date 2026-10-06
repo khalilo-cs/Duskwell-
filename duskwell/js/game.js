@@ -88,7 +88,7 @@ function enterRoom(id, spawn) {
   const def = WORLD.rooms[id];
   const L = new Level(def);
   G.level = L;
-  G.enemies = []; G.projs = []; G.geos = []; G.items = []; G.fx = []; G.parts = []; G.eclipse = G.eclipseT = 0;
+  G.enemies = []; G.projs = []; G.geos = []; G.items = []; G.fx = []; G.parts = []; G.eclipse = G.eclipseT = 0; Powers.clearActive();
   G.benches = def.benches.map(b => ({ x: b.x, y: b.y, px: b.x * TILE + 16, py: (b.y + 1) * TILE, room: id }));
   G.npcs = def.npcs.map(n => ({ type: n.type, shop: n.shop, px: n.x * TILE + 16, py: (n.y + 1) * TILE }));
   G.stations = def.stations.map(t => ({ px: t.x * TILE + 16, py: (t.y + 1) * TILE, room: id }));
@@ -96,9 +96,10 @@ function enterRoom(id, spawn) {
   G.gates = []; G.arena = null; G.boss = null; G.bossBarShow = false; G.doorLock = true;
   // persistent changes
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.get(x, y); if ((v === T_BREAK || v === T_CRACK) && G.flags['brk_' + id + '_' + x + '_' + y]) L.set(x, y, T_AIR); }
-  for (const e of def.enemies) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; en.hp = Math.max(1, Math.round(en.hp * Diff.enemyHp(def.area))); Mind.prepare(en, def.area); G.enemies.push(en); }
+  Hard.spikes(L, def);
+  for (const e of def.enemies.concat(Hard.foes(def))) { const en = new ENEMY_TYPES[e.type](e); en.kind = e.type; en.hp = Math.max(1, Math.round(en.hp * Diff.enemyHp(def.area))); Mind.prepare(en, def.area); G.enemies.push(en); }
   for (const it of def.items) if (!G.flags[it.id] && (it.kind !== 'quest' || Quests.itemActive(it))) G.items.push(new Item(it));
-  Mech.init(def);
+  Mech.init(def, Hard.drips(def));
   if (G.shade && G.shade.room === id) {
     const s = new ShadeEnemy({ x: 0, y: 0 }, G.shade.geo); s.kind = 'shade';
     s.x = G.shade.x - s.w / 2; s.y = G.shade.y - s.h / 2; s.home = { x: G.shade.x, y: G.shade.y };
@@ -162,7 +163,7 @@ function spawnArenaBoss(a, hpK, tempoK) {
   const B = BOSS_TYPES[a.def.boss], area = G.level.def.area;
   const boss = new B({ x: a.def.spawn.x, y: a.def.spawn.y });
   boss.hp = boss.maxHp = Math.round(boss.hp * Diff.bossHp(area) * hpK); Mind.prepare(boss, area);
-  if (tempoK !== 1) boss.tempo = (boss.tempo || 1) * tempoK;
+  boss.tempo = Math.min(1.5, Diff.bossTempo(area) * tempoK); boss.spd = Diff.bossPace;                 // quicker than its creatures, shorter pauses
   G.enemies.push(boss); G.boss = boss;
   Sound.boss(true, a.def.boss);
   return boss;
@@ -254,7 +255,7 @@ G.onBossDeath = function (b) {
 function startGame(useSave) {
   Object.assign(P, new Player());
   G.look = 0; G.lookT = 0; G.lookDir = 0;
-  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); Gear.reset(); G.seen = {}; Mind.reset();
+  G.flags = {}; G.visited = {}; G.shade = null; G.time = 0; G.deaths = 0; G.lastArea = ''; G.ending = null; Charms.reset(); Gear.reset(); G.seen = {}; Mind.reset(); Powers.reset();
   let room = WORLD.startRoom, spawn = { pos: { x: WORLD.startPos.x * TILE + 16, y: (WORLD.startPos.y + 1) * TILE } };
   const s = useSave ? readSave() : null;
   if (s) {
@@ -298,7 +299,7 @@ function interact() {
   if (Echo.near()) { G.dialog = Echo.talk(); G.state = 'dialog'; Sound.play('select'); return true; }
   const n = nearest(G.npcs, P.cx, 70);
   if (n) {
-    if (n.type === 'elder') G.dialog = { lines: [tr('elder1'), tr('elder2'), tr('elder3'), tr('elder4')], i: 0, t: 0 };
+    if (n.type === 'elder') G.dialog = Powers.elder() || { lines: [tr('elder1'), tr('elder2'), tr('elder3'), tr('elder4')], i: 0, t: 0 };          // the Elder also teaches the powers (powers.js)
     else {
       G.dialog = Quests.talk(n) || shopDialog(n);               // work for the hero (quests.js), or the usual greeting and the shop
     }
@@ -355,6 +356,7 @@ function updatePlay(dt) {
   Mech.update(dt);
   P.update(dt);
   if (G.state !== 'play') return;           // hurt() may have changed it
+  Powers.update(dt);                        // the keys 1 to 6, the running powers
   // a cracked soul vessel: while the shade still holds your Geo, only two thirds of the soul can be kept
   P.maxSoul = G.shade ? Diff.soulMax * 2 / 3 : Diff.soulMax; if (P.soul > P.maxSoul) P.soul = P.maxSoul;
   // looking up or down: hold the key while standing still and the camera drifts that way
@@ -366,7 +368,7 @@ function updatePlay(dt) {
   if (Input.pressed('mute')) Sound.toggle();
 
   for (const e of G.enemies) { if (e.frozenT > 0) { e.frozenT -= dt; e.flash = 0; continue; } e.update(dt); }
-  for (const p of G.projs) p.update(dt);
+  for (const p of G.projs) { if (Powers.frozenShot(p)) continue; p.update(dt); }          // (powers) Time Stop holds the shots
   for (const c of G.geos) c.update(dt);
   for (const it of G.items) it.update(dt);
   for (const e of G.enemies) if (e.dead && typeof AnimArt !== 'undefined') AnimArt.onDead(e);      // creatures drawn with a death leave it behind
@@ -530,7 +532,7 @@ function comfortLabel() { return sx('راحة العين: ', 'Eye comfort: ') + 
 function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.setItem('duskwell_zoom', String(G.zoom)); } catch (e) { /* storage may be blocked */ } }
 // entries of the pause menu
 function pauseItems() {
-  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'quests', label: sx('المهام', 'Quests') + (Quests.active().length ? '  (' + Quests.active().length + ')' : '') }, { id: 'moves', label: sx('الحركات', 'Moves') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
+  return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'quests', label: sx('المهام', 'Quests') + (Quests.active().length ? '  (' + Quests.active().length + ')' : '') }, { id: 'moves', label: sx('الحركات والقوى', 'Moves and powers') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى والصوت', 'Music and sound') },
     { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'comfort', label: comfortLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
 }
@@ -547,7 +549,7 @@ function updatePause() {
     else if (id === 'charms') { G.state = 'charms'; G.charmSel = 0; G.charmNote = null; }
     else if (id === 'gear') { G.state = 'gear'; G.gearSel = 0; G.gearT = 0; }
     else if (id === 'quests') { G.state = 'quests'; G.questSel = 0; G.questsT = 0; }
-    else if (id === 'moves') { G.state = 'moves'; G.moveSel = 0; G.movesT = 0; }
+    else if (id === 'moves') { G.state = 'moves'; G.moveSel = 0; G.movesT = 0; G.movesTab = 0; }
     else if (id === 'bestiary') { G.state = 'bestiary'; G.bestT = 0; }
     else if (id === 'music') { G.state = 'jukebox'; G.jukeSel = Math.max(0, JUKEBOX.findIndex(e => e[0] === Sound.track())); G.jukePlay = null; G.jukeT = 0; }
     else if (id === 'comfort') Comfort.next();
@@ -691,10 +693,15 @@ function textShadow(g, s, x, y, color, blur) { g.save(); g.shadowColor = 'rgba(0
 function setDir(g) { g.direction = LANG.cur === 'ar' ? 'rtl' : 'ltr'; }
 
 // health mask icon
-function drawMaskIcon(g, x, y, full, pulse) {
+function drawMaskIcon(g, x, y, full, pulse, crack) {
   g.save(); g.translate(x, y);
   const s = 1 + pulse * 0.25;
   g.scale(s, s);
+  if (crack > 0) {                                                // the cracked picture: the last mask, or one that has just gone
+    if (IconArt.ready()) { IconArt.draw(g, 'mask_broken', 0, 1, 32, { alpha: Math.min(1, crack) }); g.restore(); return; }
+    poly(g, [-11, -12, 11, -12, 13, 2, 0, 15, -13, 2]); fs(g, 'rgba(243,248,251,' + crack + ')', INK, 2.5);
+    g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(-2, -12); g.lineTo(2, -4); g.lineTo(-3, 2); g.lineTo(1, 9); g.stroke(); g.restore(); return;
+  }
   if (IconArt.ready()) { IconArt.draw(g, full ? 'mask_full' : 'mask_empty', 0, 1, full ? 29 : 27, full ? null : { alpha: 0.85 }); g.restore(); return; }
   poly(g, [-11, -12, 11, -12, 13, 2, 0, 15, -13, 2]);
   if (full) { fs(g, '#f3f8fb', INK, 2.5); g.fillStyle = INK; ellipse(g, -4.5, -2, 2, 3.4); g.fill(); ellipse(g, 4.5, -2, 2, 3.4); g.fill(); }
@@ -776,7 +783,17 @@ function drawHUD(g) {
   g.font = font(12, '700'); g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
   textShadow(g, Math.floor(P.soul) + '', ox, oy + r + 10, P.soul >= P.spellCost() ? '#dff0ff' : '#8fa6c4');
   // masks
-  for (let i = 0; i < P.maxHp; i++) drawMaskIcon(g, 108 + i * 32, 50, i < P.hp, (P.invuln > 1.1 || (P.focusT === 0 && G.flash > 0.2)) ? 0.2 : 0);
+  // a mask that has just gone shows cracked for a moment, and the last one left trembles cracked
+  if (G.hpSeen === undefined || P.hp > G.hpSeen) G.hpSeen = P.hp;
+  else if (P.hp < G.hpSeen) { G.maskLost = { from: P.hp, to: G.hpSeen, at: G.t }; G.hpSeen = P.hp; }
+  const lost = G.maskLost && G.t - G.maskLost.at < 1.2 ? G.maskLost : null;
+  for (let i = 0; i < P.maxHp; i++) {
+    const hit = (P.invuln > 1.1 || (P.focusT === 0 && G.flash > 0.2)) ? 0.2 : 0;
+    const last = P.hp === 1 && P.maxHp > 1 && i === 0 && !P.dead;
+    if (lost && i >= lost.from && i < lost.to) drawMaskIcon(g, 108 + i * 32 + Math.sin(G.t * 60) * 1.5, 50, false, 0, 1 - (G.t - lost.at) / 1.2);
+    else if (last) drawMaskIcon(g, 108 + Math.sin(G.t * 26) * 0.9, 50 + Math.sin(G.t * 9) * 0.6, true, hit, 1);
+    else drawMaskIcon(g, 108 + i * 32, 50, i < P.hp, hit);
+  }
   // geo
   const gx = 100, gy = 88, gp = G.geoPulse;
   if (IconArt.ready()) IconArt.draw(g, 'geo', gx, gy, 24 + gp * 4); else { poly(g, [gx, gy - 8 - gp * 2, gx + 8, gy, gx, gy + 8 + gp * 2, gx - 8, gy]); fs(g, '#ffe9a0', INK, 2); }
@@ -784,6 +801,7 @@ function drawHUD(g) {
   textShadow(g, String(P.geo), gx + 16, gy + 1, gp > 0 ? '#fff6c8' : '#ffe9a0');
   // equipment: weapon, cloak and worn charms
   drawGearStrip(g, 36, 128);
+  Powers.drawHUD(g);
   // boss bar
   const b = G.boss;
   if (b && b.state !== 'intro' && G.bossBarShow) {
@@ -1044,7 +1062,9 @@ function drawWorld(g) {
     for (let i = 0; i < l; i++) { g.fillStyle = i < 3 ? 'rgba(255,214,150,0.8)' : 'rgba(255,120,110,0.9)'; g.beginPath(); g.moveTo(e.cx + (i - (l - 1) / 2) * 7, e.y - 16); g.lineTo(e.cx + (i - (l - 1) / 2) * 7 + 3, e.y - 12); g.lineTo(e.cx + (i - (l - 1) / 2) * 7, e.y - 8); g.lineTo(e.cx + (i - (l - 1) / 2) * 7 - 3, e.y - 12); g.closePath(); g.fill(); }
   }
   for (const p of G.projs) Art.drawProj(g, p, t);
-  for (const f of G.fx) Art.drawFx(g, f);
+  for (const f of G.fx) { if (f.type === 'shard') Shards.draw(g, f); else if (f.type === 'cfx') Shards.drawCue(g, f); else Art.drawFx(g, f); }
+  Guard.run(g, 'powers', () => Powers.draw(g, t));
+  for (const e of G.enemies) if (e.isBoss && e.enraged && e.state !== 'dying') bloom(g, e.cx, e.cy, Math.max(e.w, e.h) * 1.1, '#ff4030', 0.16 + 0.1 * (0.5 + 0.5 * Math.sin(t * 7)));          // an enraged guardian glows red
   for (const p of G.parts) {
     const a = 1 - p.t / p.life; g.globalAlpha = a; g.fillStyle = p.color;
     g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
@@ -1070,6 +1090,7 @@ function drawWorld(g) {
   if (G.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, G.flash) * Comfort.flash + ')'; g.fillRect(0, 0, VW, VH); }
   if (G.bolt > 0) { g.fillStyle = 'rgba(200,215,255,' + 0.26 * Comfort.bolt * G.bolt * G.bolt + ')'; g.fillRect(0, 0, VW, VH); }
   if (P.hp === 1 && P.hp < P.maxHp && G.state === 'play') { const a = 0.08 + 0.05 * Math.sin(G.t * 6); g.fillStyle = 'rgba(140,0,20,' + a + ')'; g.fillRect(0, 0, VW, VH); }
+  Guard.run(g, 'powers screen', () => Powers.drawScreen(g));
 }
 
 // light sources in screen space for the darkness map

@@ -74,3 +74,9 @@ The five newer pieces (`audio/music/fiddler.mp3`, `forge.mp3`, `wizard.mp3`, `ro
 
 ## The draw guard
 `js/guard.js` is original code.
+
+## Powers, harder guardians and rougher rooms
+`js/powers.js`, the changes to `js/bosses.js` and `js/difficulty.js`, the motion in `js/art_boss_poses.js` and `js/world_hard.js` are original code. Nothing in them uses an image, a recording or a library of anyone else's; the guardians' pictures are the owner's, bent by the code.
+
+## The loose parts of the creatures and the cracked mask
+`art/creatures/shards.webp` is cut from the owner's sheet of creatures (`art/source/creatures/_sheet_creatures2_states.png`, the "Parts" area and the effect picture of each panel) by `tools/sprites/cut_shards.py`; `js/art_shards.js` makes the parts fly and flashes the effect when a creature strikes. The cracked mask is the owner's icon sheet (`art/source/icons/weapons_cloaks_charms_ui.png`), cut by `tools/sprites/cut_icons.py`.

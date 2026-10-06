@@ -105,6 +105,7 @@ function moveWhere(m) {
 function updateMoves(dt) {
   G.movesT = (G.movesT || 0) + dt;
   if (Input.pressed('pause') || Input.pressed('map') || Input.pressed('attack')) { G.state = 'pause'; Input.consume('pause'); Input.consume('map'); Sound.play('select'); return; }
+  if (Powers.pageKeys()) return;                                                       // the Powers tab: its own keys
   if (Input.pressed('up')) { G.moveSel = (G.moveSel + MOVES.length - 1) % MOVES.length; Sound.play('select'); }
   if (Input.pressed('down')) { G.moveSel = (G.moveSel + 1) % MOVES.length; Sound.play('select'); }
   Coach.seen(MOVES[clamp(G.moveSel || 0, 0, MOVES.length - 1)].id);                   // the one in view is looked at
@@ -119,9 +120,11 @@ function padlock(g, x, y, s, col) {
 }
 
 function drawMoves(g) {
+  if (G.movesTab === 1) { Powers.drawPage(g); return; }
   g.fillStyle = 'rgba(3,5,10,0.97)'; g.fillRect(0, 0, VW, VH);
   const t = G.movesT || 0, ar = LANG.cur === 'ar', sel = clamp(G.moveSel || 0, 0, MOVES.length - 1), m = MOVES[sel];
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, sx('الحركات', 'Moves'), VW / 2, 34, '#eef5ff');
+  Powers.tabs(g, 0);
   // left: the five, each with its effect playing
   drawPanel(g, 40, 70, 330, 440);
   MOVES.forEach((q, i) => {

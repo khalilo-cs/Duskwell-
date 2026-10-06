@@ -14,6 +14,8 @@ const Input = (() => {
     Tab: 'map', KeyM: 'map',
     Escape: 'pause', KeyP: 'pause',
     Enter: 'confirm', KeyN: 'mute',
+    Digit1: 'power1', Digit2: 'power2', Digit3: 'power3', Digit4: 'power4', Digit5: 'power5', Digit6: 'power6',
+    Numpad1: 'power1', Numpad2: 'power2', Numpad3: 'power3', Numpad4: 'power4', Numpad5: 'power5', Numpad6: 'power6',
   };
   // per source: what is held; q: pressed this step; rel: released this step
   const held = {}, touch = {}, pad = {}, padPrev = {}, q = {}, rel = {};

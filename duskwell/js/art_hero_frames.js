@@ -8,6 +8,7 @@ const HeroFrames = (() => {
   // frame lists from hero_frames_meta.js
   const F = () => HERO_FRAMES;
   const H = 62;                                                       // drawn height of the hero at rest (its box is 38 tall)
+  const RUN_STEP = 12.5;                                              // ground covered by one frame of the run: nine of them are one stride, about 1.8 bodies long (it was 7.5, which spun the legs)
   // screen px per sheet px
   const scale = () => H / F().idle[0][3];
   // frame of a list by progress, and a looping frame by time
@@ -56,7 +57,7 @@ const HeroFrames = (() => {
       return { f: A.jump[4] };
     }
     if (p.landT > 0) return { f: A.jump[5] };
-    if (Math.abs(p.vx) > 30) return { f: A.run[Math.floor(S.dist / 7.5) % A.run.length] };
+    if (Math.abs(p.vx) > 30) return { f: A.run[Math.floor(S.dist / RUN_STEP) % A.run.length] };
     return { f: loop(A.idle, t, 6) };
   }
   // ---- the equipment on the drawn hero

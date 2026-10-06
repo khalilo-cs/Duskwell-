@@ -313,6 +313,7 @@ class Player {
     Mech.land(this, prevBottom);
     if (this.onGround && this.face !== faceBefore && this.atkT <= 0) this.turnT = 0.1;
     if (this.onGround && !wasGround && fallV > 300) { Sound.play('land'); this.landT = 0.12; G.burst(this.cx, this.y + this.h, 6, { color: '#8d9aa8', speed: 80, life: 0.3, size: 2 }); }
+    this.feetDust(dt, wasGround, fallV, ix, faceBefore);
     if (this.onGround) { this.airDash = true; this.djAvail = true; this.wallDir = 0; }
     if (this.bounced) {             // mushroom cap
       this.bounced = false; this.onGround = false; this.vy = -1000; this.jumping = false;
@@ -333,6 +334,20 @@ class Player {
     } else this.safeT = 0;
 
     this.checkSpikes();
+  }
+
+  // dust under the feet: a puff every stride while running, a kick at the first step and at a turn, and a heavier puff after a long fall
+  feetDust(dt, wasGround, fallV, ix, faceBefore) {
+    const th = G.level && THEMES[G.level.def.theme], col = th ? mix(th.tile, th.hi, 0.4) : '#9aa4b0', fy = this.y + this.h - 1, heel = this.cx - this.face * 8;
+    const still = this.dustStill; this.dustStill = Math.abs(this.vx) < 30; this.skidT = (this.skidT || 0) - dt;
+    if (this.onGround && !wasGround && fallV > 300) {                                      // the longer the fall, the bigger the puff, thrown out to both sides
+      const n = clamp(Math.round(fallV / 130), 3, 8), k = 1 + fallV / 1000;
+      G.dust(this.cx - 6, fy, -1, n, { color: col, k }); G.dust(this.cx + 6, fy, 1, n, { color: col, k });
+    }
+    if (!this.onGround || this.dashT > 0 || this.hurtT > 0) { this.dustT = 0.05; return; }
+    if (Math.abs(this.vx) > 190) { this.dustT -= dt; if (this.dustT <= 0) { this.dustT = 0.16; G.dust(heel, fy, -this.face, 2, { color: col }); } } else this.dustT = 0.05;
+    if (still && ix !== 0 && Math.abs(this.vx) >= 40 && this.atkT <= 0) G.dust(heel, fy, -this.face, 3, { color: col, k: 1.2 });          // the first step
+    if (ix !== 0 && Math.sign(this.vx) === -ix && Math.abs(this.vx) > 140 && this.skidT <= 0) { this.skidT = 0.3; G.dust(this.cx, fy, Math.sign(this.vx), 5, { color: col, k: 1.5 }); }   // a turn at speed: the heels dig in
   }
 
   // touching spikes or acid hurts and returns the player to safe ground
@@ -830,6 +845,8 @@ class Item {
 // ============================== ENEMIES ==============================
 // Enemy brains mirror a PlayMaker FSM: each enemy runs one switch over this.currentState.
 const ST = { IDLE: 'idle', PATROL: 'patrol', CHASE: 'chase', ANTICIPATION: 'anticipation', ATTACK: 'attack', RECOIL: 'recoil' };
+// how long a walker waits: at the end of a patrol before it turns, when it first sees the hero, and after a leap it has made
+const PACE = { turn: 0.24, notice: 0.3, recover: 0.32 };
 // base enemy: health, state machine, knockback, hit flash and shared physics
 class Enemy {
   // def: placement from the room, w / h: size
@@ -839,7 +856,7 @@ class Enemy {
     this.vx = 0; this.vy = 0; this.face = def.face || (Math.random() < 0.5 ? -1 : 1);
     this.t = rand(0, 10); this.flash = 0; this.stun = 0; this.dead = false; this.dmg = 1; this.geo = 2;
     this.kb = 1; this.home = { x: this.x + w / 2, y: this.y + h / 2 }; this.onGround = false;
-    this.currentState = ST.IDLE; this.stateT = 0; this.lastSeen = -99;
+    this.currentState = ST.IDLE; this.stateT = 0; this.lastSeen = -99; this.holdT = 0; this.pauseT = 0;
   }
   get cx() { return this.x + this.w / 2; }
   get cy() { return this.y + this.h / 2; }
@@ -847,9 +864,24 @@ class Enemy {
   hb() { return { x: this.x, y: this.y, w: this.w, h: this.h }; }
   body() { return this.hb(); }
   // change state and restart its timer
-  setState(s) { this.currentState = s; this.stateT = 0; if (s === ST.ATTACK && typeof Shards !== 'undefined') Shards.cue(this); }
+  setState(s) {
+    const prev = this.currentState;
+    this.currentState = s; this.stateT = 0;
+    if (s === ST.ATTACK && typeof Shards !== 'undefined') Shards.cue(this);
+    // a walker that first notices the hero stops for a moment and turns to face them, then comes (as the husks of a dark ruin do)
+    const p = G.player;
+    if (prev === ST.PATROL && s === ST.CHASE && this.onGround && !this.isBoss && !this.dummy && p && !p.dead) { this.hold(PACE.notice); this.face = p.cx > this.cx ? 1 : -1; }
+  }
+  // stand still for a time (deeper creatures are quicker about it)
+  hold(t) { this.holdT = Math.max(this.holdT, t / (typeof Mind !== 'undefined' ? Mind.tempo(this) : 1)); }
+  // the pace of a patrol: steady along the floor; at a ledge or a wall it stops, looks about, and turns back
+  walkPatrol(speed, dt) {
+    if (this.pauseT > 0) { this.pauseT -= dt; this.vx = 0; if (this.pauseT <= 0) this.face *= -1; return; }
+    if (this.edgeAhead(this.face)) { this.pauseT = PACE.turn / (typeof Mind !== 'undefined' ? Mind.tempo(this) : 1); this.vx = 0; return; }
+    this.vx = this.face * speed;
+  }
   // advance the clocks
-  tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; }
+  tick(dt) { this.t += dt; this.flash -= dt; this.stun -= dt; this.stateT += dt; this.holdT -= dt; }
   // take a hit: damage, knockback, flash, souls for the player
   hurt(dmg, dir, how) {
     if (this.dead) return;
@@ -869,7 +901,7 @@ class Enemy {
   }
   // knockback pushes the enemy away from the strike and puts it in the Recoil state
   // the Dusk Cry holds enemies in its column instead of throwing them out of it
-  onHurt(dir, how) { if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
+  onHurt(dir, how) { this.holdT = 0; this.pauseT = 0; if (this.kb && how === 'wail') { this.vx *= 0.3; this.vy = -30 * this.kb; this.stun = 0.1; } else if (this.kb) { this.vx = dir * 220 * this.kb; this.vy = -140 * this.kb; this.stun = 0.18; this.setState(ST.RECOIL); } }
   // die: drop geo, burst, count the kill
   kill() {
     this.dead = true; Sound.play('enemyDie'); G.shake(4, 0.15); Mind.killed(this, this.lastHow); Quests.killed(this);
@@ -894,6 +926,7 @@ class Enemy {
   }
   // gravity and tile collision for walkers
   physics(dt, grav) {
+    if (this.holdT > 0 && grav !== false && this.onGround) this.vx = 0;
     if (grav !== false) this.vy = Math.min(this.vy + GRAV * dt, MAXFALL);
     moveBody(this, dt, G.level);
   }
@@ -908,7 +941,7 @@ class Crawler extends Enemy {
     switch (this.currentState) {
       case ST.IDLE: this.setState(ST.PATROL); break;
       case ST.PATROL:
-        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * this.speed; }
+        if (this.onGround) this.walkPatrol(this.speed, dt);
         break;
       case ST.RECOIL:
         if (this.onGround) this.vx *= 0.85;
@@ -930,7 +963,7 @@ class Husk extends Enemy {
     switch (this.currentState) {
       case ST.IDLE: this.setState(ST.PATROL); break;
       case ST.PATROL:
-        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * this.speed; }
+        if (this.onGround) this.walkPatrol(this.speed, dt);
         if (this.seesPlayer(300)) this.setState(ST.CHASE);
         break;
       case ST.CHASE:
@@ -947,7 +980,7 @@ class Husk extends Enemy {
         if (this.stateT > 0.25) { this.vy = -400; this.vx = this.face * 230; this.onGround = false; this.setState(ST.ATTACK); }
         break;
       case ST.ATTACK:
-        if (this.onGround && this.stateT > 0.12) { this.vx = 0; this.setState(ST.CHASE); }
+        if (this.onGround && this.stateT > 0.12) { this.vx = 0; this.setState(ST.CHASE); this.hold(PACE.recover); }          // it lands and stands a moment, open to a blow
         break;
       case ST.RECOIL:
         if (this.onGround) this.vx *= 0.85;
@@ -1241,7 +1274,7 @@ class Shroom extends Enemy {    // slow walker that breathes out a cloud of spor
     switch (this.currentState) {
       case ST.IDLE: this.vx = 0; if (this.stateT > 0.6) this.setState(ST.PATROL); break;
       case ST.PATROL:
-        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * 32; }
+        if (this.onGround) this.walkPatrol(32, dt);
         this.cool -= dt;
         if (this.cool <= 0 && this.seesPlayer(210) && Math.abs(p.cy - this.cy) < 80) { this.face = p.cx > this.cx ? 1 : -1; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
         break;

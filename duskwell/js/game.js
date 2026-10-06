@@ -28,6 +28,14 @@ G.burst = function (x, y, n, o) {
     G.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp + (o.vy || 0), life: (o.life || 0.5) * rand(0.6, 1), t: 0, size: (o.size || 3) * rand(0.6, 1.2), color: o.color || '#fff', grav: o.grav == null ? 300 : o.grav });
   }
 };
+// a puff of dust along the ground: it drifts out to one side (dir) and rises a little before it is gone
+G.dust = function (x, y, dir, n, o) {
+  o = o || {}; const k = o.k || 1;
+  for (let i = 0; i < n; i++) {
+    if (G.parts.length > 900) break;
+    G.parts.push({ x: x + rand(-3, 3), y: y - rand(0, 2), vx: dir * rand(14, 58) * k + rand(-10, 10), vy: -rand(6, 34) * k, life: (o.life || 0.36) * rand(0.7, 1.15), t: 0, size: (o.size || 2.6) * rand(0.7, 1.35), color: o.color || '#9aa4b0', grav: -24 });
+  }
+};
 // effect helpers: screen shake, hit stop, ring and slash marks
 G.shake = function (a, t) { if (a >= G.shakeA || G.shakeT <= 0) { G.shakeA = a; } G.shakeT = Math.max(G.shakeT, t); };
 G.hitstop = function (t) { G.hitstopT = Math.max(G.hitstopT, t); };

@@ -174,7 +174,7 @@ class Lensling extends Enemy {
     switch (this.currentState) {
       case ST.IDLE: this.setState(ST.PATROL); break;
       case ST.PATROL:
-        if (this.onGround) { if (this.edgeAhead(this.face)) this.face *= -1; this.vx = this.face * 34; }
+        if (this.onGround) this.walkPatrol(34, dt);
         if (this.cool <= 0 && this.seesPlayer(460)) { this.vx = 0; this.setState(ST.ANTICIPATION); Sound.play('tele'); }
         break;
       case ST.ANTICIPATION: {        // the lens swings after you, then locks

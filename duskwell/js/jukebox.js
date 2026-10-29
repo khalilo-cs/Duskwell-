@@ -74,6 +74,7 @@ function drawJuke(g) {
     g.fillStyle = now ? '#ffd24a' : 'rgba(150,170,200,0.5)'; g.textAlign = 'center'; g.direction = 'ltr'; g.font = font(14, '700');
     g.fillText(now ? '♪' : String(i + 1), ar ? 66 : 74, y);
   }
+  listPages(top, VIS, n, 78, 506, sel, k => { G.jukeSel = k; }, 243);
   g.fillStyle = 'rgba(230,240,255,0.5)';
   if (top > 0) { g.beginPath(); g.moveTo(235, 82); g.lineTo(251, 82); g.lineTo(243, 74); g.fill(); }
   if (top + VIS < n) { g.beginPath(); g.moveTo(235, 502); g.lineTo(251, 502); g.lineTo(243, 510); g.fill(); }

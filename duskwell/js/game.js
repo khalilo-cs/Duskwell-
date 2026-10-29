@@ -486,6 +486,30 @@ function updateDying(dt) {
   }
 }
 
+// the first row of a window of vis rows over n entries that keeps the selected one in view (remembered per list)
+function listWindow(key, sel, n, vis) {
+  const m = G.scr || (G.scr = {});
+  let t = m[key] || 0;
+  if (sel < t) t = sel; else if (sel >= t + vis) t = sel - vis + 1;
+  t = clamp(t, 0, Math.max(0, n - vis)); m[key] = t; return t;
+}
+// invisible tap zones over the arrows a screen draws itself: a tap pages the cursor up or down
+function listPages(top, vis, n, yUp, yDn, sel, set, x) {
+  const hits = G.menuHits || (G.menuHits = []); x = x || VW / 2;
+  if (top > 0) hits.push({ x: x - 40, y: yUp - 14, w: 80, h: 28, fn: () => { set(clamp(sel - vis, 0, n - 1)); Sound.play('select'); } });
+  if (top + vis < n) hits.push({ x: x - 40, y: yDn - 14, w: 80, h: 28, fn: () => { set(clamp(sel + vis, 0, n - 1)); Sound.play('select'); } });
+}
+// small arrows above and below a window that has more rows out of view; a tap on one moves the cursor a page
+function listArrows(g, top, vis, n, yUp, yDn, key, sel, x) {
+  const hits = G.menuHits || (G.menuHits = []), t = G.t || 0; x = x || VW / 2;
+  const one = (y, dir, show) => {
+    if (!show) return;
+    const bob = Math.sin(t * 4) * 1.5 * dir;
+    g.save(); g.fillStyle = 'rgba(255,233,176,0.85)'; g.beginPath(); g.moveTo(x - 9, y + 5 * dir + bob); g.lineTo(x + 9, y + 5 * dir + bob); g.lineTo(x, y - 5 * dir + bob); g.closePath(); g.fill(); g.restore();
+    hits.push({ x: x - 40, y: y - 14, w: 80, h: 28, fn: () => { G.menuSel = clamp(sel - dir * vis, 0, n - 1); Sound.play('select'); } });
+  };
+  one(yUp, 1, top > 0); one(yDn, -1, top + vis < n);
+}
 // move the selection with up / down; true when confirmed
 function menuNav(n) {
   if (Input.pressed('up')) { G.menuSel = (G.menuSel + n - 1) % n; Sound.play('select'); }
@@ -1262,21 +1286,24 @@ function drawCharms(g) {
     else { g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(P.sitting ? tr('charmsHint') : tr('charmsBench'), VW / 2, 494); }
   }
 }
-// fast travel screen
+// fast travel screen: a window of rows that follows the cursor, the last row is "leave"
 function drawTravel(g) {
-  const list = stationList();
+  const list = stationList(), n = list.length + 1, VIS = 6, ROWH = 46;
   g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH);
   drawPanel(g, 200, 70, VW - 400, 400);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('stationTitle'), VW / 2, 112, '#ffe9b0');
   g.font = font(20, '700'); g.textAlign = 'right'; g.direction = 'ltr'; g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 240, 112);
   g.font = font(17, '500'); g.textAlign = 'center'; setDir(g); g.fillStyle = '#9db5d6'; g.fillText(tr('stationFare') + ': ' + stationFare() + ' ' + tr('price'), VW / 2, 146);
-  list.forEach((it, i) => {
-    const y = 196 + i * 48, on = G.menuSel === i;
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(230, y - 22, VW - 460, 44); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(230.5, y - 21.5, VW - 461, 43); }
-    poly(g, [262, y - 8, 270, y, 262, y + 8, 254, y]); fs(g, it.color, INK, 2);
-    setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(210,222,240,0.85)'; g.fillText(it.name, VW / 2, y);
-  });
-  drawMenu(g, [{ id: 'leave', label: tr('leave') }], G.menuSel - list.length, 196 + list.length * 48 + 28, 48, { base: list.length, w: 260, h: 40 });
+  const top = listWindow('travel', G.menuSel, n, VIS), hits = G.menuHits || (G.menuHits = []);
+  for (let k = 0; k < VIS && top + k < n; k++) {
+    const i = top + k, y = 196 + k * ROWH, on = G.menuSel === i, it = list[i];
+    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(230, y - 21, VW - 460, 42); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(230.5, y - 20.5, VW - 461, 41); }
+    setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(210,222,240,0.85)';
+    if (it) { poly(g, [262, y - 8, 270, y, 262, y + 8, 254, y]); fs(g, it.color, INK, 2); g.fillText(it.name, VW / 2, y); }
+    else g.fillText(tr('leave'), VW / 2, y);
+    hits.push({ x: 230, y: y - 21, w: VW - 460, h: 42, i });
+  }
+  listArrows(g, top, VIS, n, 176, 462, 'travel', G.menuSel);
 }
 // banner shown after an item is found
 function drawBanner(g) {
@@ -1331,7 +1358,7 @@ function draw() {
       if (G.level) {
         Guard.run(g, 'world', () => drawWorld(g)); drawHUD(g); drawCoach(g);
         if (G.state === 'map') drawMap(g);
-        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 86, 29, { w: 340, h: 26 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
+        if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 80, 27, { w: 340, h: 24 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);
         if (G.state === 'shop') drawShop(g);
         if (G.state === 'charms') drawCharms(g);
@@ -1368,7 +1395,13 @@ function boot() {
     try { G.canvas.focus({ preventScroll: true }); } catch (err) { /* ignore */ }
     const r = G.canvas.getBoundingClientRect(), px = (e.clientX - r.left) * VW / r.width, py = (e.clientY - r.top) * VH / r.height;
     const hit = (G.menuHits || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
-    if (hit) { if (hit.fn) hit.fn(); else { G.menuSel = hit.i; pressEnter(); } return; }
+    if (hit) {
+      if (hit.fn) hit.fn();
+      else if (hit.gear) { if (G.gearSel === hit.i) pressEnter(); else { G.gearSel = hit.i; Sound.play('select'); } }
+      else if (G.state === 'shop' && G.menuSel !== hit.i && hit.i < shopList().length) { G.menuSel = hit.i; Sound.play('select'); }
+      else { G.menuSel = hit.i; pressEnter(); }
+      return;
+    }
     if (G.state === 'ending' || G.state === 'dialog' || G.state === 'banner') pressEnter();
     if (G.state === 'map' && MapView.inView(px, py)) { G.mapDrag = { id: e.pointerId, x: px, y: py }; try { G.canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
   });
@@ -1381,6 +1414,10 @@ function boot() {
   const dropDrag = e => { if (G.mapDrag && G.mapDrag.id === e.pointerId) G.mapDrag = null; };
   G.canvas.addEventListener('pointerup', dropDrag); G.canvas.addEventListener('pointercancel', dropDrag);
   G.canvas.addEventListener('wheel', e => {
+    if (['travel', 'pause', 'shop', 'jukebox', 'quests', 'gear'].includes(G.state)) {          // the wheel moves the cursor in a list
+      e.preventDefault(); const code = e.deltaY > 0 ? 'ArrowDown' : 'ArrowUp';
+      window.dispatchEvent(new KeyboardEvent('keydown', { code })); window.dispatchEvent(new KeyboardEvent('keyup', { code })); return;
+    }
     if (G.state !== 'map' || !G.mapView) return;
     e.preventDefault(); MapView.setMode(G.mapView.mode + (e.deltaY > 0 ? 1 : -1));
   }, { passive: false });

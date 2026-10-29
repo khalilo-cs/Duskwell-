@@ -167,6 +167,7 @@ function drawShop(g) {
   g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 170, 62);
   for (let i = G.shopTop; i < Math.min(n, G.shopTop + VIS); i++) {
     const y = Y0 + (i - G.shopTop) * ROW, on = G.menuSel === i;
+    (G.menuHits || (G.menuHits = [])).push({ x: 160, y: y - 26, w: VW - 320, h: 52, i });
     if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(160, y - 26, VW - 320, 52); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(160.5, y - 25.5, VW - 321, 51); }
     if (i === list.length) {
       setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(190,205,225,0.8)'; g.fillText(tr('leave'), VW / 2, y);
@@ -185,6 +186,7 @@ function drawShop(g) {
     g.fillStyle = sold ? '#6d7a8c' : lock ? '#6d7a8c' : (P.geo >= shopPrice(it) ? '#ffe9a0' : '#c77');
     g.fillText(sold ? tr('soldout') : shopPrice(it) + ' ' + tr('price'), VW - 180, y);
   }
+  listPages(G.shopTop, VIS, n, 100, Y0 + VIS * ROW - 14, G.menuSel, k => { G.menuSel = k; });
   g.fillStyle = 'rgba(230,240,255,0.55)';
   if (G.shopTop > 0) { g.beginPath(); g.moveTo(VW / 2 - 8, 104); g.lineTo(VW / 2 + 8, 104); g.lineTo(VW / 2, 95); g.fill(); }
   if (G.shopTop + VIS < n) { g.beginPath(); g.moveTo(VW / 2 - 8, Y0 + VIS * ROW - 18); g.lineTo(VW / 2 + 8, Y0 + VIS * ROW - 18); g.lineTo(VW / 2, Y0 + VIS * ROW - 9); g.fill(); }
@@ -245,6 +247,7 @@ function drawGear(g) {
   const tw = 190;
   GEAR_TABS.forEach((k, i) => {
     const x = 350 + i * (tw + 8), on = i === G.gearTab;
+    (G.menuHits || (G.menuHits = [])).push({ x, y: 70, w: tw, h: 34, fn: () => { if (G.gearTab !== i) { G.gearTab = i; G.gearSel = 0; Sound.play('select'); } } });
     g.fillStyle = on ? 'rgba(230,240,255,0.18)' : 'rgba(10,16,28,0.8)'; g.fillRect(x, 70, tw, 34);
     g.strokeStyle = on ? 'rgba(230,240,255,0.85)' : 'rgba(150,170,200,0.3)'; g.lineWidth = on ? 2 : 1; g.strokeRect(x + 0.5, 70.5, tw - 1, 33);
     setDir(g); g.textAlign = 'center'; g.font = font(17, '700'); g.fillStyle = on ? '#ffffff' : '#8a9ab4'; g.fillText(gearTabName(k), x + tw / 2, 88);
@@ -252,6 +255,7 @@ function drawGear(g) {
   drawPanel(g, 350, 110, 570, 266);
   const VIS = 4, ROW = 60, top = clamp(G.gearSel - VIS + 1, 0, Math.max(0, rows.length - VIS));
   for (let i = top; i < Math.min(rows.length, top + VIS); i++) {
+    (G.menuHits || (G.menuHits = [])).push({ x: 366, y: 142 + (i - top) * ROW - 28, w: 538, h: 56, i, gear: true });
     const r = rows[i], y = 142 + (i - top) * ROW, on = i === G.gearSel, owned = r.kind === 'art' ? Gear.hasArt(r.id) : true;
     const worn = r.kind === 'weapon' ? Gear.weapon() === r.id : r.kind === 'cloak' ? Gear.cloak() === r.id : false;
     if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(366, y - 28, 538, 56); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(366.5, y - 27.5, 537, 55); }
@@ -265,6 +269,7 @@ function drawGear(g) {
     g.direction = ar && r.kind === 'art' ? 'rtl' : 'ltr'; g.fillText(sub, tx, y + 14);
     if (worn) { g.textAlign = ar ? 'left' : 'right'; setDir(g); g.font = font(15, '700'); g.fillStyle = '#9ff0a8'; g.fillText('✓ ' + sx('مجهّز', 'Equipped'), ar ? 452 : 888, y); }
   }
+  listPages(top, VIS, rows.length, 114, 374, G.gearSel, k => { G.gearSel = k; }, VW / 2 + 158);
   g.fillStyle = 'rgba(230,240,255,0.55)';
   if (top > 0) { g.beginPath(); g.moveTo(VW / 2 + 150, 118); g.lineTo(VW / 2 + 166, 118); g.lineTo(VW / 2 + 158, 110); g.fill(); }
   if (top + VIS < rows.length) { g.beginPath(); g.moveTo(VW / 2 + 150, 370); g.lineTo(VW / 2 + 166, 370); g.lineTo(VW / 2 + 158, 378); g.fill(); }

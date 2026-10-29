@@ -369,6 +369,7 @@ function drawQuests(g) {
     if (c && !done && !Quests.ready(r)) g.direction = 'ltr';                           // numbers read left to right even in Arabic
     g.fillText(done ? sx('مكتملة', 'Done') : Quests.ready(r) ? sx('عُد إلى صاحبها', 'Return to the giver') : (c ? c[0] + ' / ' + c[1] : sx('في الطريق', 'Under way')), tx, y + 12);
   }
+  listArrows(g, top, VIS, list.length, 86, 502, 'quest', sel, 205);
   // the one chosen
   drawPanel(g, 390, 76, 530, 434);
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle';

@@ -1,0 +1,8 @@
+# Spore Hollows — background mid
+
+```
+Dark hand-painted 2D game art for a side-scrolling action-exploration game: moody, slightly desaturated palette with one glowing accent colour, clean thin dark ink outline of even weight, soft painted shading from a single light source at the top-left, rim light on the edge facing the light, readable silhouette at small size. Side view, the character faces RIGHT. Original design, not a copy of any existing game or character.
+Area "Spore Hollows": warm brown caves full of giant mushrooms, gills, spore clouds and caps as platforms. Palette: brown and amber, orange spore glow.
+A seamless wide middle background layer: the main shapes of the area at mid distance, darker than the play area, transparent-looking sky above them on the grey, wide format 4:1, tiles left to right seamlessly. No characters.
+NOT A PRESENTATION BOARD: no title, no logo, no captions, no numbers, no labels, no panels, no swatches. One plain flat mid-grey background (#808080), every piece separate with wide empty grey gaps, side view, lit from the top-left, same scale for all pieces (the hero is 2 tiles tall).
+```

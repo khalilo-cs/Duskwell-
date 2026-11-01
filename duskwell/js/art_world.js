@@ -441,9 +441,13 @@ const PAINT_P = 1600, PAINT_H = 700, PAINT_TOP = -40, SKY_Z = 160, PAINT_KEEP = 
 // thinned (alpha per layer: sky, far, mid, near) so it shows and the play field stays readable
 // the far, mid and near layers are the strips of the concept sheets (tools/paint/import_layers.py); the village has full-width layers
 const CONCEPT_ALPHA = { default: [1, 1, 1, 1], town: [1, 1, 1, 1], townb: [1, 0, 0, 0] };
+// whole paintings of the Lunar Observatory and the Mirror Vault, behind some of their rooms (tools: art/source/canva, sky only)
+const PAINTING_BG = ['lunar_moon', 'lunar_hall', 'lunar_dome', 'mirror_city', 'mirror_hall'];
+for (const k of PAINTING_BG) CONCEPT_ALPHA[k] = [1, 0, 0, 0];
 for (const k of ['cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
 // backdrop sets that belong to no theme of their own: the afternoon village behind the roads out of the town
 const EXTRA_BG = { townb: true };
+for (const k of PAINTING_BG) EXTRA_BG[k] = true;
 // painted backgrounds loaded so far
 const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
 // start loading the painted layers of an area

@@ -1,0 +1,3 @@
+'use strict';
+// made by tools/sprites/cut_hq.py: detailed frames of the creatures in art/creatures/hq/<kind>.webp
+const CREATURE_HQ = {"crawler":{"idle":[[0,183,340,146,170.0,146,"crawler"],[342,183,320,147,160.0,147,"crawler"]],"walk":[[664,183,365,144,182.5,144,"crawler"],[1031,183,316,153,158.0,153,"crawler"],[1349,183,334,150,167.0,150,"crawler"],[1031,183,316,153,158.0,153,"crawler"]],"atk":[[0,0,292,158,146.0,158,"crawler"],[294,0,387,160,193.5,160,"crawler"],[294,0,387,160,193.5,160,"crawler"],[683,0,331,146,165.5,146,"crawler"]],"hurt":[[1668,0,316,181,158.0,181,"crawler"]],"death":[[1016,0,313,162,156.5,162,"crawler"],[1016,0,313,162,156.5,162,"crawler"],[1331,0,335,154,167.5,154,"crawler"],[1331,0,335,154,167.5,154,"crawler"]]}};

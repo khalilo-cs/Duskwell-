@@ -9,6 +9,11 @@ const AnimArt = (() => {
   const img2 = new Image();
   img2.onload = () => { if (typeof CREATURE_CANVA !== 'undefined') for (const k of Object.keys(CREATURE_CANVA)) CREATURE_ANIMS[k] = CREATURE_CANVA[k]; };
   img2.src = 'art/creatures/canva.webp';
+  // the detailed frames painted one pose at a time (art/creatures/hq/<kind>.webp): each creature's own sheet, its rows replaced once it is loaded
+  const hq = {};
+  if (typeof CREATURE_HQ !== 'undefined') for (const k of Object.keys(CREATURE_HQ)) {
+    const im = new Image(); im.onload = () => { CREATURE_ANIMS[k] = CREATURE_HQ[k]; }; im.src = 'art/creatures/hq/' + k + '.webp'; hq[k] = im;
+  }
   // hm: drawn height of the idle frame against the hitbox height; wm: a cap on its width against the hitbox width; stride: ground
   // covered by one walk frame (px); fly: flies (centred on its body, no shadow)
   const CFG = {
@@ -82,7 +87,7 @@ const AnimArt = (() => {
     g.scale(face * sc, sc);
     const ox = o && o.pivot === 'center' ? -f[2] / 2 : -f[4], oy = o && o.pivot === 'center' ? -f[3] / 2 : o && o.top ? 0 : -f[5];
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    const im = f[6] ? img2 : img;
+    const im = typeof f[6] === 'string' ? hq[f[6]] : f[6] ? img2 : img;
     g.drawImage(im, f[0], f[1], f[2], f[3], ox, oy, f[2], f[3]);
     if (white) { g.globalAlpha *= 0.8; g.filter = 'brightness(0) invert(1)'; g.drawImage(im, f[0], f[1], f[2], f[3], ox, oy, f[2], f[3]); }
     g.restore();

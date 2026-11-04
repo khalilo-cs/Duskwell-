@@ -13,10 +13,14 @@ ROWS = [['lantern', 'banner', 'cage', 'chandelier', 'candles', 'urn', 'rubble', 
 
 def main():
     meta = {}
+    mp = os.path.join(ROOT, 'js', 'decor_meta.js')
+    if '--all' not in sys.argv and os.path.exists(mp):                  # only the sheets not cut yet (all of them with --all)
+        txt = open(mp).read(); meta = json.loads(txt[txt.index('{'):txt.rindex('}') + 1]) if '{' in txt else {}
     os.makedirs(os.path.join(ROOT, 'art', 'decor'), exist_ok=True)
     ui.LIMIT.clear(); ui.LIMIT.update({'default': 420, 'panel': 420})
     for p in sorted(glob.glob(os.path.join(ROOT, 'art', 'source', 'decor', '*_*.png'))):
         themes = os.path.basename(p)[:-4].split('_')
+        if all(t in meta for t in themes) and '--all' not in sys.argv: continue
         rows = [[t + ':' + n for n in r] for t in themes for r in ROWS]
         pics = ui.cut(p, rows)
         for t in themes:

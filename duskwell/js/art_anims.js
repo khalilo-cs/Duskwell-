@@ -84,13 +84,36 @@ const AnimArt = (() => {
     g.save(); g.translate(x, y); if (alpha != null) g.globalAlpha *= alpha;
     if (o && o.filter) g.filter = o.filter;
     if (o && o.rot) g.rotate(o.rot);
-    g.scale(face * sc, sc);
+    g.scale(face * sc * (o && o.sx || 1), sc * (o && o.sy || 1));
     const ox = o && o.pivot === 'center' ? -f[2] / 2 : -f[4], oy = o && o.pivot === 'center' ? -f[3] / 2 : o && o.top ? 0 : -f[5];
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
     const im = typeof f[6] === 'string' ? hq[f[6]] : f[6] ? img2 : img;
     g.drawImage(im, f[0], f[1], f[2], f[3], ox, oy, f[2], f[3]);
     if (white) { g.globalAlpha *= 0.8; g.filter = 'brightness(0) invert(1)'; g.drawImage(im, f[0], f[1], f[2], f[3], ox, oy, f[2], f[3]); }
     g.restore();
+  }
+  // the body moves between the painted frames: it breathes when still, bobs and leans into its walk, squashes as it lands and
+  // stretches as it jumps, crouches through a wind-up, shakes when struck, a flyer bobs and banks, and a turn is a quick squeeze.
+  // The frame is scaled about its ground point, so the feet stay on the floor
+  function motion(e, d, dt, t, c) {
+    const M = d.m || (d.m = { sq: 0, ground: !!e.onGround, vy: 0, face: e.face || 1, turn: 0 });
+    let sx = 1, sy = 1, rot = 0, dx = 0, dy = 0;
+    const vx = e.vx || 0, moving = Math.abs(vx) > 8, ph = (e.x || 0) * 0.05 + (e.ph || 0);
+    if ((e.face || 1) !== M.face) { M.face = e.face || 1; M.turn = 1; }
+    M.turn = Math.max(0, M.turn - dt * 9); sx *= 1 - 0.3 * M.turn;
+    if (c.fly) {
+      dy += Math.sin(t * 3.1 + ph) * 2.2; rot = Math.max(-0.14, Math.min(0.14, vx / 1700));
+    } else if (!e.isDummy) {
+      if (e.onGround && !M.ground && M.vy > 160) M.sq = Math.min(1, M.vy / 650);              // it lands
+      M.ground = !!e.onGround; M.vy = e.vy || 0; M.sq = Math.max(0, M.sq - dt * 7);
+      sx *= 1 + 0.16 * M.sq; sy *= 1 - 0.16 * M.sq;
+      if (!e.onGround) { const k = Math.max(-0.5, Math.min(0.6, -(e.vy || 0) / 900)); sy *= 1 + 0.1 * k; sx *= 1 - 0.06 * k; }
+      else if (moving) { dy -= Math.abs(Math.sin(d.dist * 0.085)) * 2; rot = Math.max(-0.05, Math.min(0.05, vx / 2200)); }
+      else { const b = Math.sin(t * 2.4 + ph); sy *= 1 + 0.022 * b; sx *= 1 - 0.011 * b; }
+    }
+    if (e.currentState === 'anticipation') { const k = Math.min(1, (e.stateT || 0) / 0.3); sx *= 1 + 0.07 * k; sy *= 1 - 0.08 * k; }
+    if (d.hurtT > 0) { dx += Math.sin(t * 90) * 1.6; rot -= 0.07 * (e.face || 1); }
+    return { sx, sy, rot, dx, dy };
   }
   // where the frame goes: its ground point on the floor under the creature; a flyer's frame centred on its body; a hanging one from its top.
   // A creature's config may also give place() (position, rotation...), under()/over() (things drawn behind / in front: a chain, its orbs),
@@ -115,6 +138,7 @@ const AnimArt = (() => {
       else if (c.fly) y = e.cy + (ref[5] - ref[3] * 0.5) * sc;
       else y = e.y + e.h + 1;
     }
+    if (!c.top && !c.place && !c.rigid && !e.hanging) { const m = motion(e, d, dt, t, c); o.sx = m.sx; o.sy = m.sy; if (!o.rot) o.rot = m.rot; x += m.dx; y += m.dy; }
     if (!c.fly && !c.top && !e.isDummy && !e.hanging && !(c.shadow && !c.shadow(e))) Pixel.shadow(g, e.cx, e.y + e.h, Math.min(e.w * 1.1, ref[2] * sc * 0.4));
     if (kind === 'spider' && e.hanging) {                                                         // the thread it hangs from
       g.strokeStyle = 'rgba(220,225,240,0.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(e.cx, e.anchorY != null ? e.anchorY : e.y - 300); g.lineTo(e.cx, e.y + 4); g.stroke();

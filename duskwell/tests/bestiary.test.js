@@ -1,11 +1,12 @@
 // The bestiary: every creature and boss has an entry and drawn art, creatures are entered when first seen, the list is
 // saved, and the screen opens from the pause menu and browses.
 const { open, shot } = require('./lib');
-let fails = 0, BESTN = 35 + 6 + 4;
+let fails = 0, BESTN = 35 + 6 + 4;                    // and one more for every new species with its own sheet (js/species.js)
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };
 (async () => {
   const { browser, page, errors } = await open();
   const ev = (f, a) => page.evaluate(f, a);
+  BESTN += await ev(() => (typeof Species !== 'undefined' ? Species.list.length : 0));
   let r = await ev(() => {
     const keys = BESTIARY.map(b => (b.boss ? 'b:' : 'e:') + b.k), dup = keys.filter((k, i) => keys.indexOf(k) !== i);
     const noArt = BESTIARY.filter(b => { const c = document.createElement('canvas'); c.width = c.height = 400; return !Art.drawCreature(c.getContext('2d'), b.k, !!b.boss, 200, 300, 2, 1, {}); }).map(b => b.k);

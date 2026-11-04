@@ -17,6 +17,15 @@ def cut(path):
     l, n = ndi.label(ndi.binary_dilation(fg, iterations=4)); sz = ndi.sum(fg, l, range(1, n + 1))
     keep = [i + 1 for i, v in enumerate(sz) if v > max(1500, sz.max() * 0.02)]
     m = np.isin(l, keep) & fg
+    # the grey seen through a gap (between the legs, under an arch of the body) was filled in with the outline: open it again
+    f = cv2.GaussianBlur(im.astype(np.float32), (0, 0), 1.0)
+    bg = np.median(np.concatenate([f[:6].reshape(-1, 3), f[-6:].reshape(-1, 3), f[:, :6].reshape(-1, 3), f[:, -6:].reshape(-1, 3)]), 0)
+    sat = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)[..., 1]
+    hole = m & (np.linalg.norm(f - bg, axis=2) < 13) & (sat < 30)
+    hl, hn = ndi.label(hole)
+    if hn:
+        hs = ndi.sum(hole, hl, range(1, hn + 1))
+        m &= ~np.isin(hl, [i + 1 for i, v in enumerate(hs) if v >= 150])
     body = (l == int(np.argmax(sz)) + 1) & fg
     a = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 0.9); a = np.clip((a - 0.2) / 0.6, 0, 1)
     yy, xx = np.where(m); y0, y1, x0, x1 = yy.min(), yy.max() + 1, xx.min(), xx.max() + 1
@@ -28,6 +37,9 @@ def rows_of(kind):
     js = open(os.path.join(ROOT, 'js', 'creature_anims_meta.js')).read()
     A = json.loads(re.search(r'const CREATURE_ANIMS = (\{.*?\});', js, re.S).group(1))
     P = json.loads(re.search(r'const CREATURE_PARTS = (\{.*?\});', js, re.S).group(1))
+    if kind not in A:                                        # a new species moves with the rows of the creature it is built on
+        sp = {x['k']: x['parent'] for x in json.load(open(os.path.join(HERE, 'species.json')))}
+        kind = sp[kind]
     return {s: len(v) for s, v in A[kind].items()}, P.get(kind)
 
 def spread(names, n):                                         # n frames walking through the given poses in order

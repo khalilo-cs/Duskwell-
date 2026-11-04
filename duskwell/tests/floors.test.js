@@ -1,10 +1,12 @@
-// Floors painted in code (js/art_floors.js): every area but the crystal one lays its own rock, tops, fringes and ledges.
+// Floors: every area but the crystal one lays its own rock, tops and ledges: from its painted texture and edge (js/art_painted_floors.js)
+// where it has them, else painted in code (js/art_floors.js).
 const { open, shot } = require('./lib');
 let fails = 0;
 const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra !== undefined ? '  ' + JSON.stringify(extra) : '')); if (!cond) fails++; };
 (async () => {
   const { browser, page, errors } = await open({ http: true });
   const ev = f => page.evaluate(f);
+  await page.waitForFunction(() => PaintedFloors.themes.every(t => PaintedFloors.has(t)), null, { timeout: 30000 });
   const themes = await ev(() => FloorTiles.themes);
   ok('fourteen themes have a floor of their own (the crystal one has its tileset)', themes.length === 14 && !themes.includes('crystal'), themes);
   for (const th of themes) {
@@ -13,7 +15,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       if (!id) return { missing: true };
       DW.enterRoom(id, { pos: { x: 100, y: 100 } }); DW.G.state = 'play'; DW.G.trans = null;
       const L = DW.G.level, c = Art.renderLevel(L, 1), g = c.getContext('2d');
-      const sheet = MossTiles.has(THEMES[th]), st = sheet ? MossTiles.stats : FloorTiles.stats;               // four areas are laid from the mossy sheet (moss_tiles.test.js), the rest by the painter
+      const painted = PaintedFloors.has(th), sheet = !painted && MossTiles.has(THEMES[th]), st = painted ? PaintedFloors.stats : sheet ? MossTiles.stats : FloorTiles.stats;
       // colours of the rock tiles: a real texture varies from tile to tile and inside a tile
       const lum = []; let solid = 0;
       for (let y = 1; y < L.h - 1 && lum.length < 400; y++) for (let x = 1; x < L.w - 1; x++) {
@@ -22,14 +24,14 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
         for (let i = 0; i < d.length; i += 4 * 9) lum.push(0.3 * d[i] + 0.6 * d[i + 1] + 0.1 * d[i + 2]);
       }
       const mean = lum.reduce((a, b) => a + b, 0) / (lum.length || 1), sd = Math.sqrt(lum.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (lum.length || 1));
-      return { id, sheet, theme: st.theme, tops: st.tops, fringes: st.fringes, solid, sd: +sd.toFixed(2), mean: +mean.toFixed(1) };
+      return { id, painted, sheet, theme: st.theme, tops: st.tops, fringes: st.fringes, solid, sd: +sd.toFixed(2), mean: +mean.toFixed(1) };
     }, th);
-    ok(th + ': the room is laid (by the floor painter, or from the mossy sheet in its four areas), with tops and a textured rock', !r.missing && r.theme === th && r.tops > 0 && r.sd > 3, r);
+    ok(th + ': the room is laid (from its painted texture and edge), with tops and a textured rock', !r.missing && r.painted && r.theme === th && r.tops > 0 && r.sd > 3, r);
   }
   // a room of ledges: they are drawn too
   const led = await ev(() => {
     const id = DW.WORLD.order.find(i => DW.WORLD.rooms[i].theme === 'frost' && DW.WORLD.rooms[i].t.some(v => v === 2));
-    DW.enterRoom(id, { pos: { x: 100, y: 100 } }); Art.renderLevel(DW.G.level, 1); return FloorTiles.stats.ledges;
+    DW.enterRoom(id, { pos: { x: 100, y: 100 } }); Art.renderLevel(DW.G.level, 1); return PaintedFloors.stats.ledges;
   });
   ok('one-way plates are drawn as ledges', led > 0, led);
   // the textures tile without a seam: the edge columns of each texture meet

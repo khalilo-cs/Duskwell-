@@ -27,8 +27,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('every piece is used by some area, and nothing named is missing from the atlas', r.missing.length === 0 && r.extra.length === 0, r);
 
   // ---- the hooks
-  r = await ev(() => ({ moss: ['moss', 'spore', 'aqueduct', 'ember'].map(n => Art.tileHooks[n].solid === Art.tileHooks.moss.solid && MossTiles.has(THEMES[n])), crystal: Art.tileHooks.crystal !== Art.tileHooks.moss, others: ['cave', 'frost', 'storm', 'mirror', 'bone', 'lunar', 'webbed', 'foundry', 'throne', 'town'].filter(n => Art.tileHooks[n] && Art.tileHooks[n].solid === Art.tileHooks.moss.solid) }));
-  ok('Mossgrove, Sporewood, the Aqueduct and Cinderdeep are laid from the sheet, Crystal Spires and every other area are not', r.moss.every(Boolean) && r.crystal && r.others.length === 0, r);
+  await page.waitForFunction(() => PaintedFloors.themes.every(t => PaintedFloors.has(t)), null, { timeout: 30000 });
+  r = await ev(() => ({ moss: ['moss', 'spore', 'aqueduct', 'ember'].map(n => MossTiles.has(THEMES[n]) && (PaintedFloors.has(n) || Art.tileHooks[n].solid === Art.tileHooks.moss.solid)), crystal: Art.tileHooks.crystal !== Art.tileHooks.moss, others: ['cave', 'frost', 'storm', 'mirror', 'bone', 'lunar', 'webbed', 'foundry', 'throne', 'town'].filter(n => MossTiles.THEMES[n]) }));
+  ok('Mossgrove, Sporewood, the Aqueduct and Cinderdeep take their things from the sheet (their rock from their painted floor where it has one), Crystal Spires and every other area do not', r.moss.every(Boolean) && r.crystal && r.others.length === 0, r);
 
   // ---- every room of the four areas
   r = await ev(() => {
@@ -38,9 +39,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       out.rooms++; out.themes[d.theme] = (out.themes[d.theme] || 0) + 1;
       const run = () => { G.flags = {}; enterRoom(id, { door: d.doors[0].id }); G.state = 'play'; G.trans = null; DW.step(1); DW.draw(); const s = MossTiles.stats; return JSON.stringify([s.props, s.hangs, s.fills, s.tops, s.arches]); };
       const a = run(), b = run(); if (a !== b) out.same = false;
-      const s = MossTiles.stats, L = G.level; let solid = 0; for (let i = 0; i < L.t.length; i++) if (L.t[i] === T_SOLID) solid++;
-      if (s.fills !== solid) out.bad.push([id, 'fills', s.fills, solid]);
-      for (const k of Object.keys(out.tot)) out.tot[k] += Array.isArray(s[k]) ? s[k].length : s[k];
+      const s = MossTiles.stats, L = G.level, painted = PaintedFloors.has(d.theme); let solid = 0; for (let i = 0; i < L.t.length; i++) if (L.t[i] === T_SOLID) solid++;
+      if (painted) out.painted = (out.painted || 0) + 1; else { out.sheet = (out.sheet || 0) + 1; if (s.fills !== solid) out.bad.push([id, 'fills', s.fills, solid]); }
+      for (const k of Object.keys(out.tot)) if (!painted || k === 'props' || k === 'hangs') out.tot[k] += Array.isArray(s[k]) ? s[k].length : s[k];
       const keep = []; for (const dd of d.doors) keep.push([dd.x - 2, dd.y - 1, dd.w + 4, dd.h + 2]);
       for (const q of [].concat(d.benches, d.stations, d.signs, d.npcs, d.items, d.mech)) keep.push([q.x - 3, q.y - 4, 7, 6]);
       for (const p of s.props) {
@@ -55,7 +56,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     }
     return out;
   });
-  ok('all ' + r.rooms + ' rooms of the four areas are laid without a throw: a block for every tile of rock, ground tops, hanging moss, arches, plates, things', r.rooms >= 30 && r.bad.length === 0 && r.tot.fills > 5000 && r.tot.tops > 100 && r.tot.fringes > 100 && r.tot.arches > 20 && r.tot.plates > 100 && r.tot.props > 60 && r.tot.hangs > 40, [r.rooms, r.themes, r.tot, r.bad.slice(0, 5)]);
+  ok('all ' + r.rooms + ' rooms of the four areas are laid without a throw: their things from the sheet, a block for every tile of rock where the sheet lays the rock', r.rooms >= 30 && r.bad.length === 0 && (!r.sheet || (r.tot.fills > 100 * r.sheet && r.tot.tops > 2 * r.sheet)) && r.tot.props > 60 && r.tot.hangs > 40, [r.rooms, r.themes, r.sheet, r.painted, r.tot, r.bad.slice(0, 5)]);
   ok('standing things are on rock with free air above, hanging things under rock with free air below, none on a door, bench or pickup', r.bad.length === 0, r.bad.slice(0, 5));
   ok('a room is laid the same way on every visit', r.same);
   ok('many different things stand and hang in the rooms (' + Object.keys(r.seen).length + ' kinds seen)', Object.keys(r.seen).length >= 25, Object.keys(r.seen));

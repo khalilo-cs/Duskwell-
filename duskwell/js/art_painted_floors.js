@@ -104,7 +104,11 @@ const PaintedFloors = (() => {
       ready: () => has(t) || !!(prev && prev.ready()),
       solid: (g, L, th, isS, seed) => has(t) ? solid(g, L, th, isS, seed) : !!(prev && prev.solid(g, L, th, isS, seed)),
       plats: (g, L, th) => has(t) ? plats(g, L, th) : !!(prev && prev.plats(g, L, th)),
-      scenery: prev && prev.scenery ? prev.scenery : undefined,
+      // the mossy sheet still sets its things in its areas; with painted rock its own rock pass (which starts its count) does not run
+      scenery: prev && prev.scenery ? (g, L, th, isS, seed) => {
+        if (has(t) && typeof MossTiles !== 'undefined' && MossTiles.THEMES[t]) { const s = MossTiles.stats; s.props = []; s.hangs = []; s.theme = t; }
+        prev.scenery(g, L, th, isS, seed);
+      } : undefined,
     };
   }
   return { stats, has, themes: Object.keys(meta) };

@@ -86,6 +86,14 @@ const MapView = (() => {
   const cA = (c, a) => { const [r, g, b] = rgbOf(c); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; };
   const tint = (c, k) => { const [r, g, b] = rgbOf(c); return 'rgb(' + Math.round(r + (255 - r) * k) + ',' + Math.round(g + (255 - g) * k) + ',' + Math.round(b + (255 - b) * k) + ')'; };
   const BLOCKS = new Set([T_SOLID, T_BREAK, T_GATE, T_CRACK, T_CRUMBLE]);
+  // the painted rock of every area (art/floors/<theme>_fill.webp), so the rooms on the map are of the stone they are built of
+  const rockImgs = {};
+  function rockOf(area) {
+    const th = typeof AreaArt !== 'undefined' && AreaArt.THEME_OF ? AreaArt.THEME_OF[area] : null;
+    if (!th || typeof FLOOR_ART === 'undefined' || !FLOOR_ART[th]) return null;
+    if (!rockImgs[th]) { const im = new Image(); im.onload = () => { for (const k of Object.keys(minis)) delete minis[k]; }; im.src = 'art/floors/' + th + '_fill.webp'; rockImgs[th] = im; }
+    return rockImgs[th];
+  }
   // p pixels to a tile: 1 for the whole world, 2 and 4 for the closer views
   function mini(id, p) {
     const key = id + ':' + p; if (minis[key]) return minis[key];
@@ -94,7 +102,8 @@ const MapView = (() => {
     const at = (x, y) => (x < 0 || y < 0 || x >= d.w || y >= d.h ? T_SOLID : d.t[y * d.w + x]);
     g.fillStyle = 'rgba(4,7,14,0.9)'; g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = cA(col, 0.13); g.fillRect(0, 0, c.width, c.height);
-    const body = cA(col, 0.42), rim = tint(col, 0.45), top = tint(col, 0.8), ice = '#bfeaff';
+    const rock = p > 1 ? rockOf(d.area) : null, painted = !!(rock && rock.complete && rock.naturalWidth);
+    const body = cA(col, painted ? 0.2 : 0.42), rim = tint(col, 0.45), top = tint(col, 0.8), ice = '#bfeaff';
     const thin = Math.max(1, Math.round(p / 4));
     for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) {
       const v = d.t[y * d.w + x]; if (v === T_AIR) continue;
@@ -104,6 +113,11 @@ const MapView = (() => {
         const isIce = v === T_SOLID && d.iceCells && d.iceCells.has(y * d.w + x);
         const special = v === T_CRACK ? '#d9b48a' : v === T_CRUMBLE ? '#c8aa78' : v === T_BREAK ? '#f0dca0' : v === T_GATE ? '#ffd54a' : null;
         if (p === 1) { g.fillStyle = special || (isIce ? ice : (open.some(Boolean) ? rim : body)); g.fillRect(px, py, 1, 1); continue; }
+        if (painted && !special && !isIce) {                                  // the rock as painted, darker the deeper it lies
+          const k = rock.naturalWidth / 512, sx = ((x * p * 6) % 480) * k, sy = ((y * p * 6) % 480) * k;
+          g.drawImage(rock, sx, sy, p * 6 * k, p * 6 * k, px, py, p, p);
+          if (!open.some(Boolean)) { g.fillStyle = 'rgba(3,5,12,0.35)'; g.fillRect(px, py, p, p); }
+        }
         g.fillStyle = special ? cA(special, 0.55) : (isIce ? 'rgba(191,234,255,0.5)' : body); g.fillRect(px, py, p, p);
         if (special) { g.fillStyle = special; if (v === T_BREAK || v === T_CRACK) { g.fillRect(px, py, p, thin); g.fillRect(px, py + p - thin, p, thin); g.fillRect(px, py, thin, p); g.fillRect(px + p - thin, py, thin, p); } else g.fillRect(px, py, p, thin); continue; }
         g.fillStyle = isIce ? ice : rim;
@@ -116,7 +130,8 @@ const MapView = (() => {
       else if (v === T_ACID) { g.fillStyle = hot ? 'rgba(255,122,58,0.9)' : 'rgba(125,255,90,0.85)'; g.fillRect(px, py, p, p); }
       else if (v === T_BOUNCE) { g.fillStyle = '#7dff8a'; g.fillRect(px, py + (p === 1 ? 0 : p - thin * 2), p, p === 1 ? 1 : thin * 2); }
     }
-    minis[key] = c; return c;
+    if (!rock || painted || rock.complete) minis[key] = c;                     // drawn again once its rock has loaded
+    return c;
   }
 
   // ---------------------------------------------------------------- signs

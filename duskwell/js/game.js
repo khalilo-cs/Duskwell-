@@ -729,6 +729,11 @@ function drawMaskIcon(g, x, y, full, pulse, crack) {
   g.save(); g.translate(x, y);
   const s = 1 + pulse * 0.25;
   g.scale(s, s);
+  if (typeof UiArt !== 'undefined' && UiArt.has('life_full')) {      // the painted life gems
+    if (crack > 0) UiArt.draw(g, 'life_broken', 0, 0, 31, { alpha: Math.min(1, crack) });
+    else UiArt.draw(g, full ? 'life_full' : 'life_empty', 0, 0, full ? 31 : 29, full ? null : { alpha: 0.9 });
+    g.restore(); return;
+  }
   if (crack > 0) {                                                // the cracked picture: the last mask, or one that has just gone
     if (IconArt.ready()) { IconArt.draw(g, 'mask_broken', 0, 1, 32, { alpha: Math.min(1, crack) }); g.restore(); return; }
     poly(g, [-11, -12, 11, -12, 13, 2, 0, 15, -13, 2]); fs(g, 'rgba(243,248,251,' + crack + ')', INK, 2.5);
@@ -790,27 +795,33 @@ function drawGearCard(g) {
 function drawHUD(g) {
   // soul orb
   const ox = 52, oy = 54, r = 30, soul = P.soul / Diff.soulMax;
-  g.save();
-  glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
-  const orbArt = IconArt.ready();
-  if (orbArt) IconArt.draw(g, 'orb_empty', ox, oy, r * 2.5);
-  else { g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill(); }
-  g.save(); g.beginPath(); g.arc(ox, oy, r - 2, 0, 7); g.clip();
-  const ly = oy + r - 2 * (r - 2) * soul;
-  g.fillStyle = P.soul >= P.spellCost() ? '#e4f4ff' : '#9bb8d6';
-  g.beginPath(); g.moveTo(ox - r, oy + r);
-  for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
-  g.lineTo(ox + r, oy + r); g.closePath();
-  if (orbArt) { g.clip(); IconArt.draw(g, 'orb_full', ox, oy, r * 2.5, P.soul >= P.spellCost() ? null : { filter: 'brightness(0.72) saturate(0.8)' }); } else g.fill();
-  if (P.maxSoul < Diff.soulMax) {            // the cracked top third
-    const cy = oy + r - 2 * (r - 2) * (P.maxSoul / Diff.soulMax);
-    g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
-    g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
+  const canCast = P.soul >= P.spellCost();
+  if (typeof UiArt !== 'undefined' && UiArt.has('vessel')) {          // the painted vessel and its liquid
+    glow(g, ox, oy, 60, '#cfe8ff', canCast ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
+    UiArt.vessel(g, ox, oy, 25, soul, canCast, P.maxSoul / Diff.soulMax, G.t);
+  } else {
+    g.save();
+    glow(g, ox, oy, 60, '#cfe8ff', P.soul >= P.spellCost() ? 0.25 + 0.15 * Math.sin(G.t * 5) : 0.08);
+    const orbArt = IconArt.ready();
+    if (orbArt) IconArt.draw(g, 'orb_empty', ox, oy, r * 2.5);
+    else { g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fillStyle = 'rgba(8,12,22,0.75)'; g.fill(); }
+    g.save(); g.beginPath(); g.arc(ox, oy, r - 2, 0, 7); g.clip();
+    const ly = oy + r - 2 * (r - 2) * soul;
+    g.fillStyle = P.soul >= P.spellCost() ? '#e4f4ff' : '#9bb8d6';
+    g.beginPath(); g.moveTo(ox - r, oy + r);
+    for (let x = -r; x <= r; x += 4) g.lineTo(ox + x, ly + Math.sin(G.t * 4 + x * 0.25) * 2);
+    g.lineTo(ox + r, oy + r); g.closePath();
+    if (orbArt) { g.clip(); IconArt.draw(g, 'orb_full', ox, oy, r * 2.5, P.soul >= P.spellCost() ? null : { filter: 'brightness(0.72) saturate(0.8)' }); } else g.fill();
+    if (P.maxSoul < Diff.soulMax) {            // the cracked top third
+      const cy = oy + r - 2 * (r - 2) * (P.maxSoul / Diff.soulMax);
+      g.fillStyle = 'rgba(6,8,14,0.82)'; g.fillRect(ox - r, oy - r, 2 * r, cy - (oy - r));
+      g.strokeStyle = 'rgba(160,175,200,0.7)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(ox - r + 3, cy); g.lineTo(ox - 8, cy + 3); g.lineTo(ox + 2, cy - 2); g.lineTo(ox + r - 3, cy + 2); g.stroke();
+    }
+    g.restore();
+    if (!orbArt) { g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
+    g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke(); }
+    g.restore();
   }
-  g.restore();
-  if (!orbArt) { g.lineWidth = 3; g.strokeStyle = '#e9f1f8'; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.stroke();
-  g.lineWidth = 2; g.strokeStyle = INK; g.beginPath(); g.arc(ox, oy, r + 2, 0, 7); g.stroke(); }
-  g.restore();
   // how much soul there is, under the orb (the vessel holds Diff.soulMax)
   g.font = font(12, '700'); g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
   textShadow(g, Math.floor(P.soul) + '', ox, oy + r + 10, P.soul >= P.spellCost() ? '#dff0ff' : '#8fa6c4');
@@ -828,7 +839,8 @@ function drawHUD(g) {
   }
   // geo
   const gx = 100, gy = 88, gp = G.geoPulse;
-  if (IconArt.ready()) IconArt.draw(g, 'geo', gx, gy, 24 + gp * 4); else { poly(g, [gx, gy - 8 - gp * 2, gx + 8, gy, gx, gy + 8 + gp * 2, gx - 8, gy]); fs(g, '#ffe9a0', INK, 2); }
+  if (typeof UiArt !== 'undefined' && UiArt.has('coin')) UiArt.draw(g, 'coin', gx, gy, 24 + gp * 4);
+  else if (IconArt.ready()) IconArt.draw(g, 'geo', gx, gy, 24 + gp * 4); else { poly(g, [gx, gy - 8 - gp * 2, gx + 8, gy, gx, gy + 8 + gp * 2, gx - 8, gy]); fs(g, '#ffe9a0', INK, 2); }
   g.font = font(22, '700'); g.textAlign = 'left'; g.textBaseline = 'middle'; g.direction = 'ltr';
   textShadow(g, String(P.geo), gx + 16, gy + 1, gp > 0 ? '#fff6c8' : '#ffe9a0');
   // equipment: weapon, cloak and worn charms
@@ -838,12 +850,17 @@ function drawHUD(g) {
   const b = G.boss;
   if (b && b.state !== 'intro' && G.bossBarShow) {
     const w = 520, x = (VW - w) / 2, y = VH - 44, k = clamp(b.hp / b.maxHp, 0, 1);
+    if (typeof UiArt !== 'undefined' && UiArt.bossBar(g, VW / 2, y + 1, w + 120, k, b.flash > 0)) {
+      setDir(g); g.textAlign = 'center'; g.font = font(20, '700'); textShadow(g, tr('boss_' + b.bossKey), VW / 2, y - 26, '#f2f7ff');
+      Echo.hud(g);
+    } else {
     g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(x - 6, y - 8, w + 12, 18);
     g.fillStyle = '#1a2230'; g.fillRect(x, y - 3, w, 8);
     g.fillStyle = b.flash > 0 ? '#ffffff' : '#e6eef7'; g.fillRect(x, y - 3, w * k, 8);
     g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(x - 6, y - 8, w + 12, 18);
     setDir(g); g.textAlign = 'center'; g.font = font(20, '700'); textShadow(g, tr('boss_' + b.bossKey), VW / 2, y - 22, '#f2f7ff');
     Echo.hud(g);
+    }
   }
   if (b && b.state === 'intro') {
     const k = clamp((2.4 - b.introT) / 0.7, 0, 1) * clamp(b.introT / 0.6, 0, 1);
@@ -1097,8 +1114,11 @@ function drawWorld(g) {
   for (const f of G.fx) { if (f.type === 'shard') Shards.draw(g, f); else if (f.type === 'cfx') Shards.drawCue(g, f); else Art.drawFx(g, f); }
   Guard.run(g, 'powers', () => Powers.draw(g, t));
   for (const e of G.enemies) if (e.isBoss && e.enraged && e.state !== 'dying') bloom(g, e.cx, e.cy, Math.max(e.w, e.h) * 1.1, '#ff4030', 0.16 + 0.1 * (0.5 + 0.5 * Math.sin(t * 7)));          // an enraged guardian glows red
+  const paintedParts = typeof UiArt !== 'undefined' && UiArt.has('fx_drop');
   for (const p of G.parts) {
-    const a = 1 - p.t / p.life; g.globalAlpha = a; g.fillStyle = p.color;
+    const a = 1 - p.t / p.life;
+    if (paintedParts && UiArt.particle(g, p, a)) continue;          // a painted droplet, fleck, chip or puff in its colour
+    g.globalAlpha = a; g.fillStyle = p.color;
     g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
   }
   g.globalAlpha = 1;

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Terrain kits: every sheet art/source/kits/<themeA>_<themeB>.png holds twelve painted pieces on flat grey, in 3 columns and 4 rows,
-the top two rows for the first area and the bottom two for the second:
+"""Terrain kits: every sheet art/source/kits/<themeA>_<themeB>[_<themeC>].png holds the painted pieces of two or three areas on flat
+grey, in 3 columns and two rows per area (from the top, in the order of the name):
     breakable wall, closed gate, spikes
     ledge, cracked ledge, moving platform
 Each piece is cut out of its grey ground (the grey that reaches the border, and the larger grey gaps inside it, such as between
@@ -16,7 +16,7 @@ NAMES = [['wall', 'gate', 'spikes'], ['ledge', 'ledge_crack', 'mover']]
 LIMIT = 640                                        # longest side of a piece in the atlas
 
 
-def cut_sheet(path):
+def cut_sheet(path, rows):
     a = np.asarray(Image.open(path).convert('RGB'), np.float32); H, W = a.shape[:2]
     border = np.concatenate([a[:8].reshape(-1, 3), a[-8:].reshape(-1, 3), a[:, :8].reshape(-1, 3), a[:, -8:].reshape(-1, 3)])
     grey = np.median(border, 0)
@@ -32,19 +32,29 @@ def cut_sheet(path):
     # soft edge: the grey that is close to the ground fades out over a couple of px
     alpha = ndi.gaussian_filter(fg.astype(np.float32), 0.9)
     alpha = np.where(fg, np.maximum(alpha, 0.5), alpha * (d / 40).clip(0, 1))
-    # the pieces: blobs of the (slightly grown) figure, given to the cell their centre falls in
-    blobs, nb = ndi.label(ndi.binary_dilation(fg, iterations=6))
-    cells = {}
+    # the pieces: blobs of the figure (grown a little, so a piece's loose bits stay with it). The rows of the sheet are seldom
+    # even (a row with a gate is taller than a row of ledges), so they are found from the big blobs: sorted by height on the
+    # sheet and split at the widest gaps; every blob then goes to the nearest row and to the column its centre falls in
+    blobs, nb = ndi.label(ndi.binary_dilation(fg, iterations=3))
+    info = []
     for i, sl in enumerate(ndi.find_objects(blobs)):
         if sl is None: continue
-        m = blobs[sl] == i + 1
-        if (m & fg[sl]).sum() < 0.00002 * W * H: continue           # a speck
-        cy = (sl[0].start + sl[0].stop) / 2; cx = (sl[1].start + sl[1].stop) / 2
-        r, c = min(3, int(cy * 4 / H)), min(2, int(cx * 3 / W))
-        cells.setdefault((r, c), []).append(i + 1)
+        n = int((blobs[sl] == i + 1).sum())
+        if n < 0.00002 * W * H: continue                              # a speck
+        info.append((i + 1, (sl[0].start + sl[0].stop) / 2, (sl[1].start + sl[1].stop) / 2, n))
+    big = sorted(x for x in info if x[3] >= 0.0015 * W * H)
+    ys = sorted(x[1] for x in big)
+    gaps = sorted(range(1, len(ys)), key=lambda k: ys[k] - ys[k - 1])[-(rows - 1):]
+    bounds = sorted(ys[k - 1] / 2 + ys[k] / 2 for k in gaps)
+    centres = [np.mean([y for y in ys if (k == 0 or y > bounds[k - 1]) and (k == rows - 1 or y < bounds[k])]) for k in range(rows)]
+    cells = {}
+    for i, cy, cx, n in info:
+        r = int(np.argmin([abs(cy - c) for c in centres])); c = min(2, int(cx * 3 / W))
+        cells.setdefault((r, c), []).append(i)
+    cells = {k: np.isin(blobs, v) for k, v in cells.items()}
     out = {}
-    for (r, c), ids in cells.items():
-        m = np.isin(blobs, ids) & (alpha > 0.02)
+    for (r, c), cm in cells.items():
+        m = cm & (alpha > 0.02)
         ys, xs = np.where(m); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
         rgb = a[y0:y1, x0:x1].copy()
         if (r % 2, c) == (0, 1):                                    # a gate: the grey seen between its bars is the dark passage behind it
@@ -70,9 +80,9 @@ def main():
     meta_path = os.path.join(ROOT, 'js', 'kits_meta.js')
     meta = {}
     for p in sorted(glob.glob(os.path.join(SRC, '*_*.png'))):
-        A, B = os.path.basename(p)[:-4].split('_')
-        pieces = cut_sheet(p)
-        for half, theme in ((0, A), (1, B)):
+        themes = os.path.basename(p)[:-4].split('_')
+        pieces = cut_sheet(p, 2 * len(themes))
+        for half, theme in enumerate(themes):
             pics = {}
             for rr in range(2):
                 for c in range(3):

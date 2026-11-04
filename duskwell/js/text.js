@@ -188,4 +188,13 @@ function setLang(l) { LANG.cur = l; try { localStorage.setItem('duskwell_lang', 
 const FONT_AR = '"Cairo","Noto Naskh Arabic","Segoe UI",Tahoma,sans-serif';
 const FONT_EN = '"Cinzel","Trajan Pro","Palatino Linotype",Georgia,serif';
 // canvas font string for the current language
-function font(px, weight) { return (weight || '700') + ' ' + px + 'px ' + (LANG.cur === 'ar' ? FONT_AR : FONT_EN); }
+const FONT_AR_TITLE = '"Aref Ruqaa","Cairo","Noto Naskh Arabic",serif';      // the big Arabic titles are written in a calligraphic hand
+function font(px, weight) {
+  if (LANG.cur === 'ar' && px >= 26) return '700 ' + Math.round(px * 1.08) + 'px ' + FONT_AR_TITLE;
+  return (weight || '700') + ' ' + px + 'px ' + (LANG.cur === 'ar' ? FONT_AR : FONT_EN);
+}
+// the fonts are the game's own files (fonts/): ask for them at once, so the first screens are not written in a fallback
+if (typeof document !== 'undefined' && document.fonts && document.fonts.load) {
+  for (const f of ['700 30px "Aref Ruqaa"', '400 30px "Aref Ruqaa"', '500 16px "Cairo"', '700 16px "Cairo"', '700 20px "Cinzel"', '600 20px "Cinzel"'])
+    document.fonts.load(f, 'أبجد abc').catch(() => {});
+}

@@ -1,0 +1,9 @@
+{
+  "hud": [["life_full", "life_empty", "life_broken", "vessel", "soul", "coin"],
+          ["bar_frame"],
+          ["bar_fill"],
+          ["fx_splash", "fx_drop", "fx_fleck", "fx_burst", "fx_puff", "fx_smoke", "fx_spark", "fx_chip"]],
+  "menu": [["parchment", "panel"],
+           ["map_bench", "map_merchant", "map_smith", "map_mage", "map_quest", "map_boss", "map_lantern", "map_door", "map_you"],
+           ["divider", "marker", "button"]]
+}

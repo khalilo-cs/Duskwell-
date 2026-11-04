@@ -1,0 +1,3 @@
+'use strict';
+// made by tools/paint/ui.py: the painted pieces of the interface in art/ui/ui.webp, [x, y, w, h]
+const UI_RECTS = {"bar_fill": [0, 922, 1400, 38], "bar_frame": [364, 677, 1400, 148], "coin": [1399, 0, 290, 348], "fx_burst": [612, 364, 360, 305], "fx_chip": [1608, 364, 201, 269], "fx_drop": [0, 364, 244, 309], "fx_fleck": [1267, 364, 337, 284], "fx_puff": [248, 364, 360, 309], "fx_smoke": [1221, 0, 174, 360], "fx_spark": [976, 364, 287, 291], "fx_splash": [0, 677, 360, 241], "life_broken": [563, 0, 321, 360], "life_empty": [282, 0, 277, 360], "life_full": [0, 0, 278, 360], "soul": [1693, 0, 344, 339], "vessel": [888, 0, 329, 360]};

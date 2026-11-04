@@ -445,6 +445,8 @@ const CONCEPT_ALPHA = { default: [1, 1, 1, 1], town: [1, 1, 1, 1], townb: [1, 0,
 const PAINTING_BG = ['lunar_moon', 'lunar_hall', 'lunar_dome', 'mirror_city', 'mirror_hall'];
 for (const k of PAINTING_BG) CONCEPT_ALPHA[k] = [1, 0, 0, 0];
 for (const k of ['cave', 'moss', 'spore', 'aqueduct', 'crystal', 'webbed', 'foundry', 'throne', 'frost', 'ember', 'storm', 'mirror', 'bone', 'lunar']) CONCEPT_ALPHA[k] = CONCEPT_ALPHA.default;
+// areas repainted as one detailed picture (tools/paint/floors.py): the picture alone, without the old cut-out layers
+if (typeof SKY_HD !== 'undefined') for (const k of SKY_HD) CONCEPT_ALPHA[k] = [1, 0, 0, 0];
 // backdrop sets that belong to no theme of their own: the afternoon village behind the roads out of the town
 const EXTRA_BG = { townb: true };
 for (const k of PAINTING_BG) EXTRA_BG[k] = true;

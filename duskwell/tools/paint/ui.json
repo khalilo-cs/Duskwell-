@@ -70,5 +70,17 @@
    "liq_acid",
    "liq_mercury"
   ]
+ ],
+ "items": [
+  [
+   "it_life",
+   "it_vessel",
+   "it_relic",
+   "it_fang",
+   "it_key",
+   "it_scroll",
+   "it_pouch",
+   "it_idol"
+  ]
  ]
 }

@@ -64,3 +64,15 @@ const Decor = (() => {
   }
   return { has, stats, spots };
 })();
+// the things to pick up, painted: a shard of a life gem, a relic of a power, a fang, a pouch
+(() => {
+  const old = Art.drawItem;
+  const PIC = { seed: 'it_life', ability: 'it_relic', fang: 'it_fang', vessel: 'it_vessel', key: 'it_key', scroll: 'it_scroll', idol: 'it_idol' };
+  Art.drawItem = function (g, it, t) {
+    const n = PIC[it.kind] || (it.kind !== 'charm' && it.kind !== 'cache' ? 'it_pouch' : null);
+    if (!n || typeof UiArt === 'undefined' || !UiArt.has(n)) return old(g, it, t);
+    const y = it.y + Math.sin(t * 2.5) * 5, glow = { it_life: '#ff5a6a', it_relic: '#e6f3ff', it_vessel: '#9fe0ff' }[n] || '#ffe9a0';
+    bloom(g, it.x, y, it.kind === 'ability' ? 100 : 60, glow, 0.32 + 0.12 * Math.sin(t * 3));
+    UiArt.draw(g, n, it.x, y, it.kind === 'ability' ? 46 : 36);
+  };
+})();

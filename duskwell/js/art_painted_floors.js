@@ -111,5 +111,17 @@ const PaintedFloors = (() => {
       } : undefined,
     };
   }
+  // the floors that only a dive breaks: the same painted rock, with the glowing cracks the hero is to look for
+  const oldCrack = Art.drawCrack;
+  Art.drawCrack = function (g, x, y, th, t) {
+    const name = th && th.name;
+    if (!has(name)) return oldCrack(g, x, y, th, t);
+    const im = load(name, 'fill'), k = im.naturalWidth / FILL_P, px = x * T, py = y * T, v = hash2(x, y, 51);
+    g.save(); g.imageSmoothingEnabled = true;
+    g.drawImage(im, (px % FILL_P) * k, (py % FILL_P) * k, T * k, T * k, px - 0.4, py - 0.4, T + 0.8, T + 0.8); g.restore();
+    g.strokeStyle = INK; g.lineWidth = 3; g.strokeRect(px + 1.5, py + 1.5, T - 3, T - 3);
+    g.strokeStyle = rgba(th.glow, 0.55 + 0.3 * Math.sin(t * 2 + x)); g.lineWidth = 2.2;
+    g.beginPath(); g.moveTo(px + 2, py + 10 + v * 8); g.lineTo(px + 12, py + 16); g.lineTo(px + 20, py + 8 + v * 6); g.lineTo(px + 30, py + 18); g.moveTo(px + 12, py + 16); g.lineTo(px + 14, py + 30); g.stroke();
+  };
   return { stats, has, themes: Object.keys(meta) };
 })();

@@ -28,8 +28,8 @@
       }
     } else if (d.type === 'lamp' && ok('prop_lamp')) {
       const fl = 0.85 + 0.15 * Math.sin(t * 7 + d.x);
-      bloom(g, px + 16, py - 104, 130 * fl, th.glow, 0.32);
-      put(g, 'prop_lamp', px + 16, py + 2, null, 128);
+      const [w, h] = put(g, 'prop_lamp', px + 16, py + 2, null, 128);
+      bloom(g, px + 16 + 0.22 * w, py + 2 - 0.76 * h, 120 * fl, th.glow, 0.34);            // the lantern hangs from the hook on the right
       return;
     } else if (d.type === 'well' && ok('prop_well')) {
       const w = d.w * TILE;

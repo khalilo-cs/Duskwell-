@@ -5,6 +5,10 @@
 const BossPoses = (() => {
   const img = new Image(); img.src = 'art/bosses/poses.webp';
   const ready = () => img.complete && img.naturalWidth > 0;
+  // the detailed poses painted one at a time (art/bosses/hq/<boss>.webp): idle, wind-up, strike, second attack, hurt, death,
+  // all facing right; once a boss's sheet is loaded they take the place of its old drawings
+  const hq = {};
+  const hqOf = p => (typeof p[4] === 'string' ? hq[p[4]] : img);
   const { Spr, ease, easeOut, lerp, clamp01, noise } = Anim;
   // idle / atk (list: used in turn) / hurt: indices into the boss's poses; face: which way the drawing looks (1 = right);
   // hm / wm: how big it is drawn compared with the hitbox (height / width); w: spring stiffness (heavy = low); glow: telegraph colour
@@ -29,6 +33,11 @@ const BossPoses = (() => {
 
   // how each body gives: sway (the upper body swaying, a share of the width), cloth (how much the hem trails behind a move, 0 to 1), flap (the wing tips
   // rise and fall, a share of the height) at fq beats a second. A body of stone does not sway much; a veil and a cloak trail; the winged beat.
+  if (typeof BOSS_HQ !== 'undefined') for (const key of Object.keys(BOSS_HQ)) {
+    const im = new Image();
+    im.onload = () => { if (!CFG[key]) return; BOSS_POSES[key] = BOSS_HQ[key]; Object.assign(CFG[key], { idle: 0, wind: 1, atk: [2, 3], hurt: 4, death: 5, face: 1 }); };
+    im.src = 'art/bosses/hq/' + key + '.webp'; hq[key] = im;
+  }
   const MOTION = {
     spore: { sway: 0.016, cloth: 0.25 }, weaver: { sway: 0.012, cloth: 0.4 }, drowned: { sway: 0.02, cloth: 0.5 }, brood: { sway: 0.015, cloth: 0.2 },
     colossus: { sway: 0.008, cloth: 0.1 }, thunderhoof: { sway: 0.012, cloth: 0.4 }, duelist: { sway: 0.012, cloth: 0.7 }, twin: { sway: 0.012, cloth: 0.8 },
@@ -80,7 +89,7 @@ const BossPoses = (() => {
     // which drawing
     let want = c.idle;
     const hurt = b.stunned || b.state === 'dying';
-    if (hurt) want = c.hurt; else if (r.strike > 0 || (air && c.atk.length)) want = c.atk[r.atkI]; else if (b.state === 'intro' && c.intro != null && b.introT > 1.0) want = c.intro;
+    if (b.state === 'dying' && c.death != null) want = c.death; else if (hurt) want = c.hurt; else if (tele && c.wind != null) want = c.wind; else if (r.strike > 0 || (air && c.atk.length)) want = c.atk[r.atkI]; else if (b.state === 'intro' && c.intro != null && b.introT > 1.0) want = c.intro;
     if (want !== r.pose) { r.prev = r.pose; r.pose = want; r.fade = 0; }
     r.fade = Math.min(1, r.fade + dt / 0.11);
     // targets of the springs
@@ -117,14 +126,14 @@ const BossPoses = (() => {
         const N = 14, cw = w / N, sw = p[2] / N;
         for (let j = 0; j < N; j++) {
           const u = (j + 0.5) / N * 2 - 1, edge = Math.pow(Math.abs(u), 1.4), dy = Math.sin(t * m.fq * 6.283 - Math.abs(u) * 1.1) * m.flap * h * edge;
-          g.drawImage(img, p[0] + sw * j, p[1], sw + 0.6, p[3], x + cw * j, y + dy, cw + 0.8, h);
+          g.drawImage(hqOf(p), p[0] + sw * j, p[1], sw + 0.6, p[3], x + cw * j, y + dy, cw + 0.8, h);
         }
         return;
       }
       const N = 14, sh = p[3] / N, dh = h / N, amp = (m.sway || 0.01) * w, lag = clamp((r.vxs || 0) * flipped * 0.04, -0.25 * w, 0.25 * w);   // bands: sway above, a hem that trails the move below
       for (let i = 0; i < N; i++) {
         const v = (i + 0.5) / N, off = Math.sin(t * 1.8 + v * 3.2 + (b.x || 0) * 0.004) * amp * (1 - v) + Math.sin(t * 2.6 - v * 4) * amp * 0.4 * v - lag * Math.pow(v, 1.7) * (m.cloth || 0);
-        g.drawImage(img, p[0], p[1] + sh * i, p[2], sh + 0.6, x + off, y + dh * i, w, dh + 0.8);
+        g.drawImage(hqOf(p), p[0], p[1] + sh * i, p[2], sh + 0.6, x + off, y + dh * i, w, dh + 0.8);
       }
     };
     const one = (pi, a) => {

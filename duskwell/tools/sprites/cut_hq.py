@@ -54,31 +54,34 @@ def plan(kind, have):
         out[s] = [p if p in have else 'idle_a' for p in seq]
     return out
 
-kinds = sorted({os.path.basename(p).split('_')[0] for p in glob.glob(os.path.join(SRC, '*_idle_a.webp'))})
-meta = {}
-for kind in kinds:
-    have = {os.path.basename(p)[len(kind) + 1:-5]: p for p in glob.glob(os.path.join(SRC, kind + '_*.webp'))}
-    cuts = {k: cut(p) for k, p in have.items()}
-    ref_im, ref_area = cuts['idle_a']; s0 = min(1.0, LIMIT / max(ref_im.size))
-    pics, where = [], {}
-    for k, (im, area) in sorted(cuts.items()):
-        s = s0 * min(1.6, max(0.6, (ref_area / max(area, 1)) ** 0.5))   # the body as big as in the idle pose
-        im = im.resize((max(1, round(im.size[0] * s)), max(1, round(im.size[1] * s))), Image.LANCZOS)
-        where[k] = len(pics); pics.append(im)
-    x = y = row = 0; spots = []
-    for im in pics:
-        if x + im.size[0] > 2048: x, y, row = 0, y + row + 2, 0
-        spots.append((x, y)); x += im.size[0] + 2; row = max(row, im.size[1])
-    atlas = Image.new('RGBA', (2048, y + row), (0, 0, 0, 0))
-    for im, sp in zip(pics, spots): atlas.paste(im, sp)
-    atlas.save(os.path.join(OUT, kind + '.webp'), quality=92, method=6)
-    meta[kind] = {}
-    for s, seq in plan(kind, set(cuts)).items():
-        meta[kind][s] = []
-        for p in seq:
-            n = where[p]; (x, y), (w, h) = spots[n], pics[n].size
-            meta[kind][s].append([x, y, w, h, round(w / 2, 1), h, kind])
-    print(kind, atlas.size, {s: len(v) for s, v in meta[kind].items()})
-with open(os.path.join(ROOT, 'js', 'creature_hq_meta.js'), 'w') as f:
-    f.write("'use strict';\n// made by tools/sprites/cut_hq.py: detailed frames of the creatures in art/creatures/hq/<kind>.webp\n")
-    f.write('const CREATURE_HQ = ' + json.dumps(meta, separators=(',', ':')) + ';\n')
+def main():
+    kinds = sorted({os.path.basename(p).split('_')[0] for p in glob.glob(os.path.join(SRC, '*_idle_a.webp'))})
+    meta = {}
+    for kind in kinds:
+        have = {os.path.basename(p)[len(kind) + 1:-5]: p for p in glob.glob(os.path.join(SRC, kind + '_*.webp'))}
+        cuts = {k: cut(p) for k, p in have.items()}
+        ref_im, ref_area = cuts['idle_a']; s0 = min(1.0, LIMIT / max(ref_im.size))
+        pics, where = [], {}
+        for k, (im, area) in sorted(cuts.items()):
+            s = s0 * min(1.6, max(0.6, (ref_area / max(area, 1)) ** 0.5))   # the body as big as in the idle pose
+            im = im.resize((max(1, round(im.size[0] * s)), max(1, round(im.size[1] * s))), Image.LANCZOS)
+            where[k] = len(pics); pics.append(im)
+        x = y = row = 0; spots = []
+        for im in pics:
+            if x + im.size[0] > 2048: x, y, row = 0, y + row + 2, 0
+            spots.append((x, y)); x += im.size[0] + 2; row = max(row, im.size[1])
+        atlas = Image.new('RGBA', (2048, y + row), (0, 0, 0, 0))
+        for im, sp in zip(pics, spots): atlas.paste(im, sp)
+        atlas.save(os.path.join(OUT, kind + '.webp'), quality=92, method=6)
+        meta[kind] = {}
+        for s, seq in plan(kind, set(cuts)).items():
+            meta[kind][s] = []
+            for p in seq:
+                n = where[p]; (x, y), (w, h) = spots[n], pics[n].size
+                meta[kind][s].append([x, y, w, h, round(w / 2, 1), h, kind])
+        print(kind, atlas.size, {s: len(v) for s, v in meta[kind].items()})
+    with open(os.path.join(ROOT, 'js', 'creature_hq_meta.js'), 'w') as f:
+        f.write("'use strict';\n// made by tools/sprites/cut_hq.py: detailed frames of the creatures in art/creatures/hq/<kind>.webp\n")
+        f.write('const CREATURE_HQ = ' + json.dumps(meta, separators=(',', ':')) + ';\n')
+
+if __name__ == '__main__': main()

@@ -47,10 +47,18 @@ def cut_sheet(path, rows):
     gaps = sorted(range(1, len(ys)), key=lambda k: ys[k] - ys[k - 1])[-(rows - 1):]
     bounds = sorted(ys[k - 1] / 2 + ys[k] / 2 for k in gaps)
     centres = [np.mean([y for y in ys if (k == 0 or y > bounds[k - 1]) and (k == rows - 1 or y < bounds[k])]) for k in range(rows)]
+    rowof = lambda y: int(np.argmin([abs(y - c) for c in centres]))
     cells = {}
-    for i, cy, cx, n in info:
-        r = int(np.argmin([abs(cy - c) for c in centres])); c = min(2, int(cx * 3 / W))
-        cells.setdefault((r, c), []).append(i)
+    for r in range(rows):                                             # the columns of each row: its big blobs split at the 2 widest gaps
+        mine = [x for x in info if rowof(x[1]) == r]
+        xs = sorted(x[2] for x in mine if x[3] >= 0.0015 * W * H)
+        if len(xs) >= 3:
+            g2 = sorted(range(1, len(xs)), key=lambda k: xs[k] - xs[k - 1])[-2:]
+            cb = sorted(xs[k - 1] / 2 + xs[k] / 2 for k in g2)
+        else: cb = [W / 3, 2 * W / 3]
+        for i, cy, cx, n in mine:
+            c = sum(cx > b for b in cb)
+            cells.setdefault((r, c), []).append(i)
     cells = {k: np.isin(blobs, v) for k, v in cells.items()}
     out = {}
     for (r, c), cm in cells.items():

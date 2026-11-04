@@ -190,7 +190,7 @@ const FONT_EN = '"Cinzel","Trajan Pro","Palatino Linotype",Georgia,serif';
 // canvas font string for the current language
 const FONT_AR_TITLE = '"Aref Ruqaa","Cairo","Noto Naskh Arabic",serif';      // the big Arabic titles are written in a calligraphic hand
 function font(px, weight) {
-  if (LANG.cur === 'ar' && px >= 26) return '700 ' + Math.round(px * 1.08) + 'px ' + FONT_AR_TITLE;
+  if (LANG.cur === 'ar' && px >= 26) return '700 ' + px + 'px ' + FONT_AR_TITLE;
   return (weight || '700') + ' ' + px + 'px ' + (LANG.cur === 'ar' ? FONT_AR : FONT_EN);
 }
 // the fonts are the game's own files (fonts/): ask for them at once, so the first screens are not written in a fallback

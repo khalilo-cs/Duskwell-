@@ -360,7 +360,7 @@ function drawQuests(g) {
   for (let i = top; i < Math.min(list.length, top + VIS); i++) {
     const r = list[i], y = 76 + 14 + (i - top) * ROW + ROW / 2 - 4, on = i === sel, done = Quests.isDone(r.id);
     (G.menuHits || (G.menuHits = [])).push({ x: 52, y: y - ROW / 2 + 2, w: 306, h: ROW - 4, fn: () => { if (G.questSel !== i) { G.questSel = i; Sound.play('select'); } } });
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - ROW / 2 + 2, 306, ROW - 4); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - ROW / 2 + 2.5, 305, ROW - 5); }
+    if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, 52, y - ROW / 2 + 2, 306, ROW - 4))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - ROW / 2 + 2, 306, ROW - 4); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - ROW / 2 + 2.5, 305, ROW - 5); }
     g.beginPath(); g.arc(ar ? 340 : 82, y, 12, 0, 7); g.fillStyle = done ? '#2e6a3c' : '#6a4a10'; g.fill(); g.lineWidth = 2; g.strokeStyle = done ? '#9ff0a8' : '#ffd24a'; g.stroke();
     g.fillStyle = done ? '#9ff0a8' : '#ffd24a'; g.font = font(16, '800'); g.textAlign = 'center'; g.direction = 'ltr'; g.fillText(done ? '✓' : '!', ar ? 340 : 82, y + 1);
     g.textAlign = ar ? 'right' : 'left'; g.direction = ar ? 'rtl' : 'ltr'; const tx = ar ? 318 : 106;

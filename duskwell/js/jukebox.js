@@ -66,7 +66,7 @@ function drawJuke(g) {
   for (let i = top; i < Math.min(n, top + VIS); i++) {
     const r = JUKEBOX[i], y = 70 + 16 + (i - top) * ROW + ROW / 2 - 2, on = i === sel, now = G.jukePlay === r[0];
     (G.menuHits || (G.menuHits = [])).push({ x: 52, y: y - ROW / 2 + 2, w: 366, h: ROW - 4, fn: () => { if (G.jukeSel === i) playJuke(i); else { G.jukeSel = i; Sound.play('select'); } } });
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - ROW / 2 + 2, 366, ROW - 4); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - ROW / 2 + 2.5, 365, ROW - 5); }
+    if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, 52, y - ROW / 2 + 2, 366, ROW - 4))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - ROW / 2 + 2, 366, ROW - 4); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - ROW / 2 + 2.5, 365, ROW - 5); }
     g.textAlign = ar ? 'right' : 'left'; g.direction = ar ? 'rtl' : 'ltr'; g.textBaseline = 'middle';
     const tx = ar ? 386 : 96;
     g.font = font(18, '700'); g.fillStyle = now ? '#ffe9a0' : '#eef5ff'; g.fillText(jukeName(r), tx, y - 9);

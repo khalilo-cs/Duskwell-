@@ -99,5 +99,29 @@ const UiArt = (() => {
     } else { g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.drawImage(c, -s / 2, -s / 2, s, s); g.restore(); }
     return true;
   }
-  return { ready, has, draw, vessel, bossBar, particle, R };
+  // a framed piece laid over any box without stretching its ornaments: its four corners as painted (c of its shorter side),
+  // its edges repeated from a plain stretch next to each corner (so an ornament in the middle of an edge is not smeared), its
+  // inside stretched
+  function frame(g, n, x, y, w, h, c) {
+    const r = R[n]; if (!r || !ready()) return false;
+    const cs = Math.min(r[2], r[3]) * (c || 0.08), cd = Math.min(cs * 0.75, w / 3, h / 3), k = cd / cs, seg = cs * 1.1;
+    const part = (sx, sy, sw, sh, dx, dy, dw, dh) => g.drawImage(img, r[0] + sx, r[1] + sy, sw, sh, dx, dy, dw + 0.5, dh + 0.5);
+    g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    part(cs, cs, r[2] - 2 * cs, r[3] - 2 * cs, x + cd, y + cd, w - 2 * cd, h - 2 * cd);                       // the inside
+    // the edges, a short plain stretch repeated
+    const runX = (sy, dy) => { g.save(); g.beginPath(); g.rect(x + cd, dy, w - 2 * cd, cd); g.clip(); for (let px = x + cd; px < x + w - cd; px += seg * k - 0.5) part(cs, sy, seg, cs, px, dy, seg * k, cd); g.restore(); };
+    const runY = (sx, dx) => { g.save(); g.beginPath(); g.rect(dx, y + cd, cd, h - 2 * cd); g.clip(); for (let py = y + cd; py < y + h - cd; py += seg * k - 0.5) part(sx, cs, cs, seg, dx, py, cd, seg * k); g.restore(); };
+    runX(0, y); runX(r[3] - cs, y + h - cd); runY(0, x); runY(r[2] - cs, x + w - cd);
+    // the corners
+    part(0, 0, cs, cs, x, y, cd, cd); part(r[2] - cs, 0, cs, cs, x + w - cd, y, cd, cd);
+    part(0, r[3] - cs, cs, cs, x, y + h - cd, cd, cd); part(r[2] - cs, r[3] - cs, cs, cs, x + w - cd, y + h - cd, cd, cd);
+    g.restore(); return true;
+  }
+  // the chosen row of a list: the painted plate warmed to gold
+  function select(g, x, y, w, h) {
+    if (!has('button')) return false;
+    g.save(); g.globalAlpha *= 0.9; g.filter = 'sepia(0.55) saturate(1.5) brightness(1.25)';
+    frame(g, 'button', x, y, w, h, 0.42); g.restore(); return true;
+  }
+  return { ready, has, draw, vessel, bossBar, particle, frame, select, R };
 })();

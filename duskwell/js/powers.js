@@ -359,7 +359,7 @@ const Powers = (() => {
     POWERS.forEach((p, i) => {
       const y = 112 + i * 66, on = i === sel, kn = known(p.id), rdy = ready(p.id), run = active(p.id);
       (G.menuHits || (G.menuHits = [])).push({ x: 52, y: y - 30, w: 306, h: 60, fn: () => { if (G.powerSel !== i) { G.powerSel = i; Sound.play('select'); } } });
-      if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - 30, 306, 60); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - 29.5, 305, 59); }
+      if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, 52, y - 30, 306, 60))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(52, y - 30, 306, 60); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(52.5, y - 29.5, 305, 59); }
       g.save(); g.globalAlpha = kn ? 1 : 0.4;
       g.fillStyle = 'rgba(10,16,30,0.85)'; g.beginPath(); g.arc(ar ? 332 : 82, y, 22, 0, 7); g.fill(); g.strokeStyle = kn ? p.color : 'rgba(140,150,170,0.6)'; g.lineWidth = 2; g.stroke();
       glyph(g, p.id, ar ? 332 : 82, y, 14, kn ? p.color : '#9aa4b8'); g.restore();

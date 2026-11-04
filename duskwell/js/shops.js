@@ -168,7 +168,7 @@ function drawShop(g) {
   for (let i = G.shopTop; i < Math.min(n, G.shopTop + VIS); i++) {
     const y = Y0 + (i - G.shopTop) * ROW, on = G.menuSel === i;
     (G.menuHits || (G.menuHits = [])).push({ x: 160, y: y - 26, w: VW - 320, h: 52, i });
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(160, y - 26, VW - 320, 52); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(160.5, y - 25.5, VW - 321, 51); }
+    if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, 160, y - 26, VW - 320, 52))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(160, y - 26, VW - 320, 52); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(160.5, y - 25.5, VW - 321, 51); }
     if (i === list.length) {
       setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(190,205,225,0.8)'; g.fillText(tr('leave'), VW / 2, y);
       continue;
@@ -258,7 +258,7 @@ function drawGear(g) {
     (G.menuHits || (G.menuHits = [])).push({ x: 366, y: 142 + (i - top) * ROW - 28, w: 538, h: 56, i, gear: true });
     const r = rows[i], y = 142 + (i - top) * ROW, on = i === G.gearSel, owned = r.kind === 'art' ? Gear.hasArt(r.id) : true;
     const worn = r.kind === 'weapon' ? Gear.weapon() === r.id : r.kind === 'cloak' ? Gear.cloak() === r.id : false;
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(366, y - 28, 538, 56); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(366.5, y - 27.5, 537, 55); }
+    if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, 366, y - 28, 538, 56))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(366, y - 28, 538, 56); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(366.5, y - 27.5, 537, 55); }
     gearIcon(g, [r.kind, r.id], 404, y, 24, t, !owned);
     setDir(g); g.textAlign = 'left'; g.direction = ar ? 'rtl' : 'ltr';
     g.textAlign = ar ? 'right' : 'left';

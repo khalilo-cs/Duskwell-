@@ -747,6 +747,7 @@ function drawMaskIcon(g, x, y, full, pulse, crack) {
 }
 // a small dark plate behind an icon
 function gearPlate(g, cx, cy, S, rim) {
+  if (typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', cx - S / 2, cy - S / 2, S, S, 0.06)) return;     // a small painted panel
   g.fillStyle = 'rgba(6,10,18,0.6)'; g.strokeStyle = rim || 'rgba(190,205,230,0.5)'; g.lineWidth = 1.5;
   g.beginPath(); g.roundRect(cx - S / 2, cy - S / 2, S, S, 7); g.fill(); g.stroke();
 }
@@ -771,8 +772,10 @@ function drawGearStrip(g, x, y) {
 function drawGearCard(g) {
   const x = 700, y = 140, w = 244, ar = LANG.cur === 'ar';
   g.save();
-  g.fillStyle = 'rgba(8,12,22,0.75)'; g.strokeStyle = 'rgba(190,205,230,0.45)'; g.lineWidth = 2;
-  g.beginPath(); g.roundRect(x, y, w, 330, 10); g.fill(); g.stroke();
+  if (!(typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', x - 6, y - 6, w + 12, 342, 0.07))) {
+    g.fillStyle = 'rgba(8,12,22,0.75)'; g.strokeStyle = 'rgba(190,205,230,0.45)'; g.lineWidth = 2;
+    g.beginPath(); g.roundRect(x, y, w, 330, 10); g.fill(); g.stroke();
+  }
   setDir(g); g.textBaseline = 'middle'; g.textAlign = 'center'; g.font = font(19, '700'); g.fillStyle = '#e4eefc';
   g.fillText(sx('المعدات', 'Equipment'), x + w / 2, y + 24);
   [['weapon', Gear.weapon()], ['cloak', Gear.cloak()]].forEach(([kind, id], i) => {
@@ -949,29 +952,37 @@ function drawMenuButton(g, cx, cy, w, h, label, on, id, t) {
     g.lineTo(x1 - tip - d * 0.6, cy + h / 2 - d); g.lineTo(x0 + tip + d * 0.6, cy + h / 2 - d); g.lineTo(x0 + d, cy); g.closePath();
   };
   g.save();
-  // body
-  if (on) { g.shadowColor = 'rgba(255,205,120,0.8)'; g.shadowBlur = 16 + 4 * Math.sin(t * 4); }
-  const body = g.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  if (on) { body.addColorStop(0, '#3b4d70'); body.addColorStop(1, '#17233d'); } else { body.addColorStop(0, '#1d2942'); body.addColorStop(1, '#0a101c'); }
-  shape(0); g.fillStyle = body; g.globalAlpha = on ? 0.97 : 0.88; g.fill(); g.globalAlpha = 1; g.shadowBlur = 0;
-  // rim: silver, or gold when chosen
-  const rim = g.createLinearGradient(x0, 0, x1, 0);
-  const stops = on ? ['#fff0c8', '#c98f45', '#7a4f22', '#e8b565', '#fff0c8'] : ['#dfe8f2', '#7d90a5', '#2f3b49', '#a8b9cc', '#dfe8f2'];
-  stops.forEach((c, i) => rim.addColorStop(i / (stops.length - 1), c));
-  shape(1.5); g.lineWidth = 3; g.strokeStyle = rim; g.stroke();
-  shape(5); g.lineWidth = 1; g.strokeStyle = on ? 'rgba(255,225,160,0.55)' : 'rgba(190,210,235,0.28)'; g.stroke();
-  // a band of light crossing the chosen plaque
-  if (on) {
-    g.save(); shape(2); g.clip();
-    const sx = x0 - 60 + ((t * 110) % (w + 140)), sh = g.createLinearGradient(sx, 0, sx + 50, 0);
-    sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,245,215,0.22)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = sh; g.fillRect(sx, cy - h / 2, 50, h); g.restore();
-  }
-  // diamonds at the tips and studs inside them
-  g.fillStyle = on ? '#ffe2a8' : '#aebfd3';
-  for (const sgn of [-1, 1]) {
-    const tx = sgn < 0 ? x0 + 6 : x1 - 6;
-    g.beginPath(); g.moveTo(tx, cy - 4); g.lineTo(tx + 4, cy); g.lineTo(tx, cy + 4); g.lineTo(tx - 4, cy); g.closePath(); g.fill();
+  if (typeof UiArt !== 'undefined' && UiArt.has('button')) {          // the painted plate: silver, warmed to gold and glowing when chosen
+    g.save();
+    if (on) { g.shadowColor = 'rgba(255,205,120,0.85)'; g.shadowBlur = 14 + 4 * Math.sin(t * 4); g.filter = 'sepia(0.55) saturate(1.5) brightness(1.3)'; }
+    else g.globalAlpha = 0.92;
+    UiArt.frame(g, 'button', x0, cy - h / 2, w, h, 0.42);
+    g.restore();
+  } else {
+    // body
+    if (on) { g.shadowColor = 'rgba(255,205,120,0.8)'; g.shadowBlur = 16 + 4 * Math.sin(t * 4); }
+    const body = g.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+    if (on) { body.addColorStop(0, '#3b4d70'); body.addColorStop(1, '#17233d'); } else { body.addColorStop(0, '#1d2942'); body.addColorStop(1, '#0a101c'); }
+    shape(0); g.fillStyle = body; g.globalAlpha = on ? 0.97 : 0.88; g.fill(); g.globalAlpha = 1; g.shadowBlur = 0;
+    // rim: silver, or gold when chosen
+    const rim = g.createLinearGradient(x0, 0, x1, 0);
+    const stops = on ? ['#fff0c8', '#c98f45', '#7a4f22', '#e8b565', '#fff0c8'] : ['#dfe8f2', '#7d90a5', '#2f3b49', '#a8b9cc', '#dfe8f2'];
+    stops.forEach((c, i) => rim.addColorStop(i / (stops.length - 1), c));
+    shape(1.5); g.lineWidth = 3; g.strokeStyle = rim; g.stroke();
+    shape(5); g.lineWidth = 1; g.strokeStyle = on ? 'rgba(255,225,160,0.55)' : 'rgba(190,210,235,0.28)'; g.stroke();
+    // a band of light crossing the chosen plaque
+    if (on) {
+      g.save(); shape(2); g.clip();
+      const sx = x0 - 60 + ((t * 110) % (w + 140)), sh = g.createLinearGradient(sx, 0, sx + 50, 0);
+      sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,245,215,0.22)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = sh; g.fillRect(sx, cy - h / 2, 50, h); g.restore();
+    }
+    // diamonds at the tips and studs inside them
+    g.fillStyle = on ? '#ffe2a8' : '#aebfd3';
+    for (const sgn of [-1, 1]) {
+      const tx = sgn < 0 ? x0 + 6 : x1 - 6;
+      g.beginPath(); g.moveTo(tx, cy - 4); g.lineTo(tx + 4, cy); g.lineTo(tx, cy + 4); g.lineTo(tx - 4, cy); g.closePath(); g.fill();
+    }
   }
   // the picture of the entry and its text
   const icon = MENU_ICONS[MENU_ICON_OF[id]], space = icon ? h * 0.95 : 0;
@@ -1288,7 +1299,7 @@ function drawCharms(g) {
   const CW = 104, x0 = (VW - CHARM_COLS * CW) / 2 + CW / 2;
   list.forEach((id, i) => {
     const cx = x0 + (i % CHARM_COLS) * CW, cy = 168 + Math.floor(i / CHARM_COLS) * 100, on = i === G.charmSel, worn = Charms.has(id);
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(cx - 46, cy - 42, 92, 88); g.strokeStyle = 'rgba(230,240,255,0.8)'; g.lineWidth = 1.5; g.strokeRect(cx - 45.5, cy - 41.5, 91, 87); }
+    if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, cx - 46, cy - 42, 92, 88))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(cx - 46, cy - 42, 92, 88); g.strokeStyle = 'rgba(230,240,255,0.8)'; g.lineWidth = 1.5; g.strokeRect(cx - 45.5, cy - 41.5, 91, 87); }
     if (worn) bloom(g, cx, cy - 4, 52, Charms.DEFS[id].color, 0.28);
     Art.drawCharm(g, id, cx, cy - 4, 28, { worn });
     for (let k = 0; k < Charms.DEFS[id].cost; k++) { ellipse(g, cx + (k - (Charms.DEFS[id].cost - 1) / 2) * 12, cy + 34, 4, 4); fs(g, worn ? '#7fe3d9' : '#2a3550', '#9fb4cf', 1.5); }
@@ -1317,7 +1328,7 @@ function drawTravel(g) {
   const top = listWindow('travel', G.menuSel, n, VIS), hits = G.menuHits || (G.menuHits = []);
   for (let k = 0; k < VIS && top + k < n; k++) {
     const i = top + k, y = 196 + k * ROWH, on = G.menuSel === i, it = list[i];
-    if (on) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(230, y - 21, VW - 460, 42); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(230.5, y - 20.5, VW - 461, 41); }
+    if (on && !(typeof UiArt !== 'undefined' && UiArt.select(g, 230, y - 21, VW - 460, 42))) { g.fillStyle = 'rgba(230,240,255,0.12)'; g.fillRect(230, y - 21, VW - 460, 42); g.strokeStyle = 'rgba(230,240,255,0.7)'; g.lineWidth = 1.5; g.strokeRect(230.5, y - 20.5, VW - 461, 41); }
     setDir(g); g.textAlign = 'center'; g.font = font(24, '700'); g.fillStyle = on ? '#ffffff' : 'rgba(210,222,240,0.85)';
     if (it) { poly(g, [262, y - 8, 270, y, 262, y + 8, 254, y]); fs(g, it.color, INK, 2); g.fillText(it.name, VW / 2, y); }
     else g.fillText(tr('leave'), VW / 2, y);

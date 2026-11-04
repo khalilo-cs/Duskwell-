@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..', '..')
-LIMIT = {'default': 360, 'bar': 1400, 'panel': 900}
+LIMIT = {'default': 360, 'bar': 1400, 'panel': 1100, 'divider': 1200, 'button': 720, 'map_': 160, 'marker': 140}
 
 
 def groups(vals, n):
@@ -67,7 +67,7 @@ def cut(path, rows):
             im = Image.fromarray(np.dstack([rgb, al * 255]).clip(0, 255).astype(np.uint8), 'RGBA')
             bb = Image.fromarray(((al > 0.06) * 255).astype(np.uint8)).getbbox()      # only as big as what can be seen of it
             if bb: im = im.crop(bb)
-            lim = LIMIT['bar'] if name.startswith('bar') else LIMIT['panel'] if name.startswith(('panel', 'parch')) else LIMIT['default']
+            lim = next((v for k, v in LIMIT.items() if name.startswith(k)), LIMIT['panel'] if name.startswith('parch') else LIMIT['default'])
             k2 = min(1.0, lim / max(im.size)); im = im.resize((max(1, round(im.width * k2)), max(1, round(im.height * k2))), Image.LANCZOS)
             out[name] = im
     return out

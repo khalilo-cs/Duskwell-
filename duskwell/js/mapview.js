@@ -136,25 +136,32 @@ const MapView = (() => {
 
   // ---------------------------------------------------------------- signs
   const DARK = 'rgba(2,4,10,0.9)';
+  // the painted token of a sign (art/ui), r its radius on screen; false when it has not loaded
+  const token = (g, n, x, y, r, o) => typeof UiArt !== 'undefined' && UiArt.has(n) && UiArt.draw(g, n, x, y, r * 2.3, o);
   function lantern(g, x, y, r, lit) {
+    if (token(g, 'map_lantern', x, y, r, lit ? null : { filter: 'grayscale(0.8) brightness(0.6)' })) return;
     poly(g, [x, y - r, x + r * 0.72, y, x, y + r, x - r * 0.72, y]);
     g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); g.fillStyle = lit ? '#ffd98a' : '#6d6048'; g.fill();
     if (lit) { g.fillStyle = '#fff6d8'; g.fillRect(x - r * 0.12, y - r * 0.4, r * 0.24, r * 0.8); }
   }
   function bench(g, x, y, r) {
+    if (token(g, 'map_bench', x, y, r)) return;
     g.lineWidth = 2; g.strokeStyle = DARK; g.lineJoin = 'round';
     g.beginPath(); g.rect(x - r, y - r * 0.9, r * 0.45, r * 1.1); g.rect(x - r, y - r * 0.2, r * 2, r * 0.5); g.rect(x - r, y + r * 0.3, r * 0.4, r * 0.65); g.rect(x + r * 0.6, y + r * 0.3, r * 0.4, r * 0.65); g.stroke();
     g.fillStyle = '#ffffff'; g.fill();
   }
   function coin(g, x, y, r, c) {
+    if (token(g, 'map_merchant', x, y, r)) return;
     g.beginPath(); g.arc(x, y, r * 0.9, 0, 7); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); g.fillStyle = c; g.fill();
     g.beginPath(); g.arc(x, y, r * 0.5, 0, 7); g.lineWidth = 1.2; g.strokeStyle = 'rgba(90,60,0,0.8)'; g.stroke();
   }
   function star(g, x, y, r) {
+    if (token(g, 'map_mage', x, y, r)) return;
     const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.42 : r * 1.1; pts.push(x + Math.cos(a) * q, y + Math.sin(a) * q); }
     poly(g, pts); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); g.fillStyle = '#caa0ff'; g.fill();
   }
   function anvil(g, x, y, r) {
+    if (token(g, 'map_smith', x, y, r)) return;
     poly(g, [x - r, y - r * 0.6, x + r, y - r * 0.6, x + r * 0.55, y - r * 0.05, x + r * 0.3, y - r * 0.05, x + r * 0.45, y + r * 0.75, x - r * 0.45, y + r * 0.75, x - r * 0.3, y - r * 0.05, x - r * 0.55, y - r * 0.05]);
     g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); g.fillStyle = '#ff9a4a'; g.fill();
   }
@@ -163,6 +170,7 @@ const MapView = (() => {
     g.beginPath(); g.arc(x, y - r * 0.8, r * 0.28, 0, 7); g.lineWidth = 1.6; g.strokeStyle = '#7fe0d0'; g.stroke();
   }
   function skull(g, x, y, r, alive) {
+    if (token(g, 'map_boss', x, y, r, alive ? null : { filter: 'grayscale(1) brightness(0.55)' })) return;
     g.beginPath(); g.arc(x, y - r * 0.15, r * 0.9, 0, 7); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); g.fillStyle = alive ? '#ff6a6a' : '#6f7c90'; g.fill();
     g.fillRect(x - r * 0.5, y + r * 0.5, r, r * 0.55);
     g.fillStyle = DARK; g.beginPath(); g.arc(x - r * 0.35, y - r * 0.2, r * 0.27, 0, 7); g.arc(x + r * 0.35, y - r * 0.2, r * 0.27, 0, 7); g.fill();
@@ -171,6 +179,7 @@ const MapView = (() => {
   function pin(g, x, y, r, t) {
     const k = 0.5 + 0.5 * Math.sin(t * 6);
     g.beginPath(); g.arc(x, y, r * (1.5 + 0.6 * k), 0, 7); g.strokeStyle = 'rgba(255,255,255,' + (0.55 - 0.35 * k) + ')'; g.lineWidth = 2; g.stroke();
+    if (token(g, 'map_you', x, y, r * 1.3)) return;
     g.beginPath(); g.arc(x, y, r * 0.8, 0, 7); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); g.fillStyle = '#ffffff'; g.fill();
   }
   const SIGNS = { bench, lantern, wizard: star, smith: anvil, outfitter: hanger, merchant: (g, x, y, r) => coin(g, x, y, r, '#ffd24a'), skull };
@@ -208,16 +217,20 @@ const MapView = (() => {
     const L = layout(), W = rooms(), mv = G.mapView || (G.mapView = { mode: 0, px: 0, py: 0 }), v = view(mv), s = v.s, t = G.t, ar = LANG.cur === 'ar';
     const cur = G.level.id, cd = G.level.def;
     g.fillStyle = '#03050a'; g.fillRect(0, 0, VW, VH);
-    const pic = AreaArt.picture(AreaArt.THEME_OF[cd.area]);
-    if (pic) AreaArt.cover(g, pic, 0, 0, VW, VH, 0.3);
-    g.fillStyle = 'rgba(3,5,10,0.84)'; g.fillRect(0, 0, VW, VH);
+    const paper = typeof UiArt !== 'undefined' && UiArt.has('parchment');
+    if (paper) { UiArt.draw(g, 'parchment', VW / 2, VH / 2, VH + 40, { w: VW + 40 }); g.fillStyle = 'rgba(3,5,10,0.45)'; g.fillRect(0, 0, VW, VH); }
+    else {
+      const pic = AreaArt.picture(AreaArt.THEME_OF[cd.area]);
+      if (pic) AreaArt.cover(g, pic, 0, 0, VW, VH, 0.3);
+      g.fillStyle = 'rgba(3,5,10,0.84)'; g.fillRect(0, 0, VW, VH);
+    }
     setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(32, '700'); textShadow(g, tr('map'), VW / 2, 32, '#eef5ff');
     const total = WORLD.order.length, found = WORLD.order.filter(id => G.visited[id]).length, col0 = AREA_COLORS[cd.area];
     g.font = font(17, '600'); g.fillStyle = col0; g.fillText(tr('area_' + cd.area) + '   ·   ' + sx('الغرف المكتشفة ', 'Rooms found ') + found + ' / ' + total, VW / 2, 58);
     // the three views as chips, to tap
     [sx('الغرفة', 'Room'), sx('المنطقة', 'Area'), sx('العالم', 'World')].forEach((name, i) => chip(g, 24 + i * 82, 16, 76, 30, name, mv.mode === i, () => setMode(i)));
     // the window
-    g.fillStyle = 'rgba(3,5,10,0.55)'; g.fillRect(VX, VY, VWd, VHd);
+    if (!(typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', VX - 10, VY - 10, VWd + 20, VHd + 20, 0.065))) { g.fillStyle = 'rgba(3,5,10,0.55)'; g.fillRect(VX, VY, VWd, VHd); }
     g.save(); g.beginPath(); g.rect(VX, VY, VWd, VHd); g.clip();
     const X = x => VX + VWd / 2 + (x - v.fx) * s, Y = y => VY + VHd / 2 + (y - v.fy) * s;
     const p = s < 0.9 ? 1 : s < 1.8 ? 2 : 4;
@@ -312,7 +325,7 @@ const MapView = (() => {
     let x = (VW - tw) / 2; const y = 484;
     items.forEach((it, i) => {
       const ix = ar ? x + wid[i] - 10 : x + 10;
-      if (it[0] === 'you') pin(g, ix, y, 4.5, t); else if (it[0] === 'quest') { poly(g, [ix, y - 7, ix + 5.5, y, ix, y + 7, ix - 5.5, y]); g.fillStyle = '#ffd24a'; g.fill(); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); } else if (it[0] === 'door') { g.fillStyle = '#fff1c4'; g.fillRect(ix - 2, y - 7, 4, 14); }
+      if (it[0] === 'you') pin(g, ix, y, 4.5, t); else if (it[0] === 'quest' && token(g, 'map_quest', ix, y, 8)) {} else if (it[0] === 'door' && token(g, 'map_door', ix, y, 8)) {} else if (it[0] === 'quest') { poly(g, [ix, y - 7, ix + 5.5, y, ix, y + 7, ix - 5.5, y]); g.fillStyle = '#ffd24a'; g.fill(); g.lineWidth = 2; g.strokeStyle = DARK; g.stroke(); } else if (it[0] === 'door') { g.fillStyle = '#fff1c4'; g.fillRect(ix - 2, y - 7, 4, 14); }
       else if (it[0] === 'lantern') lantern(g, ix, y, 7, true); else if (it[0] === 'skull') skull(g, ix, y, 7, true); else SIGNS[it[0]](g, ix, y, 7);
       g.fillStyle = '#c3d2ea'; g.fillText(it[1], ar ? ix - 16 : ix + 16, y + 1);
       x += wid[i] + 14;

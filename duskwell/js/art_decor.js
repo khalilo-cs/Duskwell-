@@ -198,9 +198,10 @@ const Decor = (() => {
 // (and run from the hero), grass, ferns, reeds and vines sway; which live where depends on the area
 const Life = (() => {
   const T = TILE, AIR = { town: ['fly', 'fly', 'glow'], cave: ['glow', 'bat'], moss: ['fly', 'glow', 'glow'], spore: ['spore', 'spore', 'glow'],
-    aqueduct: ['glow', 'moth'], webbed: ['moth', 'moth'], foundry: ['bat'], throne: ['moth', 'bat'], frost: ['bat'], ember: ['spore'],
-    storm: ['bat'], mirror: ['moth', 'glow'], bone: ['bat', 'moth'], lunar: ['moth', 'glow'], crystal: ['glow', 'bat'] };
-  const GROUND = { frost: 'rat', storm: 'beetle', lunar: 'beetle', mirror: 'beetle', ember: 'salam', foundry: 'gbeetle', bone: 'bbeetle', town: 'beetle', cave: 'rat', moss: 'beetle', spore: 'beetle', aqueduct: 'rat', webbed: 'beetle', foundry: 'rat', throne: 'rat', bone: 'rat', crystal: 'beetle' };
+    aqueduct: ['glow', 'moth'], webbed: ['moth', 'moth'], foundry: ['bat', 'gmoth'], throne: ['gmoth', 'bat'], frost: ['star', 'bat'], ember: ['spore', 'gmoth'],
+    storm: ['crow', 'crow'], mirror: ['mfly', 'mfly', 'star'], bone: ['bat', 'moth'], lunar: ['star', 'gmoth', 'moth'], crystal: ['star', 'glow', 'bat'] };
+  const GROUND = { town: 'beetle', cave: 'rat', moss: 'beetle', spore: 'beetle', aqueduct: 'rat', webbed: 'beetle', foundry: 'gbeetle', throne: 'rat',
+    frost: 'rat', ember: 'salam', storm: 'beetle', mirror: 'beetle', bone: 'bbeetle', lunar: 'beetle', crystal: 'beetle' };
   const PLANT = { town: ['grass', 'fern', 'toad'], moss: ['fern', 'grass', 'vine', 'toad'], spore: ['pshroom', 'toad', 'fern'], aqueduct: ['reed', 'coral', 'reed'], cave: ['grass', 'pshroom'], webbed: ['cocoon', 'vine', 'pshroom'], crystal: ['cflower', 'cflower', 'grass'], throne: ['candle', 'vine'], bone: ['candle', 'grass'], lunar: ['moongrass', 'cflower'], foundry: ['eflower', 'grass'], mirror: ['moongrass', 'vine'], storm: ['grass', 'reed'], frost: ['frostmoss', 'frostmoss', 'reed'], ember: ['eflower', 'eflower'] };
   const FRAMES = { cflower: 2, frostmoss: 2, salam: 2, eflower: 2, coral: 2, cocoon: 2, bbeetle: 2, gbeetle: 2, crow: 2, mfly: 2, star: 2, gmoth: 2, pshroom: 2, candle: 2, moongrass: 2, toad: 2, moth: 4, fly: 4, beetle: 4, rat: 4, glow: 2, fish: 2, bat: 2, spore: 2, grass: 2, fern: 2, reed: 2, vine: 2 };
   let room = null, folk = [], plants = [], last = 0;

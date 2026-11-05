@@ -43,7 +43,7 @@ const Decor = (() => {
     return (L._decor = out);
   }
   // the painted hills, outcrops and overhangs of the room (js/world_hills.js), in the rock of its area
-  const SET = { frost: 'snow', ember: 'lava', foundry: 'lava', moss: 'green', town: 'green', aqueduct: 'green', spore: 'spore', webbed: 'webbed', crystal: 'crystal', mirror: 'mirror', bone: 'bone', lunar: 'lunar' };
+  const SET = { frost: 'snow', ember: 'lava', foundry: 'foundry', storm: 'storm', throne: 'throne', moss: 'green', town: 'green', aqueduct: 'green', spore: 'spore', webbed: 'webbed', crystal: 'crystal', mirror: 'mirror', bone: 'bone', lunar: 'lunar' };
   function hills(g, L) {
     const d = L.def; if (!d || !d.hills || typeof UiArt === 'undefined') return;
     const set = SET[d.theme] || 'stone';
@@ -234,9 +234,9 @@ const Life = (() => {
         const ax = Math.sin(t * 0.7 + c.ph) * 30 + (Math.abs(c.x - px) < 90 && Math.abs(c.y - py) < 90 ? Math.sign(c.x - px) * 120 : 0), ay = Math.cos(t * 0.9 + c.ph * 1.3) * 22;
         c.vx += (ax - c.vx) * dt * 2; c.vy += (ay - c.vy) * dt * 2; c.x += c.vx * dt; c.y += c.vy * dt;
         if (!(L.get(Math.floor(c.x / T), Math.floor(c.y / T)) === T_AIR)) { c.vx = -c.vx; c.vy = -c.vy; c.x += c.vx * dt * 3; c.y += c.vy * dt * 3; }
-        const h = c.k === 'bat' ? 28 : c.k === 'glow' || c.k === 'spore' ? 14 : 22;
-        if (c.k === 'glow' || c.k === 'spore') bloom(g, c.x, c.y, 18, c.k === 'glow' ? '#7dffd8' : '#ffb070', 0.35 + 0.2 * Math.sin(t * 4 + c.ph));
-        g.save(); g.translate(c.x, c.y); if (c.vx < 0) g.scale(-1, 1); UiArt.draw(g, frame(c.k, t + c.ph, c.k === 'bat' ? 9 : 12), 0, 0, h); g.restore();
+        const h = c.k === 'bat' || c.k === 'crow' ? 28 : c.k === 'glow' || c.k === 'spore' ? 14 : 22;
+        if (c.k === 'glow' || c.k === 'spore' || c.k === 'star') bloom(g, c.x, c.y, 18, c.k === 'glow' ? '#7dffd8' : '#ffb070', 0.35 + 0.2 * Math.sin(t * 4 + c.ph));
+        g.save(); g.translate(c.x, c.y); if (c.vx < 0) g.scale(-1, 1); UiArt.draw(g, frame(c.k, t + c.ph, c.k === 'bat' || c.k === 'crow' ? 9 : 12), 0, 0, h); g.restore();
       } else {                                                        // scurry along the floor, turn at its ends, run from the hero
         const near = Math.abs(c.x - px) < 110 && Math.abs(c.y - py) < 60, sp = near ? 80 : 22;
         if (near) c.vx = Math.sign(c.x - px || 1) * sp; else c.vx = Math.sign(c.vx || 1) * sp;

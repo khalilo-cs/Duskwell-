@@ -324,5 +324,25 @@
    "hl_lunar_cave",
    "hl_lunar_over"
   ]
+ ],
+ "hills3": [
+  [
+   "hl_storm_hill",
+   "hl_storm_rock",
+   "hl_storm_cave",
+   "hl_storm_over"
+  ],
+  [
+   "hl_throne_hill",
+   "hl_throne_rock",
+   "hl_throne_cave",
+   "hl_throne_over"
+  ],
+  [
+   "hl_foundry_hill",
+   "hl_foundry_rock",
+   "hl_foundry_cave",
+   "hl_foundry_over"
+  ]
  ]
 }

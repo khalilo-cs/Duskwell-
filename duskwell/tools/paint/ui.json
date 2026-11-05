@@ -150,5 +150,31 @@
    "wf_spark_2",
    "wf_spark_3"
   ]
+ ],
+ "npcs": [
+  [
+   "npc_elder_a",
+   "npc_merchant_a",
+   "npc_smith_a",
+   "npc_outfitter_a",
+   "npc_wizard_a",
+   "npc_trader_a"
+  ],
+  [
+   "npc_elder_b",
+   "npc_merchant_b",
+   "npc_smith_b",
+   "npc_outfitter_b",
+   "npc_wizard_b",
+   "npc_trader_b"
+  ],
+  [
+   "npc_trader_frost",
+   "npc_trader_ember",
+   "npc_trader_storm",
+   "npc_trader_mirror",
+   "npc_stall",
+   "npc_sign"
+  ]
  ]
 }

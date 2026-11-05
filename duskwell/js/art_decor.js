@@ -160,3 +160,24 @@ const Decor = (() => {
     g.restore();
   };
 })();
+// the people, painted (art/ui npc_*): two poses each, breathing between them; they turn toward the hero
+(() => {
+  Art.npcPic = function (n, t) {
+    if (typeof UiArt === 'undefined') return null;
+    const kind = n.type === 'trader' && n.shop && UiArt.has('npc_trader_' + n.shop) ? 'trader_' + n.shop : n.type;
+    const pose = Math.sin(t * 1.4 + (n.px || 0) * 0.01) > 0.55 ? '_b' : '_a';
+    const name = UiArt.has('npc_' + kind + pose) ? 'npc_' + kind + pose : UiArt.has('npc_' + kind) ? 'npc_' + kind : UiArt.has('npc_' + kind + '_a') ? 'npc_' + kind + '_a' : null;
+    return name;
+  };
+  let installed = false;
+  const install = () => { if (installed) return; installed = true;            // after art_npcs.js, which sets its own drawing
+  const old = Art.drawNPC;
+  Art.drawNPC = function (g, n, t) {
+    const pic = Art.npcPic(n, t); if (!pic) return old(g, n, t);
+    const P0 = typeof DW !== 'undefined' && DW.P, face = P0 && P0.cx < n.px ? -1 : 1, h = n.type === 'merchant' ? 92 : 104;
+    const breathe = 1 + 0.012 * Math.sin(t * 2.2 + n.px);
+    g.save(); g.translate(n.px, n.py); g.scale(face, breathe); UiArt.draw(g, pic, 0, -h / 2, h); g.restore();
+  };
+  };
+  window.addEventListener('load', install); setTimeout(install, 0);
+})();

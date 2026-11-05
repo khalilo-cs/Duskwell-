@@ -130,6 +130,8 @@ function updateShop() {
 
 // small pictures for the shop rows that are not charms or gear
 function shopIcon(g, kind, x, y) {
+  const PIC = { mask: 'it_life', soul: 'it_vessel', vial: 'it_vessel', notch: 'mi_charm', nail: 'wf_nail_2' };
+  if (typeof UiArt !== 'undefined' && UiArt.has(PIC[kind])) { UiArt.draw(g, PIC[kind], x, y, kind === 'nail' ? 34 : 38, kind === 'vial' ? { filter: 'hue-rotate(250deg) saturate(1.4)' } : null); return; }
   g.save(); g.translate(x, y);
   if (kind === 'mask') drawMaskIcon(g, 0, 0, true, 0);
   else if (kind === 'nail') { poly(g, [0, -16, 5, 8, -5, 8]); fs(g, '#e6eef7', INK, 2.5); poly(g, [-10, 8, 10, 8, 10, 12, -10, 12]); fs(g, '#8a96a8', INK, 2); }
@@ -141,6 +143,7 @@ function shopIcon(g, kind, x, y) {
 // icon of a piece of gear, dimmed when it cannot be had
 function gearIcon(g, gear, x, y, size, t, dim) {
   g.save(); if (dim) g.globalAlpha = 0.45;
+  if (gear[0] !== 'art' && IconArt.draw(g, gear[0] + '_' + gear[1], x, y, size * 2.3)) { g.restore(); return; }     // the painted icon
   if (gear[0] === 'weapon') Art.weaponIcon(g, gear[1], x, y, size, t);
   else if (gear[0] === 'cloak') Art.cloakIcon(g, gear[1], x, y + 2, size, t);
   else Art.artIcon(g, gear[1], x, y, size, t);
@@ -162,6 +165,7 @@ function drawShop(g) {
   const list = shopList(), VIS = 4, ROW = 56, Y0 = 126, t = G.t, n = list.length + 1;
   g.fillStyle = 'rgba(0,0,0,0.62)'; g.fillRect(0, 0, VW, VH);
   drawPanel(g, 130, 26, VW - 260, 488);
+  if (G.shopNpc && Art.npcPic) { const pic = Art.npcPic(G.shopNpc, t); if (pic) { bloom(g, 66, 330, 120, '#ffd9a0', 0.18); UiArt.draw(g, pic, 66, 330, 250); } }   // the seller, painted, beside the wares
   setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(30, '700'); textShadow(g, shopTitle(), VW / 2, 62, '#eef5ff');
   g.font = font(22, '700'); g.textAlign = 'right'; g.direction = 'ltr';
   g.fillStyle = '#ffe9a0'; g.fillText(P.geo + '  ' + tr('geo'), VW - 170, 62);

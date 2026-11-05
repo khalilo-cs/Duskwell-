@@ -287,7 +287,7 @@ function nearest(list, px, range) {
 // up pressed: bench, station, npc or sign
 // the greeting of a shop person, then his shop (the wizard greets differently as the player's seals grow, and he is the one to say that the beasts learn)
 function shopDialog(n) {
-  G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : n.type === 'wizard' ? 'wizard' : 'general');
+  G.shopNpc = n; G.shopId = n.shop || (n.type === 'smith' ? 'smith' : n.type === 'outfitter' ? 'outfitter' : n.type === 'wizard' ? 'wizard' : 'general');
   const hi = n.type === 'wizard' ? tr(['wizardHi', 'wizardHi2', 'wizardHi3'][Math.min(2, Math.floor(sealCount() / 4))]) : shopGreet(shopDef());
   return { lines: [hi], i: 0, t: 0, shop: true };
 }
@@ -918,6 +918,7 @@ function drawHUD(g) {
 
 // dark rounded panel
 function drawPanel(g, x, y, w, h) {
+  if (typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', x, y, w, h, 0.045)) return;     // the painted panel
   g.fillStyle = 'rgba(5,8,15,0.88)'; g.fillRect(x, y, w, h);
   g.strokeStyle = 'rgba(220,232,250,0.75)'; g.lineWidth = 2; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   g.strokeStyle = 'rgba(220,232,250,0.25)'; g.strokeRect(x + 6.5, y + 6.5, w - 13, h - 13);

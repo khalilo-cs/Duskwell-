@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..', '..')
-LIMIT = {'default': 360, 'sw_': 520, 'wf_': 400, 'bar': 1400, 'panel': 1100, 'divider': 1200, 'button': 720, 'map_': 160, 'marker': 140}
+LIMIT = {'default': 360, 'npc_': 440, 'sw_': 520, 'wf_': 400, 'bar': 1400, 'panel': 1100, 'divider': 1200, 'button': 720, 'map_': 160, 'marker': 140}
 
 
 def groups(vals, n):

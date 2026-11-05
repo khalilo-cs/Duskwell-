@@ -112,9 +112,11 @@ const Decor = (() => {
   const SW = { nail: 'sw_nail', lance: 'sw_lance', rapier: 'sw_rapier', fangs: 'sw_fangs', scythe: 'sw_scythe', cleaver: 'sw_cleaver', bonesaw: 'sw_bonesaw' };
   const SIZE = { nail: 92, lance: 110, rapier: 96, fangs: 64, scythe: 130, cleaver: 104, bonesaw: 100 };
   function swing(g, p, id, pr) {
-    const n = SW[id]; if (typeof UiArt === 'undefined' || !UiArt.has(n)) return false;
+    // four painted frames of the swing (starting, growing, full, breaking up) when they are there, the single picture if not
+    const fi = Math.min(3, Math.floor(pr * 4)), fn = 'wf_' + id + '_' + fi;
+    const n = typeof UiArt !== 'undefined' && UiArt.has(fn) ? fn : SW[id]; if (typeof UiArt === 'undefined' || !UiArt.has(n)) return false;
     const r = UiArt.R[n], f = p.face, vert = p.atkDir !== 'side', up = p.atkDir === 'up';
-    const grow = 0.55 + 0.6 * Math.min(1, pr * 1.6), a = pr < 0.55 ? 1 : Math.max(0, 1 - (pr - 0.55) / 0.45);
+    const framed = n.startsWith('wf_'), grow = framed ? 1 : 0.55 + 0.6 * Math.min(1, pr * 1.6), a = framed ? (pr < 0.8 ? 1 : (1 - pr) * 5) : pr < 0.55 ? 1 : Math.max(0, 1 - (pr - 0.55) / 0.45);
     const L = SIZE[id] * (p.reachK ? p.reachK() : 1) * grow, H = L * r[3] / r[2];
     g.save(); g.globalAlpha = a; g.translate(p.cx, p.cy - 4);
     if (vert) g.rotate(up ? -Math.PI / 2 : Math.PI / 2); else if (f < 0) g.scale(-1, 1);
@@ -122,7 +124,8 @@ const Decor = (() => {
     g.globalCompositeOperation = 'lighter';
     UiArt.draw(g, n, 14 + L / 2, 0, H, { w: L });
     g.restore();
-    if (pr > 0.35 && pr < 0.5) UiArt.draw(g, 'sw_spark', p.cx + (vert ? 0 : f * (14 + L)), p.cy - 4 + (vert ? (up ? -1 : 1) * (14 + L) : 0), 34, { alpha: 0.8 });
+    const sp = 'wf_spark_' + Math.min(3, Math.floor(Math.max(0, pr - 0.3) * 6));
+    if (pr > 0.3 && pr < 0.95) UiArt.draw(g, UiArt.has(sp) ? sp : 'sw_spark', p.cx + (vert ? 0 : f * (14 + L)), p.cy - 4 + (vert ? (up ? -1 : 1) * (14 + L) : 0), 34, { alpha: 0.8 });
     return true;
   }
   const oldFx = Art.swingFx;

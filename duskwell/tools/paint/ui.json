@@ -108,5 +108,47 @@
    "btn_base",
    "btn_press"
   ]
+ ],
+ "swings": [
+  [
+   "wf_nail_0",
+   "wf_nail_1",
+   "wf_nail_2",
+   "wf_nail_3",
+   "wf_lance_0",
+   "wf_lance_1",
+   "wf_lance_2",
+   "wf_lance_3"
+  ],
+  [
+   "wf_rapier_0",
+   "wf_rapier_1",
+   "wf_rapier_2",
+   "wf_rapier_3",
+   "wf_fangs_0",
+   "wf_fangs_1",
+   "wf_fangs_2",
+   "wf_fangs_3"
+  ],
+  [
+   "wf_scythe_0",
+   "wf_scythe_1",
+   "wf_scythe_2",
+   "wf_scythe_3",
+   "wf_cleaver_0",
+   "wf_cleaver_1",
+   "wf_cleaver_2",
+   "wf_cleaver_3"
+  ],
+  [
+   "wf_bonesaw_0",
+   "wf_bonesaw_1",
+   "wf_bonesaw_2",
+   "wf_bonesaw_3",
+   "wf_spark_0",
+   "wf_spark_1",
+   "wf_spark_2",
+   "wf_spark_3"
+  ]
  ]
 }

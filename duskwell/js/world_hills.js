@@ -7,7 +7,7 @@
 (function hills() {
   const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; };
   for (const id of Object.keys(WORLD.rooms)) {
-    const r = WORLD.rooms[id]; r.hills = [];
+    const r = WORLD.rooms[id]; r.hills = (r.hills0 || []).slice();
     if (r.arena || id === 'town') continue;
     const R = hash('hills_' + id), at = (x, y) => (x < 0 || y < 0 || x >= r.w || y >= r.h ? T_SOLID : r.t[y * r.w + x]);
     const busy = [].concat(r.doors, r.items, r.benches, r.stations, r.signs, r.npcs, r.mech, r.leverGates || []);

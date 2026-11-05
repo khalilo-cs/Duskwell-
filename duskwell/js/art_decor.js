@@ -50,7 +50,8 @@ const Decor = (() => {
     for (const h of d.hills) {
       const n = 'hl_' + set + '_' + h.k; if (!UiArt.has(n)) continue;
       const r = UiArt.R[n], W = h.w * TILE + (h.k === 'over' ? 0 : 28), H = Math.max(W * r[3] / r[2], h.k === 'hill' ? 2.5 * TILE : h.k === 'rock' ? 3.1 * TILE : 0);   // tall enough to cover its steps
-      if (h.k === 'over') UiArt.draw(g, n, (h.x + h.w / 2) * TILE, H / 2 - 6, H, { w: W });
+      if (h.k === 'over') UiArt.draw(g, n, (h.x + h.w / 2) * TILE, h.y * TILE + H / 2 - 6, H, { w: W });
+      else if (h.k === 'cave') UiArt.draw(g, n, (h.x + h.w / 2) * TILE, h.y * TILE + 6 - H / 2, H, { w: W });
       else UiArt.draw(g, n, (h.x + h.w / 2) * TILE, h.y * TILE + 12 - H / 2, H, { w: W });
     }
   }

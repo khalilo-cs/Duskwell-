@@ -65,7 +65,26 @@
     // the way in: the shaft from the room above, with ledges back up to it
     const [ex] = cell(startX, 0), dx = ex + 4;
     r.air(dx, 0, 3, 2).plat(dx, 2, 3).plat(dx, 4, 3).door('top', dx, 0, 3, 1, host.id, 'deep');
-    // the farthest chamber holds the treasure behind a gate; the lever is in the second farthest
+    // the chambers are made to look hewn by water and time, not built: the ceiling of each hangs lower here and there, its upper
+    // corners are rounded off; nothing is laid where a way runs (the holes down from the chamber above, the shaft in), and the
+    // floors stay walkable. Every passage between two chambers is framed by the painted mouth of a cave, and some ceilings carry
+    // a painted overhang of the area's rock (js/world_hills.js keeps them in r.hills0)
+    r.hills0 = [];
+    const downFrom = new Set(links.filter(l => l[0] === l[2]).map(l => Math.min(l[0], l[2]) + ',' + Math.max(l[1], l[3])));
+    for (let cy = 0; cy < NY; cy++) for (let cx = 0; cx < NX; cx++) {
+      const [x0, y0] = cell(cx, cy), keep = downFrom.has(cx + ',' + cy) || (cx === startX && cy === 0);
+      let d = Math.floor(R() * 2);
+      for (let x = x0; x < x0 + CW - 2; x++) {
+        if (keep && x >= x0 + 3 && x <= x0 + 7) continue;
+        if ((x - x0) % 3 === 0) { const nd = Math.max(0, Math.min(2, d + (R() < 0.5 ? -1 : 1))); if (nd !== d && x > x0 + 1) r.hills0.push({ k: 'over', x: x - 2, y: y0 + Math.min(d, nd), w: 4 }); d = nd; }   // each step of the roof hidden under hanging rock
+        const edge = x - x0 < 2 || x0 + CW - 3 - x < 2 ? 1 : 0;                  // the corners round off
+        if (d + edge) r.solid(x, y0, 1, Math.min(2, d + edge));
+      }
+    }
+    for (const [ax, ay, bx, by, secret] of links) if (ay === by && !secret) {
+      const [x0, y0] = cell(Math.min(ax, bx), ay);
+      r.hills0.push({ k: 'cave', x: x0 + CW - 6, y: y0 + 6, w: 10, deco: true });
+    }
     const far = Object.keys(depth).sort((a, b) => depth[b] - depth[a]);
     const [tx, ty] = far[0].split(',').map(Number), [lx2, ly2] = far[Math.min(3, far.length - 1)].split(',').map(Number);
     const [t0x, t0y] = cell(tx, ty), [l0x, l0y] = cell(lx2, ly2);
@@ -92,7 +111,7 @@
       // what else the chamber holds: hanging columns, ledges with a gem up high, a lit shrine corner, or a nest of creatures
       const w2 = R();
       if (w2 < 0.18) r.solid(x0 + 3, y0, 1, 2).solid(x0 + 7, y0, 1, 2);
-      else if (w2 < 0.38) { r.plat(x0 + 1, y0 + 3, 3).plat(x0 + 5, y0 + 2, 3); r.item('gem_' + id + '_' + cx + '_' + cy, x0 + 6, y0 + 1, 'cache', { amount: 25 }); }
+      else if (w2 < 0.38) { r.air(x0, y0, 9, 2).plat(x0 + 1, y0 + 3, 3).plat(x0 + 5, y0 + 2, 3); r.item('gem_' + id + '_' + cx + '_' + cy, x0 + 6, y0 + 1, 'cache', { amount: 25 }); }
       else if (w2 < 0.55) r.decor('light', x0 + 5, y0 + 3, { r: 210, a: 0.75 });
       else if (w2 < 0.62 && kinds.length) { r.enemy(kinds[0], x0 + 3, y0 + CH - 3); r.enemy(kinds[kinds.length - 1], x0 + 7, y0 + CH - 3); }
     }

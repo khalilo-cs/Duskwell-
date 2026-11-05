@@ -260,5 +260,31 @@
    "lf_toad_0",
    "lf_toad_1"
   ]
+ ],
+ "hills": [
+  [
+   "hl_green_hill",
+   "hl_green_rock",
+   "hl_green_cave",
+   "hl_green_over"
+  ],
+  [
+   "hl_stone_hill",
+   "hl_stone_rock",
+   "hl_stone_cave",
+   "hl_stone_over"
+  ],
+  [
+   "hl_snow_hill",
+   "hl_snow_rock",
+   "hl_snow_cave",
+   "hl_snow_over"
+  ],
+  [
+   "hl_lava_hill",
+   "hl_lava_rock",
+   "hl_lava_cave",
+   "hl_lava_over"
+  ]
  ]
 }

@@ -78,6 +78,18 @@ canvas{display:block;background:var(--stage);border-radius:4px;box-shadow:0 0 40
   .b{width:46px;height:46px}.b.big{width:52px;height:52px}
 }
 @media (prefers-reduced-motion:reduce){.b{transition:none}}
+/* painted touch buttons (art/ui/btn): a stone disc in a silver ring with the glowing sign of its action */
+#touch .b{background:center/112% no-repeat;border:none!important;box-shadow:none!important}
+#touch .b::before{display:none}
+#touch .b svg{display:none}
+#touch [data-act=up],#touch [data-act=down],#touch [data-act=left],#touch [data-act=right]{background-image:url(art/ui/btn/up.webp)}
+#touch [data-act=right]{transform:rotate(90deg)}#touch [data-act=down]{transform:rotate(180deg)}#touch [data-act=left]{transform:rotate(-90deg)}
+#touch [data-act=jump]{background-image:url(art/ui/btn/jump.webp)}#touch [data-act=attack]{background-image:url(art/ui/btn/attack.webp)}
+#touch [data-act=dash]{background-image:url(art/ui/btn/dash.webp)}#touch [data-act=cast]{background-image:url(art/ui/btn/cast.webp)}
+#touch [data-act=superdash]{background-image:url(art/ui/btn/super.webp)}#touch [data-act=map]{background-image:url(art/ui/btn/map.webp)}
+#touch [data-act=pause]{background-image:url(art/ui/btn/pause.webp)}
+#touch .b.on{filter:brightness(1.45) drop-shadow(0 0 12px var(--glow));transform:scale(.93)}
+#touch [data-act=right].on{transform:rotate(90deg) scale(.93)}#touch [data-act=down].on{transform:rotate(180deg) scale(.93)}#touch [data-act=left].on{transform:rotate(-90deg) scale(.93)}
 </style>
 </head>
 <body>

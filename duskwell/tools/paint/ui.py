@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, '..', '..')
-LIMIT = {'default': 360, 'bar': 1400, 'panel': 1100, 'divider': 1200, 'button': 720, 'map_': 160, 'marker': 140}
+LIMIT = {'default': 360, 'sw_': 520, 'bar': 1400, 'panel': 1100, 'divider': 1200, 'button': 720, 'map_': 160, 'marker': 140}
 
 
 def groups(vals, n):
@@ -89,6 +89,9 @@ def main():
     for n in order: atlas.paste(pics[n], spots[n])
     os.makedirs(os.path.join(ROOT, 'art', 'ui'), exist_ok=True)
     atlas.save(os.path.join(ROOT, 'art', 'ui', 'ui.webp'), quality=92, method=6)
+    bd = os.path.join(ROOT, 'art', 'ui', 'btn'); os.makedirs(bd, exist_ok=True)      # the touch buttons also as files of their own (the page's buttons use them)
+    for n in pics:
+        if n.startswith('btn_'): im = pics[n]; k = 192 / max(im.size); im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS).save(os.path.join(bd, n[4:] + '.webp'), quality=90)
     meta = {n: [spots[n][0], spots[n][1], pics[n].width, pics[n].height] for n in sorted(pics)}
     open(os.path.join(ROOT, 'js', 'ui_meta.js'), 'w').write("'use strict';\n// made by tools/paint/ui.py: the painted pieces of the interface in art/ui/ui.webp, [x, y, w, h]\n"
                                                              "const UI_RECTS = " + json.dumps(meta, sort_keys=True) + ";\n")

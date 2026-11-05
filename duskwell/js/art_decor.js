@@ -107,3 +107,31 @@ const Decor = (() => {
   };
   window.addEventListener('load', icons); setTimeout(icons, 0);
 })();
+// the weapons' swings, painted (art/ui sw_*): the mark grows out of the blade, flares and fades; up and down strikes turn it
+(() => {
+  const SW = { nail: 'sw_nail', lance: 'sw_lance', rapier: 'sw_rapier', fangs: 'sw_fangs', scythe: 'sw_scythe', cleaver: 'sw_cleaver', bonesaw: 'sw_bonesaw' };
+  const SIZE = { nail: 92, lance: 110, rapier: 96, fangs: 64, scythe: 130, cleaver: 104, bonesaw: 100 };
+  function swing(g, p, id, pr) {
+    const n = SW[id]; if (typeof UiArt === 'undefined' || !UiArt.has(n)) return false;
+    const r = UiArt.R[n], f = p.face, vert = p.atkDir !== 'side', up = p.atkDir === 'up';
+    const grow = 0.55 + 0.6 * Math.min(1, pr * 1.6), a = pr < 0.55 ? 1 : Math.max(0, 1 - (pr - 0.55) / 0.45);
+    const L = SIZE[id] * (p.reachK ? p.reachK() : 1) * grow, H = L * r[3] / r[2];
+    g.save(); g.globalAlpha = a; g.translate(p.cx, p.cy - 4);
+    if (vert) g.rotate(up ? -Math.PI / 2 : Math.PI / 2); else if (f < 0) g.scale(-1, 1);
+    if (p.atkAlt < 0) g.scale(1, -1);
+    g.globalCompositeOperation = 'lighter';
+    UiArt.draw(g, n, 14 + L / 2, 0, H, { w: L });
+    g.restore();
+    if (pr > 0.35 && pr < 0.5) UiArt.draw(g, 'sw_spark', p.cx + (vert ? 0 : f * (14 + L)), p.cy - 4 + (vert ? (up ? -1 : 1) * (14 + L) : 0), 34, { alpha: 0.8 });
+    return true;
+  }
+  const oldFx = Art.swingFx;
+  if (oldFx) Art.swingFx = function (g, p, t) {
+    const id = Gear.weapon(), w = Gear.w(), pr = 1 - clamp(p.atkT / Math.max(0.05, Math.min(0.16, w.cd * 0.6)), 0, 1);
+    if (!swing(g, p, id, pr)) return oldFx(g, p, t);
+  };
+  if (typeof drawSlash === 'function') {
+    const oldSlash = drawSlash;
+    drawSlash = function (g, p, fx, fy, k) { if (!swing(g, p, 'nail', 1 - clamp(p.atkT / 0.16, 0, 1))) oldSlash(g, p, fx, fy, k); };
+  }
+})();

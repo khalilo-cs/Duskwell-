@@ -82,5 +82,31 @@
    "it_pouch",
    "it_idol"
   ]
+ ],
+ "fxbtn": [
+  [
+   "sw_nail",
+   "sw_lance",
+   "sw_rapier",
+   "sw_fangs",
+   "sw_scythe",
+   "sw_cleaver",
+   "sw_bonesaw",
+   "sw_spark"
+  ],
+  [
+   "btn_up",
+   "btn_jump",
+   "btn_attack",
+   "btn_dash",
+   "btn_cast",
+   "btn_super"
+  ],
+  [
+   "btn_map",
+   "btn_pause",
+   "btn_base",
+   "btn_press"
+  ]
  ]
 }

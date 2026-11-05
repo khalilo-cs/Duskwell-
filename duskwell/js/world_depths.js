@@ -98,7 +98,7 @@
     hol.solid(0, 0, HW, HH);
     const floor = [], roof = []; let fy = 30, cy = 8;
     for (let x = 0; x < HW; x++) {
-      if (x % 20 === 0 && x > 3 && x < HW - 4) fy = Math.max(24, Math.min(36, fy + (R() < 0.5 ? -1 : 1) * 2));      // long stretches: the painted hills raise them
+      if (x % 20 === 0 && x > 3 && x < HW - 4) fy = Math.max(27, Math.min(33, fy + (R() < 0.5 ? -1 : 1) * 2));   // never more than one jump from the doors' level      // long stretches: the painted hills raise them
       if (x % 5 === 0) cy = Math.max(3, Math.min(13, cy + (R() < 0.5 ? -1 : 1)));
       floor.push(x < 4 || x > HW - 5 ? 30 : fy); roof.push(cy);
     }
@@ -120,16 +120,15 @@
     const TW = 40, TH = 96, tw = room(id + '_tower', TW, TH, { area, theme: host.theme, bg: host.bg, map: host.map });
     tw.air(1, 1, TW - 2, TH - 3).solid(0, TH - 3, TW, 3);
     tw.air(0, TH - 7, 1, 4).door('w', 0, TH - 7, 1, 4, id + '_hollow', 'e');
-    let side = 0;
-    for (let y = TH - 7; y > 6; y -= 4) {
-      const w = 7 + Math.floor(R() * 5), x = side ? TW - 2 - w - Math.floor(R() * 4) : 1 + Math.floor(R() * 4);
-      tw.plat(x, y, w);
-      if (R() < 0.35) tw.plat(Math.floor(TW / 2) - 2, y - 2, 4);                                     // a step in the middle
+    let side = 0, lastX = 6, lastY = 8;
+    for (let y = TH - 6; y > 6; y -= 3) {                                            // three tiles apart: one jump each
+      const COLS = [1, 13, 26], seq = [0, 1, 2, 1], w = 12, x = COLS[seq[side % 4]] + (R() < 0.5 ? 0 : 1);   // zigzag through three columns
+      tw.plat(x, y, w); lastX = x; lastY = y;
       if (R() < 0.2) tw.solid(side ? 1 : TW - 6, y - 1, 5, 2).breakable(side ? 1 : TW - 6, y - 1, 5, 2);   // a block that breaks
       if (kinds.length && R() < 0.3) tw.enemy(kinds[Math.floor(R() * kinds.length)], x + 2, y - 1);
-      side ^= 1;
+      side++;
     }
-    tw.solid(6, 5, TW - 12, 1);
-    tw.item('cache_' + id + '_tower', Math.floor(TW / 2), 4, 'cache', { amount: 120 });
+    tw.solid(lastX, lastY, 6, 1);                                                    // the summit: a stone shelf on the last ledge
+    tw.item('cache_' + id + '_tower', lastX + 3, lastY - 1, 'cache', { amount: 120 });
   }
 })();

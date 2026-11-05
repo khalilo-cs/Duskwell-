@@ -286,5 +286,43 @@
    "hl_lava_cave",
    "hl_lava_over"
   ]
+ ],
+ "hills2": [
+  [
+   "hl_spore_hill",
+   "hl_spore_rock",
+   "hl_spore_cave",
+   "hl_spore_over"
+  ],
+  [
+   "hl_webbed_hill",
+   "hl_webbed_rock",
+   "hl_webbed_cave",
+   "hl_webbed_over"
+  ],
+  [
+   "hl_crystal_hill",
+   "hl_crystal_rock",
+   "hl_crystal_cave",
+   "hl_crystal_over"
+  ],
+  [
+   "hl_mirror_hill",
+   "hl_mirror_rock",
+   "hl_mirror_cave",
+   "hl_mirror_over"
+  ],
+  [
+   "hl_bone_hill",
+   "hl_bone_rock",
+   "hl_bone_cave",
+   "hl_bone_over"
+  ],
+  [
+   "hl_lunar_hill",
+   "hl_lunar_rock",
+   "hl_lunar_cave",
+   "hl_lunar_over"
+  ]
  ]
 }

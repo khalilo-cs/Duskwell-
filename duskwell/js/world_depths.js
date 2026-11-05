@@ -98,7 +98,7 @@
     hol.solid(0, 0, HW, HH);
     const floor = [], roof = []; let fy = 30, cy = 8;
     for (let x = 0; x < HW; x++) {
-      if (x % 4 === 0 && x > 3 && x < HW - 4) fy = Math.max(24, Math.min(36, fy + (R() < 0.5 ? -1 : 1) * (R() < 0.3 ? 2 : 1)));
+      if (x % 20 === 0 && x > 3 && x < HW - 4) fy = Math.max(24, Math.min(36, fy + (R() < 0.5 ? -1 : 1) * 2));      // long stretches: the painted hills raise them
       if (x % 5 === 0) cy = Math.max(3, Math.min(13, cy + (R() < 0.5 ? -1 : 1)));
       floor.push(x < 4 || x > HW - 5 ? 30 : fy); roof.push(cy);
     }

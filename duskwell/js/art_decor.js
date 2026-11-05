@@ -43,7 +43,7 @@ const Decor = (() => {
     return (L._decor = out);
   }
   // the painted hills, outcrops and overhangs of the room (js/world_hills.js), in the rock of its area
-  const SET = { frost: 'snow', ember: 'lava', foundry: 'lava', moss: 'green', town: 'green', aqueduct: 'green' };
+  const SET = { frost: 'snow', ember: 'lava', foundry: 'lava', moss: 'green', town: 'green', aqueduct: 'green', spore: 'spore', webbed: 'webbed', crystal: 'crystal', mirror: 'mirror', bone: 'bone', lunar: 'lunar' };
   function hills(g, L) {
     const d = L.def; if (!d || !d.hills || typeof UiArt === 'undefined') return;
     const set = SET[d.theme] || 'stone';

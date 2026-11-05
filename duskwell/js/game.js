@@ -871,6 +871,7 @@ function drawHUD(g) {
     g.font = font(50, '700'); textShadow(g, tr('boss_' + b.bossKey), VW / 2, VH / 2 - 10, '#f4f8ff', 14);
     g.fillStyle = 'rgba(230,240,255,0.6)'; g.fillRect(VW / 2 - 180, VH / 2 + 28, 360, 2); g.restore();
   }
+  if (typeof Voices !== 'undefined') Voices.draw(g);              // what a boss is saying
   // area banner
   const ab = G.areaBanner;
   if (ab) {

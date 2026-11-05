@@ -176,5 +176,47 @@
    "npc_stall",
    "npc_sign"
   ]
+ ],
+ "life": [
+  [
+   "lf_moth_0",
+   "lf_moth_1",
+   "lf_moth_2",
+   "lf_moth_3",
+   "lf_fly_0",
+   "lf_fly_1",
+   "lf_fly_2",
+   "lf_fly_3"
+  ],
+  [
+   "lf_beetle_0",
+   "lf_beetle_1",
+   "lf_beetle_2",
+   "lf_beetle_3",
+   "lf_rat_0",
+   "lf_rat_1",
+   "lf_rat_2",
+   "lf_rat_3"
+  ],
+  [
+   "lf_glow_0",
+   "lf_glow_1",
+   "lf_fish_0",
+   "lf_fish_1",
+   "lf_bat_0",
+   "lf_bat_1",
+   "lf_spore_0",
+   "lf_spore_1"
+  ],
+  [
+   "lf_grass_0",
+   "lf_grass_1",
+   "lf_fern_0",
+   "lf_fern_1",
+   "lf_reed_0",
+   "lf_reed_1",
+   "lf_vine_0",
+   "lf_vine_1"
+  ]
  ]
 }

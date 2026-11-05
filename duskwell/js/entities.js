@@ -288,7 +288,7 @@ class Player {
       this.atkBuf = 0;
       this.atkDir = iy < 0 ? 'up' : (iy > 0 && !this.onGround ? 'down' : 'side');
       this.atkT = Math.min(0.16, Gear.atkCD() * 0.6); this.atkCD = this.strikeGap(); this.atkAlt ^= 1; this.hits = new Set();
-      Sound.play('slash');
+      if (!(typeof Voices !== 'undefined' && Voices.weapon(this.atkDir))) Sound.play('slash');     // each weapon, each direction, its own sound
       if (Charms.has('echo') && this.atkDir === 'side' && (this.echoN = (this.echoN || 0) + 1) % 3 === 0) {     // Blade Echo: every third strike sends a wave
         G.projs.push(new Proj({ kind: 'wave', x: this.cx + this.face * 34, y: this.cy - 4, vx: this.face * 560, vy: 0, r: 17, dmg: Math.max(2, Math.round(this.nailDamage() * 0.6)), friendly: true, pierce: true, life: 0.55, color: '#d8c8ff' }));
         G.burst(this.cx + this.face * 34, this.cy - 4, 8, { color: '#d8c8ff', speed: 140, life: 0.3, size: 3 });
@@ -892,7 +892,7 @@ class Enemy {
       if (this.hp <= 0) this.kill();
       return;
     }
-    this.hp -= dmg; this.flash = 0.12; Sound.play('hit'); G.hitstop(how === 'spell' ? 0.03 : 0.06);
+    this.hp -= dmg; this.flash = 0.12; if (!how && typeof Voices !== 'undefined') Voices.weaponHit(); else Sound.play('hit'); G.hitstop(how === 'spell' ? 0.03 : 0.06);
     G.burst(this.cx, this.cy, 8, { color: this.blood || '#ffd59a', speed: 220, life: 0.35, size: 3 });
     G.burst(this.cx, this.cy, 3, { color: '#ffffff', speed: 260, life: 0.15, size: 2 });
     G.slashFx(this.cx, this.cy, dir);

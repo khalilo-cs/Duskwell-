@@ -181,3 +181,60 @@ const Decor = (() => {
   };
   window.addEventListener('load', install); setTimeout(install, 0);
 })();
+// living rooms: painted moths, butterflies, fireflies, bats and spores flutter about, beetles and rats scurry along the floors
+// (and run from the hero), grass, ferns, reeds and vines sway; which live where depends on the area
+const Life = (() => {
+  const T = TILE, AIR = { town: ['fly', 'fly', 'glow'], cave: ['glow', 'bat'], moss: ['fly', 'glow', 'glow'], spore: ['spore', 'spore', 'glow'],
+    aqueduct: ['glow', 'moth'], webbed: ['moth', 'moth'], foundry: ['bat'], throne: ['moth', 'bat'], frost: ['bat'], ember: ['spore'],
+    storm: ['bat'], mirror: ['moth', 'glow'], bone: ['bat', 'moth'], lunar: ['moth', 'glow'], crystal: ['glow', 'bat'] };
+  const GROUND = { town: 'beetle', cave: 'rat', moss: 'beetle', spore: 'beetle', aqueduct: 'rat', webbed: 'beetle', foundry: 'rat', throne: 'rat', bone: 'rat', crystal: 'beetle' };
+  const PLANT = { town: ['grass', 'fern'], moss: ['fern', 'grass', 'vine'], spore: ['fern'], aqueduct: ['reed', 'grass'], cave: ['grass'], webbed: ['vine'], crystal: ['grass'] };
+  const FRAMES = { moth: 4, fly: 4, beetle: 4, rat: 4, glow: 2, fish: 2, bat: 2, spore: 2, grass: 2, fern: 2, reed: 2, vine: 2 };
+  let room = null, folk = [], plants = [], last = 0;
+  const ok = n => typeof UiArt !== 'undefined' && UiArt.has(n);
+  function setup(L) {
+    room = L; folk = []; plants = [];
+    const th = L.def && L.def.theme, air = AIR[th] || ['glow'], gr = GROUND[th], pl = PLANT[th] || [];
+    const S = (x, y) => L.get(x, y) === T_SOLID, A = (x, y) => x >= 0 && y >= 0 && x < L.w && y < L.h && L.get(x, y) === T_AIR;
+    const floors = [];
+    for (let y = 2; y < L.h - 1; y++) for (let x = 1; x < L.w - 1; x++) if (S(x, y + 1) && A(x, y) && A(x, y - 1)) floors.push([x, y]);
+    const pick = (a, i) => a[Math.floor(hash2(i, L.w, 17) * a.length) % a.length];
+    const nAir = Math.min(14, 4 + Math.floor(L.w * L.h / 260));
+    for (let i = 0; i < nAir && floors.length; i++) { const f = pick(floors, i * 3 + 1); folk.push({ k: pick(air, i), x: f[0] * T, y: (f[1] - 2 - hash2(i, 3, 5) * 3) * T, vx: 0, vy: 0, ph: i * 1.7, air: true }); }
+    if (gr) for (let i = 0; i < Math.min(6, Math.floor(floors.length / 40)); i++) { const f = pick(floors, i * 7 + 5); folk.push({ k: gr, x: f[0] * T + 16, y: (f[1] + 1) * T, vx: (hash2(i, 9, 2) < 0.5 ? -1 : 1) * 22, ph: i, air: false }); }
+    if (pl.length) for (const [x, y] of floors) if (hash2(x, y, 33) < 0.16) plants.push({ k: pick(pl, x + y), x: x * T + 16, y: (y + 1) * T + 2, ph: hash2(x, y, 4) * 6, s: 0.8 + hash2(x, y, 8) * 0.6 });
+  }
+  function frame(k, t, rate) { const n = FRAMES[k] || 2; return 'lf_' + k + '_' + (Math.floor(t * rate) % n); }
+  function draw(g, t) {
+    const L = typeof G !== 'undefined' && G.level; if (!L || !ok('lf_moth_0')) return;
+    if (L !== room) setup(L);
+    const dt = Math.min(0.05, Math.max(0, t - last)); last = t;
+    const px = P.cx, py = P.cy;
+    // the plants first, swaying in the air of the room
+    for (const p of plants) {
+      const sw = Math.sin(t * 1.6 + p.ph) * 0.08 + (Math.abs(px - p.x) < 28 && Math.abs(py - p.y) < 50 ? Math.sign(p.x - px) * 0.25 : 0);
+      g.save(); g.translate(p.x, p.y); g.transform(1, 0, sw, 1, 0, 0);
+      UiArt.draw(g, frame(p.k, t + p.ph, 1.2), 0, -14 * p.s, 30 * p.s); g.restore();
+    }
+    for (const c of folk) {
+      if (c.air) {                                                    // wander, drift away from the hero
+        const ax = Math.sin(t * 0.7 + c.ph) * 30 + (Math.abs(c.x - px) < 90 && Math.abs(c.y - py) < 90 ? Math.sign(c.x - px) * 120 : 0), ay = Math.cos(t * 0.9 + c.ph * 1.3) * 22;
+        c.vx += (ax - c.vx) * dt * 2; c.vy += (ay - c.vy) * dt * 2; c.x += c.vx * dt; c.y += c.vy * dt;
+        if (!(L.get(Math.floor(c.x / T), Math.floor(c.y / T)) === T_AIR)) { c.vx = -c.vx; c.vy = -c.vy; c.x += c.vx * dt * 3; c.y += c.vy * dt * 3; }
+        const h = c.k === 'bat' ? 22 : c.k === 'glow' || c.k === 'spore' ? 12 : 16;
+        if (c.k === 'glow' || c.k === 'spore') bloom(g, c.x, c.y, 18, c.k === 'glow' ? '#7dffd8' : '#ffb070', 0.35 + 0.2 * Math.sin(t * 4 + c.ph));
+        g.save(); g.translate(c.x, c.y); if (c.vx < 0) g.scale(-1, 1); UiArt.draw(g, frame(c.k, t + c.ph, c.k === 'bat' ? 9 : 12), 0, 0, h); g.restore();
+      } else {                                                        // scurry along the floor, turn at its ends, run from the hero
+        const near = Math.abs(c.x - px) < 110 && Math.abs(c.y - py) < 60, sp = near ? 80 : 22;
+        if (near) c.vx = Math.sign(c.x - px || 1) * sp; else c.vx = Math.sign(c.vx || 1) * sp;
+        const nx = c.x + c.vx * dt, tx = Math.floor((nx + Math.sign(c.vx) * 8) / T), ty = Math.floor((c.y - 4) / T);
+        if (L.get(tx, ty) !== T_AIR || L.get(tx, ty + 1) !== T_SOLID) c.vx = -c.vx; else c.x = nx;
+        g.save(); g.translate(c.x, c.y); if (c.vx < 0) g.scale(-1, 1); UiArt.draw(g, frame(c.k, t * (Math.abs(c.vx) / 22) + c.ph, 8), 0, -6, c.k === 'rat' ? 14 : 11); g.restore();
+      }
+    }
+  }
+  // drawn in the world, in front of the rock and the machinery
+  const old = Art.mechFront;
+  Art.mechFront = function (g, t, th) { const r = old.apply(this, arguments); try { draw(g, t); } catch (e) { /* the scenery must never stop the game */ } return r; };
+  return { draw };
+})();

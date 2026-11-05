@@ -27,7 +27,7 @@ const Decor = (() => {
       if (!S(x, y + 1) || !A(x, y) || !A(x - 1, y) || !A(x + 1, y) || !S(x - 1, y + 1) || !S(x + 1, y + 1)) continue;
       let up = 0; while (A(x, y - up) && up < 9) up++;
       if (up < 3 || near(x, y, 4) || !free(x, 5)) continue;
-      const v = hash2(x, y, 77); if (v > 0.33) continue;
+      const v = hash2(x, y, 77); if (v > 0.42) continue;
       const big = up >= 6 && v < 0.14, list = big ? BIG : SMALL, n = list[(hash2(x, y, 5) * list.length) | 0];
       out.push({ n, x: x * T + T / 2, y: (y + 1) * T + 3, h: H[n] * T, back: big }); used.push(x); k++;
     }
@@ -35,8 +35,8 @@ const Decor = (() => {
     for (let y = 1; y < L.h - 4; y++) for (let x = 2; x < L.w - 2; x++) {
       if (!S(x, y - 1) || !A(x, y)) continue;
       let dn = 0; while (A(x, y + dn) && dn < 9) dn++;
-      if (dn < 6 || near(x, y + dn, 3) || !free(x, 4)) continue;
-      if (hash2(x, y, 91) > 0.18) continue;
+      if (dn < 5 || near(x, y + dn, 3) || !free(x, 4)) continue;
+      if (hash2(x, y, 91) > 0.26) continue;
       const n = HANG[(hash2(x, y, 13) * HANG.length) | 0];
       out.push({ n, x: x * T + T / 2, y: y * T - 2, h: H[n] * T, hang: true }); used.push(x);
     }

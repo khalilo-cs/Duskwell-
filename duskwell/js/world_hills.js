@@ -11,18 +11,19 @@
     if (r.arena || id === 'town') continue;
     const R = hash('hills_' + id), at = (x, y) => (x < 0 || y < 0 || x >= r.w || y >= r.h ? T_SOLID : r.t[y * r.w + x]);
     const busy = [].concat(r.doors, r.items, r.benches, r.stations, r.signs, r.npcs, r.mech, r.leverGates || []);
-    const near = (x, y) => busy.some(q => Math.abs((q.x || 0) - x) < 8 && Math.abs((q.y || 0) - y) < 6);
+    const maze = /^deep_[a-z]+$/.test(id), RUN = maze ? 8 : 16, HEAD = maze ? 4 : 6, P0 = maze ? 0.35 : 0.2;
+    const near = (x, y) => busy.some(q => Math.abs((q.x || 0) - x) < (maze ? 4 : 8) && Math.abs((q.y || 0) - y) < 4);
     for (let y = 7; y < r.h - 1; y++) {
       let run = 0;
       for (let x = 1; x < r.w - 1; x++) {
-        const flat = at(x, y + 1) === T_SOLID && !r.iceCells.has((y + 1) * r.w + x) && [0, 1, 2, 3, 4, 5, 6].every(k => at(x, y - k) === T_AIR);
+        const flat = at(x, y + 1) === T_SOLID && !r.iceCells.has((y + 1) * r.w + x) && [...Array(HEAD + 1).keys()].every(k => at(x, y - k) === T_AIR);
         run = flat ? run + 1 : 0;
-        if (run >= 16 && R() < 0.2) {
-          const rock = R() < 0.35, w = rock ? 4 : 7 + Math.floor(R() * 3), x0 = x - run + 5 + Math.floor(R() * Math.max(1, run - w - 10));
+        if (run >= RUN && R() < P0) {
+          const rock = maze ? R() < 0.5 : R() < 0.35, w = rock ? (maze ? 3 : 4) : (maze ? 5 : 7 + Math.floor(R() * 3)), x0 = x - run + (maze ? 2 : 5) + Math.floor(R() * Math.max(1, run - w - (maze ? 4 : 10)));
           let ok = !near(x0 + w / 2, y);
           for (let i = x0 - 1; i <= x0 + w && ok; i++) if (at(i, y + 1) !== T_SOLID || at(i, y) !== T_AIR) ok = false;
           if (!ok) continue;
-          if (rock) r.solid(x0, y - 1, w, 2); else { r.solid(x0, y, w, 1); r.solid(x0 + 2, y - 1, w - 4, 1); }
+          if (maze) r.solid(x0, y, w, 1); else if (rock) r.solid(x0, y - 1, w, 2); else { r.solid(x0, y, w, 1); r.solid(x0 + 2, y - 1, w - 4, 1); }
           r.hills.push({ k: rock ? 'rock' : 'hill', x: x0, y: y + 1, w });
           run = 0;
         }

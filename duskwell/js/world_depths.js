@@ -89,6 +89,12 @@
       } else if (v >= 0.34 && v < 0.42 && /spore|moss/.test(host.theme)) r.bounce(x0 + 6, y0 + CH - 3, 2);   // a springing cap
       if (v < 0.22) { if (liquid && R() < 0.5) r.lava(x0 + 6, y0 + CH - 2, 3, 1); else r.hazard(x0 + 6, y0 + CH - 3, 3, 1); }
       if (kinds.length && R() < 0.42) r.enemy(kinds[Math.floor(R() * kinds.length)], x0 + 2 + Math.floor(R() * 3), y0 + CH - 3);
+      // what else the chamber holds: hanging columns, ledges with a gem up high, a lit shrine corner, or a nest of creatures
+      const w2 = R();
+      if (w2 < 0.18) r.solid(x0 + 3, y0, 1, 2).solid(x0 + 7, y0, 1, 2);
+      else if (w2 < 0.38) { r.plat(x0 + 1, y0 + 3, 3).plat(x0 + 5, y0 + 2, 3); r.item('gem_' + id + '_' + cx + '_' + cy, x0 + 6, y0 + 1, 'cache', { amount: 25 }); }
+      else if (w2 < 0.55) r.decor('light', x0 + 5, y0 + 3, { r: 210, a: 0.75 });
+      else if (w2 < 0.62 && kinds.length) { r.enemy(kinds[0], x0 + 3, y0 + CH - 3); r.enemy(kinds[kinds.length - 1], x0 + 7, y0 + CH - 3); }
     }
 
     // ---- the Hollow: a wide cavern east of the maze, its floor and roof rising and falling, pillars, pits and ledges above ----

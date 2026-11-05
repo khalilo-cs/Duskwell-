@@ -212,6 +212,7 @@ const Decor = (() => {
   const install = () => { if (installed) return; installed = true;            // after art_npcs.js, which sets its own drawing
   const old = Art.drawNPC;
   Art.drawNPC = function (g, n, t) {
+    if (n.type === 'elder' && typeof ElderArt !== 'undefined' && ElderArt.ready() && !ElderArt.state.off) return old(g, n, t);   // the Elder keeps his own moving picture (js/art_elder.js)
     const pic = Art.npcPic(n, t); if (!pic) return old(g, n, t);
     const P0 = typeof DW !== 'undefined' && DW.P, face = P0 && P0.cx < n.px ? -1 : 1, h = n.type === 'merchant' ? 92 : 104;
     const breathe = 1 + 0.012 * Math.sin(t * 2.2 + n.px);

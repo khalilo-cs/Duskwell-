@@ -71,7 +71,8 @@ def main():
         meta_only = '--meta' in args                    # only refresh the tempo of every piece in music.json, render nothing
         only = set(a for a in args if not a.startswith('--'))
         meta_path = os.path.join(out, 'music.json')
-        meta = json.load(open(meta_path)) if (only or meta_only) and os.path.exists(meta_path) else {}
+        old = json.load(open(meta_path)) if os.path.exists(meta_path) else {}
+        meta = dict(old) if (only or meta_only) else {}
         for name, sec in sorted(loops.items()):
             if meta_only:
                 if name in meta:
@@ -79,6 +80,7 @@ def main():
             elif not only or name in only:
                 meta[name] = render(name, sec, work, out)
                 meta[name].update(beats[name])
+                if 'tonic' in old.get(name, {}): meta[name]['tonic'] = old[name]['tonic']     # the key (tools/music/tonic.py) stays: the notes did not change
         meta = dict(sorted(meta.items()))
     with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=1)

@@ -3,186 +3,217 @@
   "loop": 145.4545,
   "gain": 1.0,
   "bpm": 66,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "adventure": {
   "loop": 114.2857,
   "gain": 0.765,
   "bpm": 84,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "aqueduct": {
   "loop": 109.7143,
   "gain": 0.702,
   "bpm": 70,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "boss": {
   "loop": 53.3333,
   "gain": 0.844,
   "bpm": 144,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 11
  },
  "boss_abyss": {
   "loop": 115.2,
   "gain": 0.928,
   "bpm": 100,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "boss_bone": {
   "loop": 51.8919,
   "gain": 0.966,
   "bpm": 148,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 1
  },
  "boss_march": {
   "loop": 109.0909,
   "gain": 0.792,
   "bpm": 88,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "boss_moon": {
   "loop": 49.2308,
   "gain": 0.9,
   "bpm": 156,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 7
  },
  "crossroads": {
   "loop": 106.6667,
   "gain": 0.823,
   "bpm": 72,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 2
  },
  "crystal": {
   "loop": 73.8462,
   "gain": 0.858,
   "bpm": 104,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "ember": {
   "loop": 83.4783,
   "gain": 0.935,
   "bpm": 92,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 1
  },
  "ending": {
   "loop": 87.2727,
   "gain": 0.843,
   "bpm": 66,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 2
  },
  "fiddler": {
   "loop": 75.7895,
   "gain": 0.742,
   "bpm": 76,
-  "bpb": 3
+  "bpb": 3,
+  "tonic": 9
  },
  "forge": {
   "loop": 83.4783,
   "gain": 0.777,
   "bpm": 92,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 2
  },
  "foundry": {
   "loop": 80.0,
   "gain": 0.85,
   "bpm": 96,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 7
  },
  "frost": {
   "loop": 92.9032,
   "gain": 0.613,
   "bpm": 62,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 1
  },
  "hushvale": {
   "loop": 72.0,
   "gain": 0.876,
   "bpm": 80,
-  "bpb": 3
+  "bpb": 3,
+  "tonic": 9
  },
  "king": {
   "loop": 58.1818,
   "gain": 0.881,
   "bpm": 132,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "legend": {
   "loop": 138.9474,
   "gain": 1.0,
   "bpm": 76,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "lunar": {
   "loop": 92.3077,
   "gain": 0.854,
   "bpm": 78,
-  "bpb": 3
+  "bpb": 3,
+  "tonic": 0
  },
  "mirror": {
   "loop": 84.7059,
   "gain": 0.784,
   "bpm": 68,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 3
  },
  "moss": {
   "loop": 91.4286,
   "gain": 0.606,
   "bpm": 84,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "ossuary": {
   "loop": 99.3103,
   "gain": 0.701,
   "bpm": 58,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 3
  },
  "overture": {
   "loop": 106.6667,
   "gain": 0.945,
   "bpm": 72,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 2
  },
  "rest": {
   "loop": 153.6,
   "gain": 0.743,
   "bpm": 50,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 2
  },
  "road": {
   "loop": 96.0,
   "gain": 0.775,
   "bpm": 80,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "spore": {
   "loop": 76.8,
   "gain": 0.755,
   "bpm": 100,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "storm": {
   "loop": 60.9524,
   "gain": 0.952,
   "bpm": 126,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 3
  },
  "throne": {
   "loop": 68.5714,
   "gain": 0.674,
   "bpm": 56,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "webbed": {
   "loop": 66.2069,
   "gain": 0.675,
   "bpm": 58,
-  "bpb": 4
+  "bpb": 4,
+  "tonic": 0
  },
  "wizard": {
   "loop": 53.3333,
   "gain": 0.802,
   "bpm": 54,
-  "bpb": 3
+  "bpb": 3,
+  "tonic": 4
  }
 }

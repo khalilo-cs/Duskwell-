@@ -41,27 +41,28 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('the foundry shaft and the Charnel Gate lead to each other; seven first rooms', r.a && r.b && r.a.to === 'os1' && r.a.toDoor === 'e' && r.b.to === 'fd2' && r.b.toDoor === 'w' && r.n === 7, r);
 
   // ---------------------------------------------------------------- the Heap
+  // (the Heap is tried on the flat floor east of the painted rock, x 57..71)
   await setup('os1', 'e');
   r = await ev(() => {
     const { G, P } = DW; const out = {};
-    P.x = 66 * 32; P.y = 17 * 32 - P.h + 32; DW.step(3);
-    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 50, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
+    P.x = 40 * 32; P.y = 17 * 32 - P.h + 32; DW.step(3);
+    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 58, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
     DW.step(60); out.far = h.currentState;
-    P.x = 54 * 32; DW.step(10); out.near = h.currentState;
+    P.x = 62 * 32; DW.step(10); out.near = h.currentState;
     DW.step(50); out.stood = h.currentState; out.hp = h.hp; out.dmg = h.dmg;
     return out;
   });
   ok('the Heap lies still while you are far, rises when you come close, and stands with 15 hp', r.far === 'pile' && (r.near === 'rising') && (r.stood === 'walk' || r.stood === 'windup' || r.stood === 'slash') && r.hp === 15 && r.dmg === 1, r);
   r = await ev(() => {                                           // a heap struck while it sleeps is simply destroyed
     const { G } = DW; G.enemies = []; G.geos = [];
-    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 52, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
+    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 60, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
     h.hurt(7, 1, 'side'); DW.step(2);
     return { dead: h.dead, state: h.currentState, geo: G.geos.length };
   });
   ok('struck asleep it is destroyed for good', r.dead && r.state === 'pile' && r.geo > 0, r);
   r = await ev(() => {                                           // standing: first death leaves a skull, which knits and rises again with 9 hp, then the real death
     const { G, P } = DW; G.enemies = []; G.geos = []; const out = {};
-    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 52, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
+    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 60, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
     h.currentState = 'walk'; h.hp = 15; h.hurt(15, 1, 'side');
     out.skull = { state: h.currentState, hp: h.hp, dead: h.dead, revived: h.revived, geos: G.geos.length };
     P.x = 2 * 32; DW.step(150); out.afterSkull = h.currentState;
@@ -73,21 +74,21 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('second death is final and drops Geo', r.second.dead && r.second.geos > 0, r.second);
   r = await ev(() => {                                           // striking the skull destroys it at once
     const { G } = DW; G.enemies = []; G.geos = [];
-    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 52, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
+    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 60, y: 17 }); h.kind = 'heap'; G.enemies.push(h);
     h.currentState = 'walk'; h.hp = 15; h.hurt(15, 1, 'side'); const first = h.currentState; h.hurt(1, 1, 'side');
     return { first, dead: h.dead, geos: G.geos.length };
   });
   ok('a blow on the skull ends it', r.first === 'skull' && r.dead && r.geos > 0, r);
   r = await ev(() => {                                           // while rising it cannot be hurt
     const { G } = DW; G.enemies = [];
-    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 52, y: 17 }); h.kind = 'heap'; G.enemies.push(h); h.setState('rising'); const hp = h.hp; const ret = h.hurt(3, 1, 'side');
+    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 60, y: 17 }); h.kind = 'heap'; G.enemies.push(h); h.setState('rising'); const hp = h.hp; const ret = h.hurt(3, 1, 'side');
     return { hp0: hp, hp1: h.hp, ret };
   });
   ok('a heap still rising turns the blow aside', r.ret === false && r.hp0 === r.hp1, r);
   r = await ev(() => {                                           // the club: a windup, then a swing that wounds the hero in front of it
-    const { G, P } = DW; G.enemies = []; P.invuln = 0; P.hp = P.maxHp = 9; P.x = 56 * 32; P.y = 17 * 32 + 32 - P.h;
-    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 52, y: 17 }); h.kind = 'heap'; h.currentState = 'walk'; h.hp = 15; G.enemies.push(h);
-    const seen = new Set(); for (let i = 0; i < 200; i++) { P.x = 56 * 32; DW.step(1); seen.add(h.currentState); if (P.hp < 9) break; }
+    const { G, P } = DW; G.enemies = []; P.invuln = 0; P.hp = P.maxHp = 9; P.x = 64 * 32; P.y = 17 * 32 + 32 - P.h;
+    const h = new ENEMY_TYPES.heap({ type: 'heap', x: 60, y: 17 }); h.kind = 'heap'; h.currentState = 'walk'; h.hp = 15; G.enemies.push(h);
+    const seen = new Set(); for (let i = 0; i < 200; i++) { P.x = 64 * 32; DW.step(1); seen.add(h.currentState); if (P.hp < 9) break; }
     return { seen: [...seen], hp: P.hp };
   });
   ok('it winds up and swings, and the swing wounds', r.seen.includes('windup') && r.seen.includes('slash') && r.hp < 9, r);

@@ -21,11 +21,11 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
     for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) if (A[i].x < A[j].x + A[j].w && A[j].x < A[i].x + A[i].w && A[i].y < A[j].y + A[j].h && A[j].y < A[i].y + A[i].h) out.blockClash++;
     return out;
   });
-  ok('every one of the 117 rooms has a place on the map', r.n === 117, r.n);
+  ok('every one of the 159 rooms (the Depths too) has a place on the map', r.n === 159, r.n);
   ok('no two rooms overlap', r.overlaps.length === 0, r.overlaps);
   ok('the blocks of the fifteen areas do not overlap', r.areas === 15 && r.blockClash === 0, r);
-  ok('the doors of rooms in one area are lined up with the doors they open into (all but a few)', r.pairs > 80 && r.aligned / r.pairs >= 0.94, { pairs: r.pairs, aligned: r.aligned, off: r.off });
-  ok('the whole world is packed to be seen at over 0.6 pixel to the tile, and is not a thin strip', r.fit >= 0.6 && r.w / r.h < 3.2, { fit: r.fit, w: r.w, h: r.h });
+  ok('the doors of rooms in one area are lined up with the doors they open into (all but a few)', r.pairs > 80 && r.aligned / r.pairs >= 0.9,   // the Depths hang under their areas, a few of their doors are offset { pairs: r.pairs, aligned: r.aligned, off: r.off });
+  ok('the whole world (grown with the Depths) is packed to be seen at over 0.5 pixel to the tile, and is not a thin strip', r.fit >= 0.5 && r.w / r.h < 3.2, { fit: r.fit, w: r.w, h: r.h });
   // ---- the drawings of the rooms
   r = await ev(() => {
     const out = {}, c1 = MapView.mini('cx2', 1), c2 = MapView.mini('cx2', 2), c4 = MapView.mini('cx2', 4), d = WORLD.rooms.cx2;

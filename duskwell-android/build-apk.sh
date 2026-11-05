@@ -8,8 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION_CODE="${VERSION_CODE:-30}"
-VERSION_NAME="${VERSION_NAME:-3.9}"
+VERSION_CODE="${VERSION_CODE:-31}"
+VERSION_NAME="${VERSION_NAME:-4.0}"
 PACKAGE="com.duskwell.game"
 KEYSTORE="${KEYSTORE:-sideload.keystore}"
 ALIAS="${ALIAS:-duskwell}"
@@ -34,14 +34,14 @@ cp -r ../duskwell/js "$B/assets/www/js"
 cp -r ../duskwell/art "$B/assets/www/art"
 rm -rf "$B/assets/www/art/source"          # the artist's source sheets and cut pieces stay in the repo, not in the app
 cp -r ../duskwell/audio "$B/assets/www/audio"
-cp -r fonts "$B/assets/www/fonts"
+cp -r ../duskwell/fonts "$B/assets/www/fonts"          # the game's own fonts (Cairo, Aref Ruqaa, Cinzel)
 # web fonts come from the APK instead of Google, so the app works offline
 python3 - "$B/assets/www/index.html" <<'PY'
 import re, sys
 p = sys.argv[1]; s = open(p, encoding='utf-8').read()
 s = re.sub(r'<link rel="preconnect"[^>]*>\n?', '', s)
 s, n = re.subn(r'<link href="https://fonts\.googleapis\.com[^>]*>', '<link href="fonts/fonts.css" rel="stylesheet">', s)
-assert n == 1, 'font link not found'
+assert n == 1 or 'fonts/fonts.css' in s, 'font link not found'
 open(p, 'w', encoding='utf-8').write(s)
 PY
 

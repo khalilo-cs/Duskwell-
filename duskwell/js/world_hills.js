@@ -29,5 +29,17 @@
       }
     }
     for (const d of r.doors) if (d.y === 0 && d.h === 1) r.hills.push({ k: 'over', x: d.x - 3, y: 0, w: d.w + 6 });
+    // in the wide caverns, every step of the rolling ground is hidden under a painted slope of the area's rock
+    // and in every room, a step in a floor (one to four tiles, with ground to walk on either side) is softened the same way
+    {
+      const big = /_hollow$/.test(id), floorY = x => { let y = r.h - 2; while (y > 1 && at(x, y) === T_SOLID) y--; return y + 1; };
+      for (let x = 3; x < r.w - 3; x++) {
+        const a = floorY(x - 1), b = floorY(x), lo = Math.max(a, b);
+        if (a === b || Math.abs(a - b) > (big ? 4 : 2) || lo >= r.h - 1) continue;
+        const sideOk = [-3, -2, 1, 2].every(k => floorY(x + k) === (k < 0 ? a : b));
+        if (!big && (!sideOk || near(x, lo))) continue;
+        r.hills.push({ k: 'rock', x: x - 3, y: lo, w: 6, deco: true });
+      }
+    }
   }
 })();

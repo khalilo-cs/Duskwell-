@@ -3,7 +3,7 @@
 // of ground, the lower one wide) or a rocky outcrop is raised, and the painted hill or rock of the area is laid over it
 // (js/art_decor.js), so the ground rises and falls in painted shapes; under a way up through a ceiling an overhang of the
 // area's rock hangs. Nothing is raised near doors, benches, stations, signs, people, pickups or machinery, on ice or under a
-// low roof, so every way stays open.
+// low roof, and never under a creature, so every way stays open and nothing is buried.
 (function hills() {
   const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; };
   for (const id of Object.keys(WORLD.rooms)) {
@@ -20,7 +20,7 @@
         run = flat ? run + 1 : 0;
         if (run >= RUN && R() < P0) {
           const rock = maze ? R() < 0.5 : R() < 0.35, w = rock ? (maze ? 3 : 4) : (maze ? 5 : 7 + Math.floor(R() * 3)), x0 = x - run + (maze ? 2 : 5) + Math.floor(R() * Math.max(1, run - w - (maze ? 4 : 10)));
-          let ok = !near(x0 + w / 2, y);
+          let ok = !near(x0 + w / 2, y) && !r.enemies.some(e => e.x >= x0 - 2 && e.x <= x0 + w + 1 && Math.abs(e.y - y) <= 2);   // never raised under a creature's feet
           for (let i = x0 - 1; i <= x0 + w && ok; i++) if (at(i, y + 1) !== T_SOLID || at(i, y) !== T_AIR) ok = false;
           if (!ok) continue;
           if (maze) r.solid(x0, y, w, 1); else if (rock) r.solid(x0, y - 1, w, 2); else { r.solid(x0, y, w, 1); r.solid(x0 + 2, y - 1, w - 4, 1); }

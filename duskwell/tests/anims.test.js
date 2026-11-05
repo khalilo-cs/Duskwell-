@@ -70,7 +70,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await arena(10);
   r = await ev(() => {
     const { G, P } = DW; const out = {};
-    for (const [k, x, y] of [['husk', 16, 39], ['warden', 20, 39], ['flyer', 24, 33], ['spider', 28, 39]]) { const e = new ENEMY_TYPES[k]({ type: k, x, y, ground: true }); e.kind = k; e.update = function (dt) { this.t += dt; }; G.enemies.push(e); }
+    for (const [k, x, y] of [['husk', 16, 39], ['warden', 20, 39], ['flyer', 26, 33], ['spider', 28, 39]]) { const e = new ENEMY_TYPES[k]({ type: k, x, y, ground: true }); e.kind = k; e.update = function (dt) { this.t += dt; }; G.enemies.push(e); }
     DW.step(1); DW.draw();
     for (const e of G.enemies) { e.hp = 0; e.kill(); }
     DW.step(1);

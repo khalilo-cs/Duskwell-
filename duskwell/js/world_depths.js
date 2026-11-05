@@ -21,6 +21,15 @@
     }
     return hole;
   }
+  // a creature is set down only where it can stand: air for its body, ground (not a pit, spikes or lava) under its feet; the
+  // nearest such spot to the one asked for, or none
+  const GROUND = [T_SOLID, T_ONEWAY, T_BREAK, T_CRACK, T_CRUMBLE];
+  function foe(rm, k, x, y) {
+    for (let d = 0; d < 6; d++) for (const sx of d ? [1, -1] : [1]) {
+      const xx = x + d * sx;
+      if (rm.at(xx, y) === T_AIR && rm.at(xx, y - 1) === T_AIR && GROUND.includes(rm.at(xx, y + 1))) { rm.enemy(k, xx, y); return; }
+    }
+  }
   const areas = {};
   for (const id of Object.keys(WORLD.rooms)) { const r = WORLD.rooms[id]; if (!r.area || r.arena) continue; (areas[r.area] = areas[r.area] || []).push(r); }
   for (const area of Object.keys(areas)) {
@@ -107,13 +116,13 @@
         r.air(x0 + 3, y0 + CH - 2, 4, 2).hazard(x0 + 3, y0 + CH - 1, 4, 1).crumble(x0 + 3, y0 + CH - 2, 4);
       } else if (v >= 0.34 && v < 0.42 && /spore|moss/.test(host.theme)) r.bounce(x0 + 6, y0 + CH - 3, 2);   // a springing cap
       if (v < 0.22) { if (liquid && R() < 0.5) r.lava(x0 + 6, y0 + CH - 2, 3, 1); else r.hazard(x0 + 6, y0 + CH - 3, 3, 1); }
-      if (kinds.length && R() < 0.42) r.enemy(kinds[Math.floor(R() * kinds.length)], x0 + 2 + Math.floor(R() * 3), y0 + CH - 3);
+      if (kinds.length && R() < 0.42) foe(r, kinds[Math.floor(R() * kinds.length)], x0 + 2 + Math.floor(R() * 3), y0 + CH - 3);
       // what else the chamber holds: hanging columns, ledges with a gem up high, a lit shrine corner, or a nest of creatures
       const w2 = R();
       if (w2 < 0.18) r.solid(x0 + 3, y0, 1, 2).solid(x0 + 7, y0, 1, 2);
       else if (w2 < 0.38) { r.air(x0, y0, 9, 2).plat(x0 + 1, y0 + 3, 3).plat(x0 + 5, y0 + 2, 3); r.item('gem_' + id + '_' + cx + '_' + cy, x0 + 6, y0 + 1, 'cache', { amount: 25 }); }
       else if (w2 < 0.55) r.decor('light', x0 + 5, y0 + 3, { r: 210, a: 0.75 });
-      else if (w2 < 0.62 && kinds.length) { r.enemy(kinds[0], x0 + 3, y0 + CH - 3); r.enemy(kinds[kinds.length - 1], x0 + 7, y0 + CH - 3); }
+      else if (w2 < 0.62 && kinds.length) { foe(r, kinds[0], x0 + 2, y0 + CH - 3); foe(r, kinds[kinds.length - 1], x0 + 8, y0 + CH - 3); }
     }
 
     // ---- the Hollow: a wide cavern east of the maze, its floor and roof rising and falling, pillars, pits and ledges above ----
@@ -130,13 +139,14 @@
     for (let x = 1; x < HW - 1; x++) hol.air(x, roof[x], 1, floor[x] - roof[x]);
     hol.air(0, 26, 1, 4).air(HW - 1, 26, 1, 4);
     hol.door('w', 0, 26, 1, 4, id, 'e').door('e', HW - 1, 26, 1, 4, id + '_tower', 'w');
+    const holFoes = [];
     for (let x = 10; x < HW - 12; x += 9 + Math.floor(R() * 8)) {
       const v = R(), f = floor[x];
       if (v < 0.25) hol.solid(x, roof[x], 2, Math.max(2, f - roof[x] - 6));                         // a pillar hanging from the roof
       else if (v < 0.45) { hol.air(x, f, 4, 3).hazard(x, f + 2, 4, 1); hol.plat(x - 1, f - 3, 6); } // a pit of spikes with a ledge over it
       else if (v < 0.6) hol.plat(x, f - 4 - Math.floor(R() * 3), 5 + Math.floor(R() * 4));          // a ledge to a higher way
       else if (v < 0.7 && /spore|moss/.test(host.theme)) hol.bounce(x, f - 1, 2);
-      if (kinds.length && R() < 0.55) hol.enemy(kinds[Math.floor(R() * kinds.length)], x + 3, f - 1);
+      if (kinds.length && R() < 0.55) holFoes.push([kinds[Math.floor(R() * kinds.length)], x + 3, f - 1]);   // set down once the cavern is all carved
     }
     for (let x = 20; x < HW - 20; x += 22) hol.plat(x, roof[x] + 4, 7);                               // a high way along the roof
     // the Chasm: halfway along, a wide canyon of spikes crossed on stones that crumble under the hero's feet
@@ -147,6 +157,7 @@
     { const hx = HW - 12, f = floor[hx]; hol.air(hx - 1, f - 4, 6, 4).breakable(hx - 2, f - 4, 1, 4).solid(hx - 2, f - 5, 8, 1).solid(hx + 5, f - 4, 1, 4);
       hol.item('relic_' + id, hx + 2, f - 1, 'cache', { amount: 200 }); }
     hol.item('cache_' + id + '_hollow', HW - 30, floor[HW - 20] - 1, 'cache', { amount: 70 });
+    for (const [k, x, y] of holFoes) foe(hol, k, x, y);
 
     // ---- the Spire: a tall shaft east of the Hollow, climbed from its foot on ledges that zigzag up to a treasure at the top ----
     const TW = 40, TH = 96, tw = room(id + '_tower', TW, TH, { area, theme: host.theme, bg: deepBg, map: host.map });
@@ -157,7 +168,7 @@
       const COLS = [1, 13, 26], seq = [0, 1, 2, 1], w = 12, x = COLS[seq[side % 4]] + (R() < 0.5 ? 0 : 1);   // zigzag through three columns
       tw.plat(x, y, w); lastX = x; lastY = y;
       if (R() < 0.2) tw.solid(side ? 1 : TW - 6, y - 1, 5, 2).breakable(side ? 1 : TW - 6, y - 1, 5, 2);   // a block that breaks
-      if (kinds.length && R() < 0.3) tw.enemy(kinds[Math.floor(R() * kinds.length)], x + 2, y - 1);
+      if (kinds.length && R() < 0.3) foe(tw, kinds[Math.floor(R() * kinds.length)], x + 2, y - 1);
       side++;
     }
     tw.solid(lastX, lastY, 6, 1);                                                    // the summit: a stone shelf on the last ledge

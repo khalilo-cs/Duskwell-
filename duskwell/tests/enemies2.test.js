@@ -37,7 +37,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   await arena(10);
   r = await ev(() => {
     const { G, P } = DW; const out = { seen: new Set() };
-    const b = new ENEMY_TYPES.imp({ x: 22, y: 39 }); b.kind = 'imp'; G.enemies.push(b); b.cool = 0;
+    const b = new ENEMY_TYPES.imp({ x: 34, y: 39 }); b.kind = 'imp'; G.enemies.push(b); b.cool = 0;
     P.x = b.cx - 260; P.y = b.y + b.h - P.h; P.invuln = 0; P.hp = 5; let bomb = false, blast = false, hurt = false;
     for (let i = 0; i < 360; i++) {
       P.vx = 0; DW.step(1); out.seen.add(b.currentState);
@@ -49,7 +49,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('Bomber lobs a bomb that bursts into a blast and wounds', r.bomb && r.blast && r.hurt && /anticipation/.test(r.seen) && /throw/.test(r.seen), r);
   r = await ev(() => {
     const { G, P } = DW; G.enemies = []; G.projs = []; P.invuln = 1e9;
-    const b = new ENEMY_TYPES.imp({ x: 22, y: 39 }); b.kind = 'imp'; G.enemies.push(b); b.cool = 99; b.setState('chase'); b.lastSeen = b.t;
+    const b = new ENEMY_TYPES.imp({ x: 34, y: 39 }); b.kind = 'imp'; G.enemies.push(b); b.cool = 99; b.setState('chase'); b.lastSeen = b.t;
     P.x = b.cx - 90; P.y = b.y + b.h - P.h; let vx = 0; for (let i = 0; i < 12; i++) { P.vx = 0; DW.step(1); if (!vx) vx = b.vx; }
     return { vx, face: b.face };
   });

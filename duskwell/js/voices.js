@@ -68,7 +68,14 @@ const Voices = (() => {
   // the weapons: each its own swing for each direction, and its own blow
   const weaponId = () => (typeof Gear !== 'undefined' && Gear.weapon && Gear.weapon()) || 'nail';
   function weapon(dir) { play('weapons/' + weaponId() + '_' + (dir || 'side'), 0.7); return true; }
-  function weaponHit() { play('weapons/' + weaponId() + '_hit', 0.75); return true; }
+  // the weight of a blow: heavy weapons shake the view and flash, light ones only tick
+  const WEIGHT = { cleaver: [6, 0.18, 0.12], scythe: [4, 0.14, 0.08], bonesaw: [4, 0.14, 0.06], lance: [3, 0.1, 0.05], nail: [2, 0.08, 0.03], rapier: [1.5, 0.06, 0], fangs: [1.5, 0.06, 0] };
+  function weaponHit() {
+    play('weapons/' + weaponId() + '_hit', 0.75);
+    const w = WEIGHT[weaponId()] || WEIGHT.nail;
+    if (typeof G !== 'undefined') { G.shake(w[0], w[1]); if (w[2] && typeof Comfort !== 'undefined') G.flash = Math.max(G.flash || 0, w[2]); }
+    return true;
+  }
   // the air of the area: its loop fades in under the music when the hero enters, and out when the area changes
   let amb = null, ambTheme = null;
   setInterval(() => {

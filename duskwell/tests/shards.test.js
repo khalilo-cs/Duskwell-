@@ -19,14 +19,14 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
       res({ kinds: kinds.length, pieces: kinds.reduce((n, k) => n + SHARD_RECTS[k].parts.length, 0), W, H, bad, few });
     }; probe.complete ? go() : probe.onload = go; });
   });
-  ok('28 creatures have their parts in the atlas, at least four each, all inside the picture', r.kinds === 28 && r.pieces >= 150 && r.bad.length === 0 && r.few.length === 0, r);
+  ok('36 creatures have their parts in the atlas (the eight newest cut from their own painted frame), at least four each, all inside the picture', r.kinds === 36 && r.pieces >= 150 && r.bad.length === 0 && r.few.length === 0, r);
   r = await ev(() => { const miss = []; for (const k of Object.keys(AnimArt.CFG)) if (!Shards.has(k)) miss.push(k); return miss; });
   ok('every creature drawn from frames has parts to break into', r.length === 0, r);
 
   r = await ev(() => { const probe = new Image(); probe.src = 'art/creatures/shards.webp'; const W = probe.naturalWidth, H = probe.naturalHeight; const have = [], bad = [];
     for (const k of Object.keys(SHARD_RECTS)) { const f = SHARD_RECTS[k].fx; if (!f) continue; have.push(k); if (f[0] < 0 || f[1] < 0 || f[0] + f[2] > W || f[1] + f[3] > H || f[2] < 20 || f[3] < 20) bad.push(k); }
     return { have: have.length, bad, none: Object.keys(SHARD_RECTS).filter(k => !SHARD_RECTS[k].fx) }; });
-  ok('24 of the creatures have their effect picture (the slash, the spear, the acid...) in the atlas; the three whose panel has none and the hare, whose leap is only a swirl, do not', r.have === 24 && r.bad.length === 0 && r.none.length === 4, r);
+  ok('24 of the creatures have their effect picture (the slash, the spear, the acid...) in the atlas; the three whose panel has none, the hare, whose leap is only a swirl, and the eight newest (no panel) do not', r.have === 24 && r.bad.length === 0 && r.none.length === 12, r);
 
   // ---- the effect when a creature strikes
   r = await ev(() => {
@@ -86,9 +86,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   // ---- the cracked mask
   const masks = hp => ev(hp => {
     const { G, P } = DW; Diff.setMode('normal'); G.state = 'play'; G.trans = null; G.fadeA = 0; G.areaBanner = null; G.toast = null; P.maxHp = 5; P.hp = 5; P.dead = false; G.hpSeen = undefined; G.maskLost = null; DW.step(2);
-    const names = [], old = IconArt.draw; IconArt.draw = function (g, n) { names.push(n); return old.apply(this, arguments); };
-    const seen = () => { names.length = 0; DW.draw(); return names.filter(n => n === 'mask_broken').length; };
-    const out = { full: seen() }; P.hp = hp; DW.step(1); out.after = seen(); DW.step(90); out.later = seen(); IconArt.draw = old; return out;
+    const names = [], old = IconArt.draw, oldU = UiArt.draw; IconArt.draw = function (g, n) { names.push(n); return old.apply(this, arguments); }; UiArt.draw = function (g, n) { names.push(n); return oldU.apply(this, arguments); };   // the painted life gems (art_ui) or the old masks
+    const seen = () => { names.length = 0; DW.draw(); return names.filter(n => n === 'mask_broken' || n === 'life_broken').length; };
+    const out = { full: seen() }; P.hp = hp; DW.step(1); out.after = seen(); DW.step(90); out.later = seen(); IconArt.draw = old; UiArt.draw = oldU; return out;
   }, hp);
   r = await masks(4);
   ok('a mask that has just gone shows cracked for a moment, then as an empty one', r.full === 0 && r.after === 1 && r.later === 0, r);

@@ -12,7 +12,7 @@ const Shards = (() => {
   function floorUnder(L, x, y) {
     const tx = Math.floor(x / TILE); let ty = Math.floor(y / TILE);
     while (ty < L.h - 1 && !L.solid(tx, ty)) ty++;
-    return L.solid(tx, ty) ? ty * TILE + 1 : y;
+    return L.solid(tx, ty) ? ty * TILE + 1 : (L.h + 2) * TILE;          // over a pit with no bottom (a shaft down): they fall out of the room
   }
   // where a piece is `t` seconds after it left, and how it is turned
   function at(f, t) {

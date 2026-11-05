@@ -551,8 +551,8 @@ function titleItems() {
 // text of the graphics setting
 function gfxLabel() {
   const m = Lumen.mode(), ar = LANG.cur === 'ar';
-  if (!Lumen.ready()) return ar ? 'قديمة (WebGL غير متاح)' : 'Classic (no WebGL)';
-  return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'قديمة' : 'Classic');
+  if (!Lumen.ready()) return ar ? 'كلاسيكية' : 'Classic';
+  return m === 'auto' ? (ar ? 'تلقائي' : 'Auto') : m === 2 ? (ar ? 'عالية' : 'High') : m === 1 ? (ar ? 'عادية' : 'Normal') : (ar ? 'كلاسيكية' : 'Classic');
 }
 // the zoom the player chose: how close the picture is during play (kept in this browser)
 const ZOOMS = [1, 1.25, 1.5];
@@ -566,7 +566,7 @@ function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'quests', label: sx('المهام', 'Quests') + (Quests.active().length ? '  (' + Quests.active().length + ')' : '') }, { id: 'moves', label: sx('الحركات والقوى', 'Moves and powers') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى والصوت', 'Music and sound') },
-    { id: 'lang', label: tr('lang') }, { id: 'look', label: (LANG.cur === 'ar' ? 'شكل البطل: ' : 'Hero look: ') + HeroStyle.label() }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'comfort', label: comfortLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'skins', label: LANG.cur === 'ar' ? 'صورك الخاصة' : 'Your images' }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'comfort', label: comfortLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'quit', label: tr('quit') }];
 }
 // pause menu input
 function updatePause() {

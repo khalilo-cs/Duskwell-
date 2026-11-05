@@ -199,7 +199,7 @@ const Life = (() => {
     const floors = [];
     for (let y = 2; y < L.h - 1; y++) for (let x = 1; x < L.w - 1; x++) if (S(x, y + 1) && A(x, y) && A(x, y - 1)) floors.push([x, y]);
     const pick = (a, i) => a[Math.floor(hash2(i, L.w, 17) * a.length) % a.length];
-    const nAir = Math.min(34, 8 + Math.floor(L.w * L.h / 110));
+    const nAir = Math.min(22, 8 + Math.floor(L.w * L.h / 160));
     for (let i = 0; i < nAir && floors.length; i++) { const f = pick(floors, i * 3 + 1); folk.push({ k: pick(air, i), x: f[0] * T, y: (f[1] - 2 - hash2(i, 3, 5) * 3) * T, vx: 0, vy: 0, ph: i * 1.7, air: true }); }
     if (gr) for (let i = 0; i < Math.min(14, 2 + Math.floor(floors.length / 18)); i++) { const f = pick(floors, i * 7 + 5); folk.push({ k: gr, x: f[0] * T + 16, y: (f[1] + 1) * T, vx: (hash2(i, 9, 2) < 0.5 ? -1 : 1) * 22, ph: i, air: false }); }
     if (pl.length) for (const [x, y] of floors) if (hash2(x, y, 33) < 0.42) plants.push({ k: pick(pl, x + y), x: x * T + 16, y: (y + 1) * T + 2, ph: hash2(x, y, 4) * 6, s: 0.8 + hash2(x, y, 8) * 0.6 });

@@ -90,5 +90,46 @@
       if (v < 0.22) { if (liquid && R() < 0.5) r.lava(x0 + 6, y0 + CH - 2, 3, 1); else r.hazard(x0 + 6, y0 + CH - 3, 3, 1); }
       if (kinds.length && R() < 0.42) r.enemy(kinds[Math.floor(R() * kinds.length)], x0 + 2 + Math.floor(R() * 3), y0 + CH - 3);
     }
+
+    // ---- the Hollow: a wide cavern east of the maze, its floor and roof rising and falling, pillars, pits and ledges above ----
+    const [bx0, by0] = cell(NX - 1, NY - 1);
+    r.air(bx0 + CW - 2, by0 + 2, W - (bx0 + CW - 2), 4).door('e', W - 1, by0 + 2, 1, 4, id + '_hollow', 'w');
+    const HW = 150, HH = 42, hol = room(id + '_hollow', HW, HH, { area, theme: host.theme, bg: host.bg, map: host.map });
+    hol.solid(0, 0, HW, HH);
+    const floor = [], roof = []; let fy = 30, cy = 8;
+    for (let x = 0; x < HW; x++) {
+      if (x % 4 === 0 && x > 3 && x < HW - 4) fy = Math.max(24, Math.min(36, fy + (R() < 0.5 ? -1 : 1) * (R() < 0.3 ? 2 : 1)));
+      if (x % 5 === 0) cy = Math.max(3, Math.min(13, cy + (R() < 0.5 ? -1 : 1)));
+      floor.push(x < 4 || x > HW - 5 ? 30 : fy); roof.push(cy);
+    }
+    for (let x = 1; x < HW - 1; x++) hol.air(x, roof[x], 1, floor[x] - roof[x]);
+    hol.air(0, 26, 1, 4).air(HW - 1, 26, 1, 4);
+    hol.door('w', 0, 26, 1, 4, id, 'e').door('e', HW - 1, 26, 1, 4, id + '_tower', 'w');
+    for (let x = 10; x < HW - 12; x += 9 + Math.floor(R() * 8)) {
+      const v = R(), f = floor[x];
+      if (v < 0.25) hol.solid(x, roof[x], 2, Math.max(2, f - roof[x] - 6));                         // a pillar hanging from the roof
+      else if (v < 0.45) { hol.air(x, f, 4, 3).hazard(x, f + 2, 4, 1); hol.plat(x - 1, f - 3, 6); } // a pit of spikes with a ledge over it
+      else if (v < 0.6) hol.plat(x, f - 4 - Math.floor(R() * 3), 5 + Math.floor(R() * 4));          // a ledge to a higher way
+      else if (v < 0.7 && /spore|moss/.test(host.theme)) hol.bounce(x, f - 1, 2);
+      if (kinds.length && R() < 0.55) hol.enemy(kinds[Math.floor(R() * kinds.length)], x + 3, f - 1);
+    }
+    for (let x = 20; x < HW - 20; x += 22) hol.plat(x, roof[x] + 4, 7);                               // a high way along the roof
+    hol.item('cache_' + id + '_hollow', HW - 20, floor[HW - 20] - 1, 'cache', { amount: 70 });
+
+    // ---- the Spire: a tall shaft east of the Hollow, climbed from its foot on ledges that zigzag up to a treasure at the top ----
+    const TW = 40, TH = 96, tw = room(id + '_tower', TW, TH, { area, theme: host.theme, bg: host.bg, map: host.map });
+    tw.air(1, 1, TW - 2, TH - 3).solid(0, TH - 3, TW, 3);
+    tw.air(0, TH - 7, 1, 4).door('w', 0, TH - 7, 1, 4, id + '_hollow', 'e');
+    let side = 0;
+    for (let y = TH - 7; y > 6; y -= 4) {
+      const w = 7 + Math.floor(R() * 5), x = side ? TW - 2 - w - Math.floor(R() * 4) : 1 + Math.floor(R() * 4);
+      tw.plat(x, y, w);
+      if (R() < 0.35) tw.plat(Math.floor(TW / 2) - 2, y - 2, 4);                                     // a step in the middle
+      if (R() < 0.2) tw.solid(side ? 1 : TW - 6, y - 1, 5, 2).breakable(side ? 1 : TW - 6, y - 1, 5, 2);   // a block that breaks
+      if (kinds.length && R() < 0.3) tw.enemy(kinds[Math.floor(R() * kinds.length)], x + 2, y - 1);
+      side ^= 1;
+    }
+    tw.solid(6, 5, TW - 12, 1);
+    tw.item('cache_' + id + '_tower', Math.floor(TW / 2), 4, 'cache', { amount: 120 });
   }
 })();

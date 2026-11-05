@@ -1168,6 +1168,15 @@ function collectLights(cx, cy, skipPlayer, zoom) {
     if (d.type === 'lamp') add(d.x * TILE + 16, d.y * TILE - 70, 280, 0.95, th.glow);
     else if (d.type === 'light') add(d.x * TILE + 16, d.y * TILE + 16, d.r || 220, d.a || 0.8, d.c || th.glow);
   }
+  // the painted furnishings that burn or glow light the room around them (js/art_decor.js)
+  if (typeof Decor !== 'undefined' && Decor.spots && Decor.has(L.def.theme)) {
+    const LIT = { lantern: [200, 0.75, 0.6], chandelier: [260, 0.85, 0.5], candles: [150, 0.6, -0.4], brazier: [240, 0.9, -0.6], shrine: [160, 0.5, -0.5] };
+    for (const s of Decor.spots(L)) {
+      const l = LIT[s.n]; if (!l) continue;
+      const fl = 0.9 + 0.1 * Math.sin(G.t * 9 + s.x);
+      add(s.x, s.hang ? s.y + s.h * l[2] : s.y + s.h * l[2], l[0] * fl, l[1], th.glow);
+    }
+  }
   for (const b of G.benches) add(b.px, b.py - 40, 200, 0.85, '#ffe2a8');
   const es = Echo.stone(); if (es) add(es.px, es.py - 56, 190, 0.8, '#9fe0d8');
   for (const n of G.npcs) add(n.px, n.py - 40, 170, 0.8, '#ffd98a');

@@ -450,6 +450,8 @@ if (typeof SKY_HD !== 'undefined') for (const k of SKY_HD) CONCEPT_ALPHA[k] = [1
 // backdrop sets that belong to no theme of their own: the afternoon village behind the roads out of the town
 const EXTRA_BG = { townb: true };
 for (const k of PAINTING_BG) EXTRA_BG[k] = true;
+// the painted labyrinths under the areas (js/maze_bg_meta.js): one picture, no layers
+if (typeof MAZE_BG !== 'undefined') for (const k of MAZE_BG) { EXTRA_BG['deep_' + k] = true; CONCEPT_ALPHA['deep_' + k] = [1, 0, 0, 0]; }
 // painted backgrounds loaded so far
 const painted = new Map();             // theme -> { imgs, n, ready }, most recently used last
 // start loading the painted layers of an area

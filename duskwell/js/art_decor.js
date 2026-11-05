@@ -44,6 +44,31 @@ const Decor = (() => {
   }
   // the painted hills, outcrops and overhangs of the room (js/world_hills.js), in the rock of its area
   const SET = { frost: 'snow', ember: 'lava', foundry: 'foundry', storm: 'storm', throne: 'throne', moss: 'green', town: 'green', aqueduct: 'green', spore: 'spore', webbed: 'webbed', crystal: 'crystal', mirror: 'mirror', bone: 'bone', lunar: 'lunar' };
+  // the dark framing in front of the world: painted overhangs of the area's own rock hanging into the top of the view and
+  // painted boulders rising at its foot, darkened and softened once (they are nearer than the play field) and drifting faster
+  const fgDark = {}, fgSpots = {}, codeFore = Art.drawForeground;
+  function darkPiece(n) {
+    if (fgDark[n] !== undefined) return fgDark[n];
+    const r = UiArt.R[n]; if (!r || !UiArt.ready()) return null;
+    const k = Math.min(1, 300 / r[2]), c = document.createElement('canvas'); c.width = Math.round(r[2] * k) + 8; c.height = Math.round(r[3] * k) + 8;
+    const g = c.getContext('2d'); g.filter = 'brightness(0.16) saturate(0.6) blur(1.5px)';
+    UiArt.draw(g, n, c.width / 2, c.height / 2, c.height - 8, { w: c.width - 8 });
+    return (fgDark[n] = c);
+  }
+  Art.drawForeground = function paintedFore(g, theme, camX, camY, t) {
+    const set = SET[theme] || 'stone', up = darkPiece('hl_' + set + '_over'), down = darkPiece('hl_' + set + '_rock');
+    if (!up || !down) return codeFore.apply(this, arguments);
+    let L = fgSpots[theme];
+    if (!L) { const rnd = mulberry32(theme.length * 31 + 7); L = fgSpots[theme] = []; for (let i = 0; i < 12; i++) L.push({ x: i / 12 * 2600 + rnd() * 120, top: i % 2 === 0, s: 0.75 + rnd() * 0.6, flip: rnd() < 0.5, p: rnd() * 6 }); }
+    const f = depthFactor(FORE_Z);
+    for (const o of L) {
+      const x = ((o.x - camX * f) % 2600 + 2600) % 2600 - 200, c = o.top ? up : down, w = 400 * o.s, h = w * c.height / c.width;
+      if (x < -w || x > VW + w) continue;
+      const y = o.top ? -h * 0.42 - camY * 0.02 + Math.sin(t * 0.5 + o.p) * 2 : VH - h * 0.36;
+      g.save(); g.globalAlpha *= 0.94; g.translate(x, y); if (o.flip) g.scale(-1, 1);
+      g.drawImage(c, -w / 2, 0, w, h); g.restore();
+    }
+  };
   function hills(g, L) {
     const d = L.def; if (!d || !d.hills || typeof UiArt === 'undefined') return;
     const set = SET[d.theme] || 'stone';

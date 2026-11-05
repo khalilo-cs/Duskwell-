@@ -31,11 +31,11 @@
       host = cand; hole = findHole(cand); if (hole) break;
     }
     if (!hole) continue;
-    const id = 'deep_' + area;
+    const id = 'deep_' + area, deepBg = typeof MAZE_BG !== 'undefined' && MAZE_BG.includes(host.theme) ? 'deep_' + host.theme : host.bg;
     host.air(hole.x, hole.y, 3, host.h - hole.y).door('deep', hole.x, host.h - 1, 3, 1, id, 'top');
 
     // the maze: a spanning tree of the chambers (depth first), then a few more ways to make loops
-    const r = room(id, W, H, { area, theme: host.theme, bg: host.bg, map: host.map });
+    const r = room(id, W, H, { area, theme: host.theme, bg: deepBg, map: host.map });
     r.solid(0, 0, W, H);
     const cell = (cx, cy) => [1 + cx * CW, 1 + cy * CH];
     for (let cy = 0; cy < NY; cy++) for (let cx = 0; cx < NX; cx++) { const [x0, y0] = cell(cx, cy); r.air(x0, y0, CW - 2, CH - 2); }
@@ -56,7 +56,7 @@
     for (const [ax, ay, bx, by, secret] of links) {
       const lx = Math.min(ax, bx), ly = Math.min(ay, by), [x0, y0] = cell(lx, ly);
       if (ay === by) {                                                               // side by side: an opening in the wall, at floor level
-        if (secret) r.breakable(x0 + CW - 2, y0 + 2, 2, 4); else r.air(x0 + CW - 2, y0 + 2, 2, 4);
+        if (secret) r.breakable(x0 + CW - 2, y0 + 2, 2, 4); else if (R() < 0.45) r.air(x0 + CW - 2, y0 + 1, 2, 5); else r.air(x0 + CW - 2, y0 + 2, 2, 4);   // some walls fall away almost whole: two chambers become one cavern
       } else {                                                                       // one above the other: a hole in the floor, ledges to climb
         const sx = x0 + 4; r.air(sx, y0 + CH - 2, 3, 2);
         r.plat(sx, y0 + CH - 2, 3).plat(sx, y0 + CH + 1, 3).plat(sx, y0 + CH + 4, 3);
@@ -119,7 +119,7 @@
     // ---- the Hollow: a wide cavern east of the maze, its floor and roof rising and falling, pillars, pits and ledges above ----
     const [bx0, by0] = cell(NX - 1, NY - 1);
     r.air(bx0 + CW - 2, by0 + 2, W - (bx0 + CW - 2), 4).door('e', W - 1, by0 + 2, 1, 4, id + '_hollow', 'w');
-    const HW = 150, HH = 42, hol = room(id + '_hollow', HW, HH, { area, theme: host.theme, bg: host.bg, map: host.map });
+    const HW = 150, HH = 42, hol = room(id + '_hollow', HW, HH, { area, theme: host.theme, bg: deepBg, map: host.map });
     hol.solid(0, 0, HW, HH);
     const floor = [], roof = []; let fy = 30, cy = 8;
     for (let x = 0; x < HW; x++) {
@@ -149,7 +149,7 @@
     hol.item('cache_' + id + '_hollow', HW - 30, floor[HW - 20] - 1, 'cache', { amount: 70 });
 
     // ---- the Spire: a tall shaft east of the Hollow, climbed from its foot on ledges that zigzag up to a treasure at the top ----
-    const TW = 40, TH = 96, tw = room(id + '_tower', TW, TH, { area, theme: host.theme, bg: host.bg, map: host.map });
+    const TW = 40, TH = 96, tw = room(id + '_tower', TW, TH, { area, theme: host.theme, bg: deepBg, map: host.map });
     tw.air(1, 1, TW - 2, TH - 3).solid(0, TH - 3, TW, 3);
     tw.air(0, TH - 7, 1, 4).door('w', 0, TH - 7, 1, 4, id + '_hollow', 'e');
     let side = 0, lastX = 6, lastY = 8;

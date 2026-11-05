@@ -747,7 +747,7 @@ function drawMaskIcon(g, x, y, full, pulse, crack) {
 }
 // a small dark plate behind an icon
 function gearPlate(g, cx, cy, S, rim) {
-  if (typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', cx - S / 2, cy - S / 2, S, S, 0.06)) return;     // a small painted panel
+  if (typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', cx - S / 2, cy - S / 2, S, S, 0.025)) return;     // a small painted panel
   g.fillStyle = 'rgba(6,10,18,0.6)'; g.strokeStyle = rim || 'rgba(190,205,230,0.5)'; g.lineWidth = 1.5;
   g.beginPath(); g.roundRect(cx - S / 2, cy - S / 2, S, S, 7); g.fill(); g.stroke();
 }
@@ -772,7 +772,7 @@ function drawGearStrip(g, x, y) {
 function drawGearCard(g) {
   const x = 700, y = 140, w = 244, ar = LANG.cur === 'ar';
   g.save();
-  if (!(typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', x - 6, y - 6, w + 12, 342, 0.07))) {
+  if (!(typeof UiArt !== 'undefined' && UiArt.frame(g, 'panel', x - 6, y - 6, w + 12, 342, 0.04))) {
     g.fillStyle = 'rgba(8,12,22,0.75)'; g.strokeStyle = 'rgba(190,205,230,0.45)'; g.lineWidth = 2;
     g.beginPath(); g.roundRect(x, y, w, 330, 10); g.fill(); g.stroke();
   }

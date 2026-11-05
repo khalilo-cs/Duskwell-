@@ -123,5 +123,6 @@ const UiArt = (() => {
     g.save(); g.globalAlpha *= 0.9; g.filter = 'sepia(0.55) saturate(1.5) brightness(1.25)';
     frame(g, 'button', x, y, w, h, 0.42); g.restore(); return true;
   }
-  return { ready, has, draw, vessel, bossBar, particle, frame, select, R };
+  const part = (g, n, sx, sy, sw, sh, dx, dy, dw, dh) => { const r = R[n]; if (r && ready()) g.drawImage(img, r[0] + sx, r[1] + sy, sw, sh, dx, dy, dw, dh); };
+  return { ready, has, draw, vessel, bossBar, particle, frame, select, part, R };
 })();

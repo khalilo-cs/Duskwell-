@@ -76,3 +76,34 @@ const Decor = (() => {
     UiArt.draw(g, n, it.x, y, it.kind === 'ability' ? 46 : 36);
   };
 })();
+// pools of lava, acid and quicksilver painted (art/ui liq_*), slowly flowing; menu icons painted (art/ui mi_*)
+(() => {
+  const oldAcid = Art.drawAcid;
+  Art.drawAcid = function (g, x, y, surface, t, th) {
+    const n = th && th.name === 'ember' ? 'liq_lava' : th && th.name === 'mirror' ? 'liq_mercury' : 'liq_acid';
+    if (typeof UiArt === 'undefined' || !UiArt.has(n)) return oldAcid(g, x, y, surface, t, th);
+    const r = UiArt.R[n], px = x * TILE, py = y * TILE, s = 40, top = surface ? 7 : 0;
+    const ox = ((x * s + t * 9) % (r[2] - s) + (r[2] - s)) % (r[2] - s), oy = ((y * s) % (r[3] - s) + (r[3] - s)) % (r[3] - s);
+    g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = 0.95;
+    UiArt.part(g, n, ox, oy, s, s, px - 0.3, py + top, TILE + 0.6, TILE - top + 0.3);
+    if (surface) {
+      g.globalAlpha = 0.85; g.beginPath(); g.moveTo(px, py + 9);
+      for (let i = 0; i <= 4; i++) g.lineTo(px + i * 8, py + 7 + Math.sin(t * 2.4 + (x * 4 + i) * 0.8) * 2);
+      g.lineTo(px + TILE, py + 11); g.lineTo(px, py + 11); g.closePath();
+      g.fillStyle = n === 'liq_lava' ? 'rgba(255,225,140,0.9)' : n === 'liq_mercury' ? 'rgba(245,240,255,0.85)' : 'rgba(200,255,160,0.8)'; g.fill();
+      bloom(g, px + 16, py + 8, 40, n === 'liq_lava' ? '#ff7a30' : n === 'liq_mercury' ? '#e8e0ff' : '#9dff6a', 0.2);
+    }
+    g.restore();
+  };
+  const PIC = { play: 'mi_play', sword: 'mi_sword', globe: 'mi_globe', map: 'mi_map', charm: 'mi_charm', shield: 'mi_shield', book: 'mi_book',
+    note: 'mi_note', speaker: 'mi_speaker', mask: 'mi_hood', sun: 'mi_sun', frame: 'mi_frame', door: 'mi_door', yes: 'mi_yes', no: 'mi_no' };
+  let done = false;
+  const icons = () => {                                    // the menu icons exist once game.js has run
+    if (done || typeof MENU_ICONS === 'undefined') return; done = true;
+    for (const k of Object.keys(PIC)) {
+      const old = MENU_ICONS[k]; if (!old) continue;
+      MENU_ICONS[k] = g => { if (typeof UiArt !== 'undefined' && UiArt.has(PIC[k])) { g.save(); g.shadowBlur = 0; UiArt.draw(g, PIC[k], 0, 0, 26); g.restore(); } else old(g); };
+    }
+  };
+  window.addEventListener('load', icons); setTimeout(icons, 0);
+})();

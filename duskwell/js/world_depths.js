@@ -72,12 +72,21 @@
     r.solid(t0x + 4, t0y + 1, 5, 5).air(t0x + 5, t0y + 3, 3, 3);              // a small vault, its door a gate
     r.item('cache_' + id, t0x + 6, t0y + 5, 'cache', { amount: 150 });
     r.lever(id, l0x + 5, l0y + 5, [{ x: t0x + 4, y: t0y + 3, w: 1, h: 3 }]);
+    if (far.length > 6) {                                          // a second vault, its lever elsewhere
+      const [ux, uy] = far[2].split(',').map(Number), [vx, vy] = far[5].split(',').map(Number), [u0x, u0y] = cell(ux, uy), [v0x, v0y] = cell(vx, vy);
+      r.solid(u0x + 4, u0y + 1, 5, 5).air(u0x + 5, u0y + 3, 3, 3);
+      r.item('cache2_' + id, u0x + 6, u0y + 5, 'cache', { amount: 90 });
+      r.lever(id + '_b', v0x + 2, v0y + 5, [{ x: u0x + 4, y: u0y + 3, w: 1, h: 3 }]);
+    }
     // hazards on some floors, the area's own creatures in some chambers
     const kinds = [...new Set(rooms.flatMap(q => q.enemies.map(e => e.type)))].filter(k => typeof ENEMY_TYPES === 'undefined' || ENEMY_TYPES[k]);
     const liquid = /ember|aqueduct|spore|mirror/.test(host.theme);
     for (let cy = 0; cy < NY; cy++) for (let cx = 0; cx < NX; cx++) {
       if ((cx === tx && cy === ty) || (cx === lx2 && cy === ly2) || (cx === startX && cy === 0)) continue;
       const [x0, y0] = cell(cx, cy), v = R();
+      if (v >= 0.22 && v < 0.34 && cx > 0 && cx < NX - 1) {                     // a pit of spikes under a bridge that crumbles
+        r.air(x0 + 3, y0 + CH - 2, 4, 2).hazard(x0 + 3, y0 + CH - 1, 4, 1).crumble(x0 + 3, y0 + CH - 2, 4);
+      } else if (v >= 0.34 && v < 0.42 && /spore|moss/.test(host.theme)) r.bounce(x0 + 6, y0 + CH - 3, 2);   // a springing cap
       if (v < 0.22) { if (liquid && R() < 0.5) r.lava(x0 + 6, y0 + CH - 2, 3, 1); else r.hazard(x0 + 6, y0 + CH - 3, 3, 1); }
       if (kinds.length && R() < 0.42) r.enemy(kinds[Math.floor(R() * kinds.length)], x0 + 2 + Math.floor(R() * 3), y0 + CH - 3);
     }

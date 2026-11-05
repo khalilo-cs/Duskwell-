@@ -114,7 +114,14 @@
       if (kinds.length && R() < 0.55) hol.enemy(kinds[Math.floor(R() * kinds.length)], x + 3, f - 1);
     }
     for (let x = 20; x < HW - 20; x += 22) hol.plat(x, roof[x] + 4, 7);                               // a high way along the roof
-    hol.item('cache_' + id + '_hollow', HW - 20, floor[HW - 20] - 1, 'cache', { amount: 70 });
+    // the Chasm: halfway along, a wide canyon of spikes crossed on stones that crumble under the hero's feet
+    { const cx = 70, f = floor[cx]; hol.air(cx, f, 14, 5).hazard(cx, f + 4, 14, 1);
+      for (let k = 0; k < 4; k++) hol.crumble(cx + 1 + k * 3, f, 2);
+      hol.solid(cx + 14, f, 3, 5); }
+    // the Hidden Hall: behind a cracked wall low in the cavern's end, a small chamber with a relic of the area
+    { const hx = HW - 12, f = floor[hx]; hol.air(hx - 1, f - 4, 6, 4).breakable(hx - 2, f - 4, 1, 4).solid(hx - 2, f - 5, 8, 1).solid(hx + 5, f - 4, 1, 4);
+      hol.item('relic_' + id, hx + 2, f - 1, 'cache', { amount: 200 }); }
+    hol.item('cache_' + id + '_hollow', HW - 30, floor[HW - 20] - 1, 'cache', { amount: 70 });
 
     // ---- the Spire: a tall shaft east of the Hollow, climbed from its foot on ledges that zigzag up to a treasure at the top ----
     const TW = 40, TH = 96, tw = room(id + '_tower', TW, TH, { area, theme: host.theme, bg: host.bg, map: host.map });

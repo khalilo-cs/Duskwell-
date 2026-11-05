@@ -138,3 +138,25 @@ const Decor = (() => {
     drawSlash = function (g, p, fx, fy, k) { if (!swing(g, p, 'nail', 1 - clamp(p.atkT / 0.16, 0, 1))) oldSlash(g, p, fx, fy, k); };
   }
 })();
+// the air of the areas, painted: snowflakes, leaves, embers, bubbles, motes and rain drawn from the painted wisps (art/ui fx_*),
+// tinted in the colour of the area; they move exactly as before
+(() => {
+  const old = Art.drawAmbient; if (!old) return;
+  const NOOP = new Proxy(function () {}, { get: () => NOOP, set: () => true, apply: () => NOOP });
+  Art.drawAmbient = function (g, dt, theme, camX, camY, t) {
+    if (typeof UiArt === 'undefined' || !UiArt.has('fx_puff')) return old(g, dt, theme, camX, camY, t);
+    old(NOOP, dt, theme, camX, camY, t);                     // only the moving
+    const th = THEMES[theme] || {}, hot = theme === 'foundry' || theme === 'ember';
+    const kind = theme === 'frost' ? ['fx_puff', '#ffffff'] : theme === 'storm' ? ['fx_drop', '#cfe0ff'] : hot ? ['wf_spark_1', '#ffb070']
+      : theme === 'town' ? ['fx_fleck', '#ff9a50'] : (theme === 'moss' || theme === 'aqueduct') ? ['fx_drop', '#bff8ee'] : ['wf_spark_1', th.part || '#cfe0ff'];
+    const c = UiArt.tint(UiArt.has(kind[0]) ? kind[0] : 'fx_puff', kind[1]); if (!c) return;
+    g.save();
+    for (const m of Art.motes) {
+      const a = (0.3 + 0.5 * Math.abs(Math.sin(t * 1.3 + m.p))) * m.z, s = (theme === 'storm' ? 10 : theme === 'frost' ? 6 : 7) * (0.6 + m.s * 0.35) * m.z + 2;
+      g.globalAlpha = Math.min(0.9, a + 0.1); g.globalCompositeOperation = hot || theme === 'cave' || theme === 'crystal' ? 'lighter' : 'source-over';
+      g.save(); g.translate(m.x, m.y); g.rotate(theme === 'storm' ? 0.35 : m.rot);
+      g.drawImage(c, -s / 2, -s / 2, s, theme === 'storm' ? s * 2.2 : s); g.restore();
+    }
+    g.restore();
+  };
+})();

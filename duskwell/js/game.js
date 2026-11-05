@@ -1403,7 +1403,15 @@ function draw() {
         if (G.state === 'map' || G.state === 'moves' || G.state === 'quests' || G.state === 'jukebox' || G.state === 'gear' || G.state === 'charms' || G.state === 'bestiary') backButton(g);
       }
   }
-  if (G.fadeA > 0) { g.fillStyle = 'rgba(0,0,0,' + G.fadeA + ')'; g.fillRect(0, 0, VW, VH); }
+  if (G.fadeA > 0) {                                             // room changes: an ink-dark mist rolls over the screen, then the black
+    const k = G.fadeA, mist = typeof UiArt !== 'undefined' && UiArt.has('fx_smoke') && UiArt.tint('fx_puff', '#05070d');
+    if (mist && k < 0.995) {
+      g.save(); g.globalAlpha = Math.min(1, k * 1.6);
+      for (let i = 0; i < 9; i++) { const x = ((i * 173) % VW) + Math.sin(G.t * 0.7 + i) * 30, y = ((i * 97) % VH) + Math.cos(G.t * 0.5 + i) * 20, s = 520 * (0.6 + k); g.drawImage(mist, x - s / 2, y - s / 2, s, s); }
+      g.restore();
+    }
+    g.fillStyle = 'rgba(0,0,0,' + (mist ? k * k : k) + ')'; g.fillRect(0, 0, VW, VH);
+  }
 }
 
 // ---------------------------------------------------------------- boot

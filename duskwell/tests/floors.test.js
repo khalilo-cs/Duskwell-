@@ -31,7 +31,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   // a room of ledges: they are drawn too
   const led = await ev(() => {
     const id = DW.WORLD.order.find(i => DW.WORLD.rooms[i].theme === 'frost' && DW.WORLD.rooms[i].t.some(v => v === 2));
-    DW.enterRoom(id, { pos: { x: 100, y: 100 } }); Art.renderLevel(DW.G.level, 1); return PaintedFloors.stats.ledges;
+    DW.enterRoom(id, { pos: { x: 100, y: 100 } }); Art.renderLevel(DW.G.level, 1); return PaintedFloors.stats.ledges + (typeof Kits !== 'undefined' ? Kits.stats.plats : 0);   // the painted kits draw them where the area has one
   });
   ok('one-way plates are drawn as ledges', led > 0, led);
   // the textures tile without a seam: the edge columns of each texture meet

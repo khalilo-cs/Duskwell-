@@ -20,10 +20,10 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   // every room of the area lays its rock from the pieces; the cave's rooms do not
   const out = {};
   for (const id of ['cs1', 'cs2', 'cs3', 'cs4']) {
-    out[id] = await ev(id => { enter(id); const b = stats().renders; const { L } = layer(); const s = stats(); return { laid: s.renders - b, fills: s.fills, trims: s.trims, fringes: s.fringes, ledges: s.ledges, props: s.placed.map(p => p.kind) }; }, id);
+    out[id] = await ev(id => { const k0 = typeof Kits !== 'undefined' ? Kits.stats.plats : 0; enter(id); const b = stats().renders; const { L } = layer(); const s = stats(); return { laid: s.renders - b, fills: s.fills, trims: s.trims, fringes: s.fringes, ledges: s.ledges + (typeof Kits !== 'undefined' ? Kits.stats.plats - k0 : 0), props: s.placed.map(p => p.kind) }; }, id);
   }
   ok('the four rooms of the Crystal Spires are laid from the tileset', Object.values(out).every(o => o.laid === 1 && o.fills > 200 && o.trims >= 1), out);
-  ok('rock has its trim on top, stalactite fringes below, and the plates are the drawn ledges', out.cs1.fringes >= 1 && out.cs2.ledges >= 2 && out.cs3.ledges >= 4, out);
+  ok('rock has its trim on top, stalactite fringes below, and the plates are the drawn ledges', out.cs1.fringes >= 1 && out.cs2.ledges >= 1 && out.cs3.ledges >= 2, out);   // counted as whole painted ledges now, not tile by tile
   r = await ev(() => { enter('cx1'); const b = stats().renders; layer(); return stats().renders - b; });
   ok('the other areas keep their own tiles (the hook is for the crystal theme only)', r === 0, r);
 

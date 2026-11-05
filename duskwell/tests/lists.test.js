@@ -43,9 +43,9 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('the wheel moves down the list', r === 1, r);
   await ev(() => { G.menuSel = 8; DW.draw(); }); await page.waitForTimeout(100); await page.screenshot({ path: shot('travel_list.png') });
 
-  // pause menu: sixteen rows all inside the screen and clear of the hint line
-  r = await ev(() => { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 15; DW.draw(); const hs = G.menuHits.filter(h => h.i !== undefined); return { n: hs.length, last: Math.max(...hs.map(h => h.y + h.h)) }; });
-  ok('the pause menu lists all its entries above the control hint', r.n >= 15 && r.last < 510, r);
+  // pause menu: fourteen rows all inside the screen and clear of the hint line
+  r = await ev(() => { G.state = 'pause'; G.menu = 'pause'; G.menuSel = 13; DW.draw(); const hs = G.menuHits.filter(h => h.i !== undefined); return { n: hs.length, last: Math.max(...hs.map(h => h.y + h.h)) }; });
+  ok('the pause menu lists all its entries above the control hint', r.n >= 14 && r.last < 510, r);
 
   // shop and gear rows answer taps
   await ev(() => { G.state = 'shop'; G.shopId = 'general'; G.menuSel = 0; G.shopTop = 0; DW.step(1); DW.draw(); });

@@ -46,7 +46,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('a room is laid the same way on every visit', r.same);
 
   // ---- the paintings behind some rooms
-  r = await ev(() => { const b = {}; for (const id of WORLD.order) { const d = WORLD.rooms[id]; if (/_/.test(d.bg) && d.bg !== 'townb') (b[d.bg] = b[d.bg] || []).push(id); } return b; });
+  r = await ev(() => { const b = {}; for (const id of WORLD.order) { const d = WORLD.rooms[id]; if (/_/.test(d.bg) && d.bg !== 'townb' && !/^deep_/.test(d.bg)) (b[d.bg] = b[d.bg] || []).push(id); } return b; });
   ok('five paintings stand behind rooms of the Observatory and the Vault', Object.keys(r).length === 5 && Object.values(r).every(l => l.length >= 2), r);
   await ev(() => { const { G, P, enterRoom } = DW; enterRoom('lo1', { door: WORLD.rooms.lo1.doors[0].id }); G.state = 'play'; G.trans = null; G.fadeA = 0; G.areaBanner = null; G.toast = null; P.invuln = 1e9; DW.step(3); snapCamera(); });
   await page.waitForFunction(() => Art.paintedReady('lunar_moon'), null, { timeout: 30000 });

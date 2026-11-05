@@ -27,6 +27,7 @@ const Voices = (() => {
       if (!this.dead && has.has(this.kind)) play(this.kind + '_die', 0.7);
       return kill.apply(this, arguments);
     };
+    Object.assign(Enemy.prototype.hurt, hurt); Object.assign(Enemy.prototype.kill, kill);
     // now and then, a creature near the hero calls (looked at twice a second, never two calls at once)
     setInterval(() => {
       if (typeof G === 'undefined' || G.state !== 'play' || !G.enemies) return;
@@ -56,6 +57,8 @@ const Voices = (() => {
       return r;
     };
     if (killB) Boss.prototype.kill = function () { say(this.bossKey, 2); return killB.apply(this, arguments); };
+    // the marks other wrappers left on the old functions stay on the new ones (js/mind.js looks for them)
+    Object.assign(Boss.prototype.update, upd); Object.assign(Boss.prototype.hurt, hurtB); Object.assign(Boss.prototype.kill, killB);
   }
   // the words, under the boss's name
   function draw(g) {

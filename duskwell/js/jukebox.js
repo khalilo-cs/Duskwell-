@@ -32,6 +32,9 @@ const JUKEBOX = [
   ['forge', 'المسبك', 'The Forge', 'عند الحدّاد والخيّاطة', 'At the smith and the outfitter'],
   ['road', 'الدرب', 'The Road', 'عند التجّار الجوّالين', 'At the travelling traders'],
   ['rest', 'الاستراحة', 'Rest', 'في القوائم', 'In the menus'],
+  ['crossroads', 'المفترق القديم', 'The Old Crossroads', 'حيث لا لحن آخر', 'Where no other piece plays'],
+  ['overture', 'الافتتاحية', 'Overture', 'مقطوعة للاستماع', 'A piece to listen to'],
+  ['webbed', 'شباك الظل', 'Webs of Shadow', 'مقطوعة للاستماع', 'A piece to listen to'],
 ];
 
 const jukeName = e => (LANG.cur === 'ar' ? e[1] : e[2]);

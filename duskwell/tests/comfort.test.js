@@ -25,7 +25,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   r = await ev(() => { const { G } = DW; G.state = 'title'; G.hasSave = false; return titleItems().map(i => i.id); });
   ok('the title menu has the entry', r.includes('comfort'), r);
   r = await ev(() => { const { G } = DW; G.state = 'pause'; return pauseItems().map(i => i.id); });
-  ok('the pause menu has the entry (and no longer the effects row, which moved to the music screen)', r.includes('comfort') && !r.includes('sfx') && r.length === 16, r);
+  ok('the pause menu has the entry (and no longer the effects row, which moved to the music screen)', r.includes('comfort') && !r.includes('sfx') && r.length === 14, r);   // the look and pictures rows are gone
   await ev(() => { const { G } = DW; G.state = 'pause'; G.menuSel = pauseItems().findIndex(i => i.id === 'comfort'); });
   await key('Enter');
   r = await ev(() => ({ level: Comfort.level, state: DW.G.state, label: comfortLabel() }));

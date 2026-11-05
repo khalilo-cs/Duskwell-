@@ -218,5 +218,47 @@
    "lf_vine_0",
    "lf_vine_1"
   ]
+ ],
+ "life2": [
+  [
+   "lf_cflower_0",
+   "lf_cflower_1",
+   "lf_frostmoss_0",
+   "lf_frostmoss_1",
+   "lf_salam_0",
+   "lf_salam_1",
+   "lf_eflower_0",
+   "lf_eflower_1"
+  ],
+  [
+   "lf_coral_0",
+   "lf_coral_1",
+   "lf_cocoon_0",
+   "lf_cocoon_1",
+   "lf_bbeetle_0",
+   "lf_bbeetle_1",
+   "lf_gbeetle_0",
+   "lf_gbeetle_1"
+  ],
+  [
+   "lf_crow_0",
+   "lf_crow_1",
+   "lf_mfly_0",
+   "lf_mfly_1",
+   "lf_star_0",
+   "lf_star_1",
+   "lf_gmoth_0",
+   "lf_gmoth_1"
+  ],
+  [
+   "lf_pshroom_0",
+   "lf_pshroom_1",
+   "lf_candle_0",
+   "lf_candle_1",
+   "lf_moongrass_0",
+   "lf_moongrass_1",
+   "lf_toad_0",
+   "lf_toad_1"
+  ]
  ]
 }

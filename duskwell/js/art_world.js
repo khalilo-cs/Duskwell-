@@ -67,12 +67,31 @@ Art.drawGravs = function (g, L, t, cx, cy) {
   }
 };
 
-// draw the whole tile layer of a room once (rock, edges, ledges, spikes, door fog)
+// a room wider or taller than this (in pixels of the picture) is laid on several canvases side by side: a phone's graphics chip
+// takes a canvas only up to about this size, and a bigger one is drawn slowly by the processor, every frame
+const LEVEL_TILE = 4096;
+// one context that passes every call and every setting on to several (each moved to its own part of the room)
+function fanOut(gs) {
+  return new Proxy(gs[0], {
+    get(t, p) { const v = t[p]; return typeof v === 'function' ? (...a) => { let r; for (const q of gs) r = q[p](...a); return r; } : v; },
+    set(t, p, v) { for (const q of gs) q[p] = v; return true; },
+  });
+}
+// draw the whole tile layer of a room once (rock, edges, ledges, spikes, door fog); a big room comes back as { tiled, tiles }
 Art.renderLevel = function (L, s) {
   const th = THEMES[L.def.theme];
-  const c = document.createElement('canvas');
-  c.width = Math.ceil(L.pw * s); c.height = Math.ceil(L.ph * s);
-  const g = c.getContext('2d');
+  const W = Math.ceil(L.pw * s), H = Math.ceil(L.ph * s);
+  let c, g;
+  if (W <= LEVEL_TILE && H <= LEVEL_TILE) { c = document.createElement('canvas'); c.width = W; c.height = H; g = c.getContext('2d'); }
+  else {
+    const tiles = [];
+    for (let y = 0; y < H; y += LEVEL_TILE) for (let x = 0; x < W; x += LEVEL_TILE) {
+      const t = document.createElement('canvas'); t.width = Math.min(LEVEL_TILE, W - x); t.height = Math.min(LEVEL_TILE, H - y);
+      const tg = t.getContext('2d'); tg.translate(-x, -y); tiles.push({ c: t, x, y, g: tg });
+    }
+    c = { tiled: true, width: W, height: H, tiles };
+    g = fanOut(tiles.map(t => t.g));
+  }
   g.scale(s, s);
   // is the tile rock (for edges)
   const isS = (x, y) => { const v = L.get(x, y); return v === T_SOLID || v === T_BREAK || v === T_GATE || v === T_CRACK; };
@@ -481,12 +500,10 @@ function drawPainted(g, th, p, camX, camY, t, key) {
     if (la > 0.01) { g.save(); g.globalAlpha *= la; for (let x = off; x < VW; x += PAINT_P) g.drawImage(p.imgs[li], x, y, PAINT_P, PAINT_H); g.restore(); }
     if (li === 0) drawRays(g, th, camX);
     if (li === 2) drawCritters(g, th, camX, camY, t);
-    if (li > 0) {
-      const fog = g.createLinearGradient(0, VH * 0.4, 0, VH);
-      fog.addColorStop(0, rgba(th.fog, 0)); fog.addColorStop(1, rgba(th.fog, 0.04 + li * 0.035));
-      g.fillStyle = fog; g.fillRect(0, 0, VW, VH);
-    }
   }
+  // the haze of the three far layers, laid once over them all (three full-screen layers cost a phone dearly)
+  if (!th.fogPaint) { const fog = g.createLinearGradient(0, VH * 0.4, 0, VH); fog.addColorStop(0, rgba(th.fog, 0)); fog.addColorStop(1, rgba(th.fog, 0.31)); th.fogPaint = fog; }
+  g.fillStyle = th.fogPaint; g.fillRect(0, VH * 0.4, VW, VH * 0.6);
 }
 // light rays through the air
 function drawRays(g, th, camX) {

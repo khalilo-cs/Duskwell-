@@ -9,6 +9,8 @@ const Voices = (() => {
   function play(name, vol) {
     if (typeof Sound === 'undefined' || !Sound.isOn()) return;
     const lv = Sound.levels ? Sound.levels().sfx : 1; if (!lv) return;
+    const path = 'audio/' + (name.includes('/') ? name : 'voices/' + name) + '.mp3';
+    if (Sound.playFile && location.protocol !== 'file:' && Sound.playFile(path, vol || 0.6)) return;     // through the sound engine (the sfx level is on its bus)
     let pool = cache[name]; if (!pool) pool = cache[name] = [];
     let a = pool.find(x => x.paused || x.ended);
     if (!a) { if (pool.length >= 3) return; a = new Audio('audio/' + (name.includes('/') ? name : 'voices/' + name) + '.mp3'); pool.push(a); }

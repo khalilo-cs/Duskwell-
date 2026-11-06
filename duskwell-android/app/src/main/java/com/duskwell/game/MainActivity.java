@@ -68,6 +68,8 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setTextZoom(100);                               // ignore the system font size; the game scales itself
+        // the game's renderer is kept at the highest priority, so the system does not slow it down or reclaim it while playing
+        if (android.os.Build.VERSION.SDK_INT >= 26) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
 
         web.setWebViewClient(new WebViewClient() {
             @Override

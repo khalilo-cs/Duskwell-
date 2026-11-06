@@ -31,8 +31,20 @@ const UiArt = (() => {
   }
   // the soul vessel at (x, y), the glass ri px in radius: dark glass, the liquid up to `fill` (0..1) with a moving surface,
   // dimmer when it is not enough for a spell; above `cap` (0..1) the glass is cracked and dark
+  // (painted on a small canvas of its own and then laid on the screen: its round clips cost little there, and much on the
+  // whole screen of a phone)
+  let vc = null;
   function vessel(g, x, y, ri, fill, bright, cap, t) {
     const pic = ringPic(); if (!pic) return false;
+    const h0 = ri / RING_IN, w0 = h0 * pic.width / pic.height, m = g.getTransform(), k = Math.max(1, Math.min(3, Math.hypot(m.a, m.b)));
+    const W = Math.ceil(w0 * k) + 4, H = Math.ceil(h0 * k) + 4;
+    if (!vc || vc.width !== W || vc.height !== H) { vc = document.createElement('canvas'); vc.width = W; vc.height = H; }
+    const c = vc.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, W, H); c.setTransform(k, 0, 0, k, W / 2, H / 2);
+    paintVessel(c, 0, 0, ri, fill, bright, cap, t, pic);
+    g.save(); g.imageSmoothingEnabled = true; g.drawImage(vc, x - W / 2 / k, y - H / 2 / k, W / k, H / k); g.restore();
+    return true;
+  }
+  function paintVessel(g, x, y, ri, fill, bright, cap, t, pic) {
     const h = ri / RING_IN, w = h * pic.width / pic.height;
     g.save();
     g.beginPath(); g.arc(x, y, ri + 1, 0, 7); g.clip();

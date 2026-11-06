@@ -1064,10 +1064,19 @@ function drawWorld(g) {
   }
   // tile layer
   Art.mechBack(gs, t);
-  const s = Math.min(G.k * Math.max(1, G.zoom), 1.8);           // the room's tiles are painted once, as sharp as the zoom the player chose needs
+  // the room's tiles are painted once, as sharp as the zoom the player chose needs; the biggest rooms a little less sharp, so
+  // the picture of the room stays within about twelve million pixels (a phone's memory)
+  const s = Math.min(G.k * Math.max(1, G.zoom), 1.8, Math.sqrt(12e6 / (L.pw * L.ph)));
   if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.renderLevel(L, s); G.tileScale = s; G.tileRoom = L.id; }
   const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW / Z + 1, L.pw - vx), vh = Math.min(VH / Z + 1, L.ph - vy);
-  if (vw > 0 && vh > 0) gs.drawImage(G.tileCanvas, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
+  if (vw > 0 && vh > 0) {
+    const tc = G.tileCanvas;
+    if (!tc.tiled) gs.drawImage(tc, vx * s, vy * s, vw * s, vh * s, vx, vy, vw, vh);
+    else for (const t of tc.tiles) {                                // a big room: only the parts in view, each cut to the view
+      const x0 = Math.max(vx * s, t.x), y0 = Math.max(vy * s, t.y), x1 = Math.min((vx + vw) * s, t.x + t.c.width), y1 = Math.min((vy + vh) * s, t.y + t.c.height);
+      if (x1 > x0 && y1 > y0) gs.drawImage(t.c, x0 - t.x, y0 - t.y, x1 - x0, y1 - y0, x0 / s, y0 / s, (x1 - x0) / s, (y1 - y0) / s);
+    }
+  }
   for (const d of L.def.deco) if (d.type === 'lamp' || d.type === 'well') Art.drawDecor(gs, d, t, th);
     else if (d.type === 'seals') Art.drawSeals(gs, d, t, SEAL_FLAGS.map(f => !!G.flags[f]));
   // breakable walls and gates
@@ -1426,8 +1435,10 @@ function draw() {
 }
 
 // ---------------------------------------------------------------- boot
+// the picture is drawn at the screen's own sharpness (at most twice the page's pixels); a phone that cannot keep up gets it a
+// step softer, once or twice, so the game stays smooth (G.res, worked out in frame())
 function resize() {
-  const c = G.canvas, r = c.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const c = G.canvas, r = c.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2, G.res || 2);
   c.width = Math.max(320, Math.round(r.width * dpr)); c.height = Math.round(c.width * 9 / 16);
   G.k = c.width / VW; G.tileCanvas = null;
 }
@@ -1486,6 +1497,17 @@ function boot() {
     while (acc >= STEP && guard++ < 6) { update(STEP); acc -= STEP; Input.endStep(); }
     if (guard >= 6) acc = 0;
     draw();
+    // too slow for this phone: draw a little softer (the time between frames, looked at over two seconds of play, never while
+    // a room is being laid or the game waits in the background)
+    if (G.state === 'play' && !G.trans) {
+      const ms = dt * 1000, a = G.perf || (G.perf = { n: 0, sum: 0 });
+      if (ms < 250) { a.n++; a.sum += ms; }
+      if (a.n >= 120) {
+        const avg = a.sum / a.n; a.n = a.sum = 0;
+        const cur = Math.min(window.devicePixelRatio || 1, 2, G.res || 2);
+        if (avg > 24 && cur > 1.01) { G.res = Math.max(1, cur - 0.35); resize(); }
+      }
+    }
   }
   requestAnimationFrame(frame);
   const fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();

@@ -7,10 +7,24 @@ function ellipse(g, x, y, rx, ry, rot) { g.beginPath(); g.ellipse(x, y, Math.max
 function poly(g, pts) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); }
 function fs(g, fill, stroke, lw) { if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2.5; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); } }
 // soft radial glow
+// (one small glow picture per colour, made once and drawn at any size: a gradient made anew for every glow of every frame was
+// one of the slowest things on a phone)
+const glowPics = new Map();
+function glowPic(color) {
+  let c = glowPics.get(color);
+  if (!c) {
+    c = document.createElement('canvas'); c.width = c.height = 128;
+    const q = c.getContext('2d'), gr = q.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, rgba(color, 1)); gr.addColorStop(1, rgba(color, 0)); q.fillStyle = gr; q.fillRect(0, 0, 128, 128);
+    glowPics.set(color, c); if (glowPics.size > 300) glowPics.delete(glowPics.keys().next().value);
+  }
+  return c;
+}
 function glow(g, x, y, r, color, a) {
-  const gr = g.createRadialGradient(x, y, 0, x, y, r);
-  gr.addColorStop(0, rgba(color, a)); gr.addColorStop(1, rgba(color, 0));
-  g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+  if (!(r > 0) || !(a > 0)) return;
+  const ga = g.globalAlpha; if (typeof ga !== "number") return;          // a stand-in context that only counts calls
+  g.globalAlpha = ga * Math.min(1, a);
+  g.drawImage(glowPic(color), x - r, y - r, r * 2, r * 2); g.globalAlpha = ga;
 }
 // the same glow, added to what is below it
 function bloom(g, x, y, r, color, a) { const o = g.globalCompositeOperation; g.globalCompositeOperation = 'lighter'; glow(g, x, y, r, color, a); g.globalCompositeOperation = o; }

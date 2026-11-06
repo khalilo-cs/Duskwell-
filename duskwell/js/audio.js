@@ -365,7 +365,25 @@ const Sound = (() => {
   }
 
   // what the rest of the game calls
+  // a recorded sound file (a voice, a weapon's swing) played through the sound engine: fetched and decoded once, then started
+  // as often as wanted at no cost (an <audio> element per sound makes a phone stall)
+  const fileBufs = new Map();
+  function playFile(path, vol) {
+    if (!ctx || muted) return false;
+    let b = fileBufs.get(path);
+    if (b === undefined) {
+      fileBufs.set(path, null);
+      fetch(path).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(d => new Promise((ok, fail) => { const q = ctx.decodeAudioData(d, ok, fail); if (q && q.catch) q.catch(fail); }))
+        .then(buf => { fileBufs.set(path, buf); if (fileBufs.wantNow === path) { fileBufs.wantNow = null; playFile(path, vol); } }, () => fileBufs.set(path, false));
+      fileBufs.wantNow = path; return true;
+    }
+    if (!b) return b === null;
+    const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = b; g.gain.value = vol;
+    src.connect(g); g.connect(sfxBus); src.start(); return true;
+  }
   return {
+    playFile,
     init,
     play(name) { try { const r = Rec.play(name); if (r !== 'replace' && FX[name]) FX[name](); } catch (e) { /* audio must never crash the game */ } },
     // area theme: 'title', 'town', 'cave', 'moss', ... (see TRACK)

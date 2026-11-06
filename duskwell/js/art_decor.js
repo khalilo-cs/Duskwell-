@@ -251,8 +251,13 @@ const Life = (() => {
     if (L !== room) setup(L);
     const dt = Math.min(0.05, Math.max(0, t - last)); last = t;
     const px = P.cx, py = P.cy;
+    // only what is in view is drawn (the view in room pixels, from the transform the world is drawn with, and a margin)
+    const m = g.getTransform().inverse(), cw = g.canvas.width, ch = g.canvas.height;
+    const vx0 = Math.min(m.e, m.a * cw + m.e) - 60, vx1 = Math.max(m.e, m.a * cw + m.e) + 60, vy0 = Math.min(m.f, m.d * ch + m.f) - 60, vy1 = Math.max(m.f, m.d * ch + m.f) + 60;
+    const seen = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
     // the plants first, swaying in the air of the room
     for (const p of plants) {
+      if (!seen(p.x, p.y)) continue;
       const sw = Math.sin(t * 1.6 + p.ph) * 0.08 + (Math.abs(px - p.x) < 28 && Math.abs(py - p.y) < 50 ? Math.sign(p.x - px) * 0.25 : 0);
       g.save(); g.translate(p.x, p.y); g.transform(1, 0, sw, 1, 0, 0);
       UiArt.draw(g, frame(p.k, t + p.ph, 1.2), 0, -19 * p.s, 40 * p.s); g.restore();
@@ -262,6 +267,7 @@ const Life = (() => {
         const ax = Math.sin(t * 0.7 + c.ph) * 30 + (Math.abs(c.x - px) < 90 && Math.abs(c.y - py) < 90 ? Math.sign(c.x - px) * 120 : 0), ay = Math.cos(t * 0.9 + c.ph * 1.3) * 22;
         c.vx += (ax - c.vx) * dt * 2; c.vy += (ay - c.vy) * dt * 2; c.x += c.vx * dt; c.y += c.vy * dt;
         if (!(L.get(Math.floor(c.x / T), Math.floor(c.y / T)) === T_AIR)) { c.vx = -c.vx; c.vy = -c.vy; c.x += c.vx * dt * 3; c.y += c.vy * dt * 3; }
+        if (!seen(c.x, c.y)) continue;
         const h = c.k === 'bat' || c.k === 'crow' ? 28 : c.k === 'glow' || c.k === 'spore' ? 14 : 22;
         if (c.k === 'glow' || c.k === 'spore' || c.k === 'star') bloom(g, c.x, c.y, 18, c.k === 'glow' ? '#7dffd8' : '#ffb070', 0.35 + 0.2 * Math.sin(t * 4 + c.ph));
         g.save(); g.translate(c.x, c.y); if (c.vx < 0) g.scale(-1, 1); UiArt.draw(g, frame(c.k, t + c.ph, c.k === 'bat' || c.k === 'crow' ? 9 : 12), 0, 0, h); g.restore();
@@ -270,6 +276,7 @@ const Life = (() => {
         if (near) c.vx = Math.sign(c.x - px || 1) * sp; else c.vx = Math.sign(c.vx || 1) * sp;
         const nx = c.x + c.vx * dt, tx = Math.floor((nx + Math.sign(c.vx) * 8) / T), ty = Math.floor((c.y - 4) / T);
         if (L.get(tx, ty) !== T_AIR || L.get(tx, ty + 1) !== T_SOLID) c.vx = -c.vx; else c.x = nx;
+        if (!seen(c.x, c.y)) continue;
         g.save(); g.translate(c.x, c.y); if (c.vx < 0) g.scale(-1, 1); UiArt.draw(g, frame(c.k, t * (Math.abs(c.vx) / 22) + c.ph, 8), 0, -8, c.k === 'rat' ? 18 : 14); g.restore();
       }
     }

@@ -1505,7 +1505,7 @@ function boot() {
       if (a.n >= 120) {
         const avg = a.sum / a.n; a.n = a.sum = 0;
         const cur = Math.min(window.devicePixelRatio || 1, 2, G.res || 2);
-        if (avg > 24 && cur > 1.01) { G.res = Math.max(1, cur - 0.35); resize(); }
+        if (avg > 24 && cur > 1.31) { G.res = Math.max(1.3, cur - 0.35); resize(); }          // never softer than 1.3 of the page's pixels
       }
     }
   }

@@ -375,10 +375,16 @@ const Sound = (() => {
       fileBufs.set(path, null);
       fetch(path).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then(d => new Promise((ok, fail) => { const q = ctx.decodeAudioData(d, ok, fail); if (q && q.catch) q.catch(fail); }))
-        .then(buf => { fileBufs.set(path, buf); if (fileBufs.wantNow === path) { fileBufs.wantNow = null; playFile(path, vol); } }, () => fileBufs.set(path, false));
+        .then(buf => {
+          fileBufs.set(path, buf); if (fileBufs.wantNow === path) { fileBufs.wantNow = null; playFile(path, vol); }
+          // a decoded sound is many times its file: only the 40 heard most lately are kept (the others are fetched again when needed)
+          let n = 0; for (const v of fileBufs.values()) if (v) n++;
+          for (const [k, v] of fileBufs) { if (n <= 40) break; if (v && k !== path) { fileBufs.delete(k); n--; } }
+        }, () => fileBufs.set(path, false));
       fileBufs.wantNow = path; return true;
     }
     if (!b) return b === null;
+    fileBufs.delete(path); fileBufs.set(path, b);                                  // most lately heard last
     const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = b; g.gain.value = vol;
     src.connect(g); g.connect(sfxBus); src.start(); return true;
   }

@@ -3,17 +3,20 @@
 // its liquid, the coin, the boss's health bar, and the painted droplets, splashes, sparks, puffs and chips that every burst of
 // blood, dust or sparks in the game is made of (painted white, tinted with the colour of what they come from).
 const UiArt = (() => {
-  const img = new Image(); img.src = 'art/ui/ui.webp';
+  // the pieces lie on pages of at most 2048 x 4096 (a phone's graphics chip takes no bigger picture); a piece's fifth number is its page
+  const pages = [];
+  for (let i = 0; i < (typeof UI_PAGES !== 'undefined' ? UI_PAGES : 1); i++) { const im = new Image(); im.src = 'art/ui/' + (i ? 'ui_' + i + '.webp' : 'ui.webp'); pages.push(im); }
   const R = typeof UI_RECTS !== 'undefined' ? UI_RECTS : {};
-  const ready = () => img.complete && img.naturalWidth > 0;
+  const ready = () => pages.every(im => im.complete && im.naturalWidth > 0);
   const has = n => !!R[n] && ready();
+  const pic = r => pages[r[4] || 0];
   // piece n centred at (x, y), h px tall
   function draw(g, n, x, y, h, o) {
     const r = R[n]; if (!r || !ready()) return false;
     o = o || {}; const w = o.w || h * r[2] / r[3];
     g.save(); if (o.alpha != null) g.globalAlpha *= o.alpha; if (o.filter) g.filter = o.filter;
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    g.drawImage(img, r[0], r[1], r[2], r[3], x - w / 2, y - h / 2, w, h);
+    g.drawImage(pic(r), r[0], r[1], r[2], r[3], x - w / 2, y - h / 2, w, h);
     g.restore(); return true;
   }
   // the vessel's ring alone, its glass cut out, so the soul liquid shows inside it
@@ -22,7 +25,7 @@ const UiArt = (() => {
   function ringPic() {
     if (ring || !has('vessel')) return ring;
     const r = R.vessel, c = document.createElement('canvas'); c.width = r[2]; c.height = r[3];
-    const g = c.getContext('2d'); g.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3]);
+    const g = c.getContext('2d'); g.drawImage(pic(r), r[0], r[1], r[2], r[3], 0, 0, r[2], r[3]);
     g.globalCompositeOperation = 'destination-out';
     const gr = g.createRadialGradient(r[2] / 2, r[3] / 2, r[3] * RING_IN * 0.9, r[2] / 2, r[3] / 2, r[3] * RING_IN * 1.04);
     gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -77,10 +80,10 @@ const UiArt = (() => {
       const b = R.bar_fill;
       g.save(); g.beginPath(); g.rect(x - w / 2 + w * sx, y - ih / 2 - 2, w * sw * k, ih + 4); g.clip();
       if (flash) g.filter = 'brightness(1.8)';
-      g.drawImage(img, b[0], b[1], b[2], b[3], x - w / 2 + w * sx, y - ih / 2 - 1, w * sw, ih + 2);
+      g.drawImage(pic(b), b[0], b[1], b[2], b[3], x - w / 2 + w * sx, y - ih / 2 - 1, w * sw, ih + 2);
       g.restore();
     }
-    g.drawImage(img, f[0], f[1], f[2], f[3], x - w / 2, y - fh / 2, w, fh);
+    g.drawImage(pic(f), f[0], f[1], f[2], f[3], x - w / 2, y - fh / 2, w, fh);
     g.restore();
     return true;
   }
@@ -92,9 +95,9 @@ const UiArt = (() => {
     const k = Math.min(1, 96 / Math.max(r[2], r[3])), c = document.createElement('canvas');
     c.width = Math.max(1, Math.round(r[2] * k)); c.height = Math.max(1, Math.round(r[3] * k));
     const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    g.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, c.width, c.height);
+    g.drawImage(pic(r), r[0], r[1], r[2], r[3], 0, 0, c.width, c.height);
     g.globalCompositeOperation = 'multiply'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
-    g.globalCompositeOperation = 'destination-in'; g.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(pic(r), r[0], r[1], r[2], r[3], 0, 0, c.width, c.height);
     tints[key] = c; return c;
   }
   // a particle of the game: a falling one is a droplet, a fleck or a chip, a rising one a puff of dust or smoke
@@ -117,7 +120,7 @@ const UiArt = (() => {
   function frame(g, n, x, y, w, h, c) {
     const r = R[n]; if (!r || !ready()) return false;
     const cs = Math.min(r[2], r[3]) * (c || 0.08), cd = Math.min(cs * 0.75, w / 3, h / 3), k = cd / cs, seg = cs * 1.1;
-    const part = (sx, sy, sw, sh, dx, dy, dw, dh) => g.drawImage(img, r[0] + sx, r[1] + sy, sw, sh, dx, dy, dw + 0.5, dh + 0.5);
+    const part = (sx, sy, sw, sh, dx, dy, dw, dh) => g.drawImage(pic(r), r[0] + sx, r[1] + sy, sw, sh, dx, dy, dw + 0.5, dh + 0.5);
     g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
     part(cs, cs, r[2] - 2 * cs, r[3] - 2 * cs, x + cd, y + cd, w - 2 * cd, h - 2 * cd);                       // the inside
     // the edges, a short plain stretch repeated
@@ -135,6 +138,6 @@ const UiArt = (() => {
     g.save(); g.globalAlpha *= 0.9; g.filter = 'sepia(0.55) saturate(1.5) brightness(1.25)';
     frame(g, 'button', x, y, w, h, 0.42); g.restore(); return true;
   }
-  const part = (g, n, sx, sy, sw, sh, dx, dy, dw, dh) => { const r = R[n]; if (r && ready()) g.drawImage(img, r[0] + sx, r[1] + sy, sw, sh, dx, dy, dw, dh); };
+  const part = (g, n, sx, sy, sw, sh, dx, dy, dw, dh) => { const r = R[n]; if (r && ready()) g.drawImage(pic(r), r[0] + sx, r[1] + sy, sw, sh, dx, dy, dw, dh); };
   return { ready, has, draw, vessel, bossBar, particle, frame, select, part, tint: tinted, R };
 })();

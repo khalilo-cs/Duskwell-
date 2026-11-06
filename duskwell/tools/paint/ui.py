@@ -3,7 +3,11 @@
 ({sheet: [[names of row 1, left to right], [row 2], ...]}). The rows are found from the big blobs of the picture (sorted by height
 and split at the widest gaps), the pieces of a row the same way across it; every small bit (a flying shard, a fleck of a splash)
 goes with the piece nearest to it. Pieces named fx_* are painted white to be tinted: they keep only their light and its alpha.
-All pieces are packed into art/ui/ui.webp and listed in js/ui_meta.js as UI_RECTS[name] = [x, y, w, h]."""
+All pieces are packed into pages art/ui/ui.webp, ui_1.webp, ui_2.webp... of at most 2048 x 4096 (a phone's graphics chip takes
+no bigger picture: a taller one is drawn slowly by the processor, every frame) and listed in js/ui_meta.js as
+UI_RECTS[name] = [x, y, w, h, page].
+usage: ui.py            cut every sheet again and pack
+       ui.py --repack   pack the pieces already in the pages again (no cutting)"""
 import json, os
 import numpy as np
 from PIL import Image
@@ -73,29 +77,61 @@ def cut(path, rows):
     return out
 
 
-def main():
-    lay = json.load(open(os.path.join(HERE, 'ui.json')))
-    pics = {}
-    for sheet, rows in lay.items():
-        p = os.path.join(ROOT, 'art', 'source', 'ui', sheet + '.png')
-        if os.path.exists(p): pics.update(cut(p, rows)); print('cut', sheet)
+PAGE_W, PAGE_H = 2048, 4096
+
+
+def pages_of(pics):
+    """pack the pieces, tallest first, in rows across pages of PAGE_W x PAGE_H; name -> (page, x, y)"""
     order = sorted(pics, key=lambda n: -pics[n].height)
-    x = y = row = 0; spots = {}
+    page = x = y = row = 0; spots = {}; heights = [0]
     for n in order:
         im = pics[n]
-        if x + im.width > 2048: x, y, row = 0, y + row + 4, 0
-        spots[n] = (x, y); x += im.width + 4; row = max(row, im.height)
-    atlas = Image.new('RGBA', (2048, y + row), (0, 0, 0, 0))
-    for n in order: atlas.paste(pics[n], spots[n])
+        if x + im.width > PAGE_W: x, y, row = 0, y + row + 4, 0
+        if y + im.height > PAGE_H: page, x, y, row = page + 1, 0, 0, 0; heights.append(0)
+        spots[n] = (page, x, y); x += im.width + 4; row = max(row, im.height); heights[page] = max(heights[page], y + row)
+    return spots, heights
+
+
+def old_pieces():
+    """the pieces as they are now in the pages (for --repack)"""
+    src = open(os.path.join(ROOT, 'js', 'ui_meta.js')).read()
+    meta = json.loads(src[src.index('{'):src.rindex('}') + 1])
+    pages = {}
+    out = {}
+    for n, r in meta.items():
+        pg = r[4] if len(r) > 4 else 0
+        if pg not in pages: pages[pg] = Image.open(os.path.join(ROOT, 'art', 'ui', 'ui.webp' if pg == 0 else 'ui_%d.webp' % pg)).convert('RGBA')
+        out[n] = pages[pg].crop((r[0], r[1], r[0] + r[2], r[1] + r[3]))
+    return out
+
+
+def main():
+    import sys
+    if '--repack' in sys.argv: pics = old_pieces()
+    else:
+        lay = json.load(open(os.path.join(HERE, 'ui.json')))
+        pics = {}
+        for sheet, rows in lay.items():
+            p = os.path.join(ROOT, 'art', 'source', 'ui', sheet + '.png')
+            if os.path.exists(p): pics.update(cut(p, rows)); print('cut', sheet)
+    spots, heights = pages_of(pics)
     os.makedirs(os.path.join(ROOT, 'art', 'ui'), exist_ok=True)
-    atlas.save(os.path.join(ROOT, 'art', 'ui', 'ui.webp'), quality=92, method=6)
+    for f in os.listdir(os.path.join(ROOT, 'art', 'ui')):
+        if f.startswith('ui_') and f.endswith('.webp'): os.remove(os.path.join(ROOT, 'art', 'ui', f))
+    for pg, h in enumerate(heights):
+        atlas = Image.new('RGBA', (PAGE_W, h), (0, 0, 0, 0))
+        for n, (p2, x, y) in spots.items():
+            if p2 == pg: atlas.paste(pics[n], (x, y))
+        atlas.save(os.path.join(ROOT, 'art', 'ui', 'ui.webp' if pg == 0 else 'ui_%d.webp' % pg), quality=92, method=6)
     bd = os.path.join(ROOT, 'art', 'ui', 'btn'); os.makedirs(bd, exist_ok=True)      # the touch buttons also as files of their own (the page's buttons use them)
-    for n in pics:
-        if n.startswith('btn_'): im = pics[n]; k = 192 / max(im.size); im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS).save(os.path.join(bd, n[4:] + '.webp'), quality=90)
-    meta = {n: [spots[n][0], spots[n][1], pics[n].width, pics[n].height] for n in sorted(pics)}
-    open(os.path.join(ROOT, 'js', 'ui_meta.js'), 'w').write("'use strict';\n// made by tools/paint/ui.py: the painted pieces of the interface in art/ui/ui.webp, [x, y, w, h]\n"
+    if '--repack' not in sys.argv:
+        for n in pics:
+            if n.startswith('btn_'): im = pics[n]; k = 192 / max(im.size); im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS).save(os.path.join(bd, n[4:] + '.webp'), quality=90)
+    meta = {n: [spots[n][1], spots[n][2], pics[n].width, pics[n].height, spots[n][0]] for n in sorted(pics)}
+    open(os.path.join(ROOT, 'js', 'ui_meta.js'), 'w').write("'use strict';\n// made by tools/paint/ui.py: the painted pieces of the interface in the pages art/ui/ui.webp, ui_1.webp..., [x, y, w, h, page]\n"
+                                                             "const UI_PAGES = " + str(len(heights)) + ";\n"
                                                              "const UI_RECTS = " + json.dumps(meta, sort_keys=True) + ";\n")
-    print(atlas.size, {n: v[2:] for n, v in meta.items()})
+    print('pages', [(PAGE_W, h) for h in heights], len(meta), 'pieces')
 
 
 if __name__ == '__main__':

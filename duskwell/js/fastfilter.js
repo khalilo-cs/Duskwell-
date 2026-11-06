@@ -7,7 +7,7 @@
 (() => {
   const C = typeof CanvasRenderingContext2D !== 'undefined' && CanvasRenderingContext2D.prototype;
   if (!C || !('filter' in C)) return;
-  const draw = C.drawImage, BUDGET = 9e6;                // pixels kept at most
+  const draw = C.drawImage, BUDGET = 4e6;                // pixels kept at most (about 16 MB)
   const kept = new Map(); let used = 0;
   const ids = new WeakMap(); let nextId = 1;
   const idOf = im => { let v = ids.get(im); if (!v) { v = nextId++; ids.set(im, v); } return v; };

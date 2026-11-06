@@ -92,10 +92,11 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
 
   // the other twenty: each, in a real fight, is drawn from its own frames, shows its attack frames, and (but the icicle, which
   // shatters and grows back) dies on its death frames
-  const MORE = { spitter: [22, 39], shroom: [19, 39], sentinel: [22, 39], chainman: [20, 39], lensling: [21, 39], imp: [24, 39], slime: [20, 39], lunarhare: [22, 39], ram: [24, 39], roller: [24, 39],
-    mole: [20, 39, { type: 'mole' }], lavaworm: [20, 39, { type: 'lavaworm' }], heap: [17, 39], shard: [24, 39], diver: [20, 35], moth: [20, 35], jelly: [16, 37], skullbat: [20, 35], veil: [20, 36], orrery: [18, 36], censer: [17, 33, { len: 4 }], icicle: [14, 30] };
+  // (the shaft down to the Depths opens at x 22..24 of this room, so nothing is set over it)
+  const MORE = { spitter: [19, 39], shroom: [19, 39], sentinel: [22, 39], chainman: [20, 39], lensling: [21, 39], imp: [19, 39], slime: [20, 39], lunarhare: [22, 39], ram: [24, 39], roller: [24, 39],
+    mole: [20, 39, { type: 'mole' }], lavaworm: [20, 39, { type: 'lavaworm' }], heap: [17, 39], shard: [19, 39], diver: [20, 35], moth: [20, 35], jelly: [16, 37], skullbat: [20, 35], veil: [20, 36], orrery: [18, 36], censer: [17, 33, { len: 4 }], icicle: [14, 30] };
   const bad = {};
-  for (const [k, [x, y, extra]] of Object.entries(MORE)) {
+  for (const [k, [x, y, extra]] of Object.entries(MORE).filter(([k]) => !process.env.ONLY || process.env.ONLY.split(',').includes(k))) {
     await arena(14);
     const q = await ev(([k, x, y, extra]) => {
       const { G, P } = DW;

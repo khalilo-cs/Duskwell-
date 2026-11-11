@@ -14,11 +14,14 @@ using UnityEngine;
 [Serializable] public class FrameData { public float x, y, w, h, ax, ay; }
 [Serializable] public class AnimData { public string name; public FrameData[] f; }
 [Serializable] public class HeroData { public AnimData[] anims; }
-[Serializable] public class CreatureData { public string type; public int fw, fh; public float w, h, hp; }
+[Serializable] public class CreatureData { public string type; public int fw, fh; public float w, h, hp, ppu; }
+[Serializable] public class ArenaData { public string room, boss; public int x, y; }
+[Serializable] public class BossList { public CreatureData[] list; public ArenaData[] arenas; }
 [Serializable] public class DrawList { public string[] src; public int[] dim; public float[] d; }
 [Serializable] public class CreatureList { public CreatureData[] list; }
 // a creature of the room: walkers pace their ledge and turn at its ends, flyers drift toward the hero, hanging things stay
-public class Foe { public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, vx, vy, hp, flash, t, homeY; public int face = 1; public int mode; }
+public class Foe { public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, px, py, vx, vy, hp, maxHp, flash, t, homeY, st; public int face = 1; public int mode, act, count; public bool boss; }
+public class Puff { public SpriteRenderer sr; public float t, life, vx, vy, size; }
 
 public class Game : MonoBehaviour {
   const int TILE = 32; const float STEP = 1f / 60f;
@@ -41,6 +44,11 @@ public class Game : MonoBehaviour {
   AudioSource music, amb, sfx; string track = ""; readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
   float dashT, dashCD, lockX, wallCoy, fade = 1; bool airDash, airJump, dashWas, dashTouch; int wallDir; Texture2D btnDash;
   static readonly Dictionary<string, string> TRACK = new Dictionary<string, string> { { "town", "hushvale" }, { "cave", "adventure" }, { "webbed", "abyss" }, { "bone", "ossuary" } };
+  // what makes it feel alive: places between two steps are blended for the picture (smooth on any screen), a blow stops time for
+  // an instant and shakes the view, the blade leaves its painted arc, dust rises at a landing and where a creature falls
+  float x0, y0, stopT, shakeT, shakeAmp, shakeX, shakeY; bool wasGround; SpriteRenderer slash; Sprite[] slashFr; Sprite puffSprite;
+  readonly List<Puff> puffs = new List<Puff>(); readonly Dictionary<string, ArenaData> arenas = new Dictionary<string, ArenaData>();
+  Texture2D barFrame, barFill; Foe bossNow;
   float atkT, atkCD; bool atkWas, atkHeldTouch; readonly HashSet<Foe> struck = new HashSet<Foe>();
   const string FLYERS = " flyer diver moth jelly skullbat veil orrery frostwisp stormkite ", STILL = " icicle censer shard dummy ";
 
@@ -63,7 +71,12 @@ public class Game : MonoBehaviour {
     btnBase = Resources.Load<Texture2D>("btn/base"); btnJump = Resources.Load<Texture2D>("btn/jump"); btnAtk = Resources.Load<Texture2D>("btn/attack");
     heartFull = Resources.Load<Texture2D>("ui/life_full"); heartEmpty = Resources.Load<Texture2D>("ui/life_empty");
     foreach (var c in JsonUtility.FromJson<CreatureList>(Resources.Load<TextAsset>("creatures").text).list) kinds[c.type] = c;
-    btnDash = Resources.Load<Texture2D>("btn/dash");
+    btnDash = Resources.Load<Texture2D>("btn/dash"); barFrame = Resources.Load<Texture2D>("fx/bar_frame"); barFill = Resources.Load<Texture2D>("fx/bar_fill");
+    var bl = JsonUtility.FromJson<BossList>(Resources.Load<TextAsset>("bosses").text);
+    foreach (var c in bl.list) kinds["boss_" + c.type] = c; foreach (var a in bl.arenas) arenas[a.room] = a;
+    slashFr = new Sprite[4]; for (int i = 0; i < 4; i++) { var st = Resources.Load<Texture2D>("fx/wf_nail_" + i); if (st != null) slashFr[i] = Sprite.Create(st, new Rect(0, 0, st.width, st.height), new Vector2(0.2f, 0.5f), st.height / 96f); }
+    var sg = new GameObject("Slash"); slash = sg.AddComponent<SpriteRenderer>(); slash.sortingOrder = 11; slash.enabled = false;
+    var pt = Resources.Load<Texture2D>("fx/fx_puff"); if (pt != null) puffSprite = Sprite.Create(pt, new Rect(0, 0, pt.width, pt.height), new Vector2(0.5f, 0.5f), pt.height);
     music = gameObject.AddComponent<AudioSource>(); music.loop = true; music.volume = 0.5f;
     amb = gameObject.AddComponent<AudioSource>(); amb.loop = true; amb.volume = 0.3f;
     sfx = gameObject.AddComponent<AudioSource>();
@@ -104,7 +117,7 @@ public class Game : MonoBehaviour {
     var bg = Resources.Load<Texture2D>("bg/" + room.bg); if (bg == null) bg = Resources.Load<Texture2D>("bg/" + room.theme);
     if (bg != null) {
       sky.sprite = Sprite.Create(bg, new Rect(0, 0, bg.width, bg.height), new Vector2(0.5f, 0.5f), 1);
-      float s = Mathf.Max(560f / bg.height, 560f * cam.aspect / bg.width); sky.transform.localScale = new Vector3(s, s, 1);
+      float s = Mathf.Max(560f / bg.height, 560f * cam.aspect / bg.width) * 1.15f; sky.transform.localScale = new Vector3(s, s, 1);
     }
     x = feetX - PW / 2; y = feetY - PH; vx = 0; vy = 0; spawnX = feetX; spawnY = feetY; armed = false;
     fade = 1;
@@ -114,17 +127,26 @@ public class Game : MonoBehaviour {
       track = tr; var mc = Resources.Load<AudioClip>("music/" + tr); if (mc != null) { music.clip = mc; music.Play(); }
       var ac = Resources.Load<AudioClip>("amb/" + room.theme); if (ac != null) { amb.clip = ac; amb.Play(); } else amb.Stop();
     }
-    foes.Clear();
+    foes.Clear(); bossNow = null; x0 = x; y0 = y; foreach (var pf in puffs) if (pf.sr != null) Destroy(pf.sr.gameObject); puffs.Clear();
+    ArenaData ar; if (arenas.TryGetValue(id, out ar) && PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0) {            // the lord of this hall, if not yet beaten
+      var bd = kinds["boss_" + ar.boss]; var bt = Resources.Load<Texture2D>("bosses/" + ar.boss);
+      if (bt != null) {
+        var bf = new Sprite[4]; for (int i = 0; i < 4; i++) bf[i] = Sprite.Create(bt, new Rect(i * bd.fw, 0, bd.fw, bd.fh), new Vector2(0.5f, 0), bd.ppu);
+        var bgo = new GameObject("Boss " + ar.boss); bgo.transform.SetParent(roomGo.transform, false);
+        var b = new Foe { d = bd, fr = bf, sr = bgo.AddComponent<SpriteRenderer>(), hp = bd.hp, maxHp = bd.hp, x = (ar.x + 0.5f) * TILE - bd.w / 2, y = (ar.y + 1) * TILE - bd.h, mode = 4, boss = true, st = 1.5f };
+        b.sr.sortingOrder = 6; b.px = b.x; b.py = b.y; foes.Add(b); bossNow = b;
+      }
+    }
     foreach (var e in room.enemies) {
       CreatureData d; if (!kinds.TryGetValue(e.type, out d)) continue;
       Sprite[] fr; if (!kindFrames.TryGetValue(e.type, out fr)) {
         var ct = Resources.Load<Texture2D>("creatures/" + e.type); if (ct == null) continue;
-        fr = new Sprite[4]; for (int i = 0; i < 4; i++) fr[i] = Sprite.Create(ct, new Rect(i * d.fw, 0, d.fw, d.fh), new Vector2(0.5f, 0), 2);
+        fr = new Sprite[4]; for (int i = 0; i < 4; i++) fr[i] = Sprite.Create(ct, new Rect(i * d.fw, 0, d.fw, d.fh), new Vector2(0.5f, 0), d.ppu > 0 ? d.ppu : 2);
         kindFrames[e.type] = fr;
       }
       var go = new GameObject(e.type); go.transform.SetParent(roomGo.transform, false);
       var f = new Foe { d = d, fr = fr, sr = go.AddComponent<SpriteRenderer>(), hp = d.hp, x = (e.x + 0.5f) * TILE - d.w / 2, y = (e.y + 1) * TILE - d.h };
-      f.sr.sortingOrder = 5; f.homeY = f.y; f.mode = STILL.Contains(" " + e.type + " ") ? 2 : FLYERS.Contains(" " + e.type + " ") ? 1 : 0; f.vx = 40; f.t = e.x;
+      f.sr.sortingOrder = 5; f.homeY = f.y; f.px = f.x; f.py = f.y; f.maxHp = d.hp; f.mode = STILL.Contains(" " + e.type + " ") ? 2 : FLYERS.Contains(" " + e.type + " ") ? 1 : 0; f.vx = 40; f.t = e.x;
       foes.Add(f);
     }
   }
@@ -211,6 +233,11 @@ public class Game : MonoBehaviour {
     GUI.Label(BtnLeft, "◀", st); GUI.Label(BtnRight, "▶", st);
     GUI.color = Color.white; float hs = Screen.height * 0.07f;
     for (int i = 0; i < 5; i++) { var ht = i < hp ? heartFull : heartEmpty; if (ht != null) GUI.DrawTexture(new Rect(Screen.width * 0.03f + i * hs * 1.1f, Screen.height * 0.03f, hs, hs), ht); }
+    if (bossNow != null && bossNow.hp > 0 && barFrame != null && barFill != null) {
+      GUI.color = Color.white; float bw = Screen.width * 0.5f, bh = bw * barFrame.height / barFrame.width, bx = (Screen.width - bw) / 2, by = Screen.height * 0.02f;
+      float k = Mathf.Clamp01(bossNow.hp / bossNow.maxHp), ix = bx + bw * 0.085f, iw = bw * 0.83f, ih = bh * 0.2f;
+      GUI.DrawTextureWithTexCoords(new Rect(ix, by + bh / 2 - ih / 2, iw * k, ih), barFill, new Rect(0, 0, k, 1)); GUI.DrawTexture(new Rect(bx, by, bw, bh), barFrame);
+    }
     if (fade > 0) { GUI.color = new Color(0, 0, 0, Mathf.Clamp01(fade)); GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture); }   // a room opens out of the dark
     GUI.color = old;
   }
@@ -267,12 +294,39 @@ public class Game : MonoBehaviour {
     StepFoes(dt);
     Doors();
   }
+  void Dust(float px, float py, int n, float speed) {
+    if (puffSprite == null) return;
+    for (int i = 0; i < n; i++) {
+      var go = new GameObject("Puff"); var p = new Puff { sr = go.AddComponent<SpriteRenderer>(), life = 0.35f + UnityEngine.Random.value * 0.25f, size = 14 + UnityEngine.Random.value * 16 };
+      p.sr.sprite = puffSprite; p.sr.sortingOrder = 9; p.vx = (UnityEngine.Random.value - 0.5f) * speed * 2; p.vy = -UnityEngine.Random.value * speed * 0.6f;
+      go.transform.position = new Vector3(px, -py, 0); puffs.Add(p);
+    }
+  }
+  void Blow(float stop, float amp) { stopT = Mathf.Max(stopT, stop); shakeT = 0.18f; shakeAmp = Mathf.Max(shakeAmp, amp); }
+  // a lord of a hall: comes for the hero, rears back, lunges; every third time it leaps; below half its strength it is quicker
+  void StepBoss(Foe f, float dt) {
+    float hdx = x + PW / 2 - (f.x + f.d.w / 2); float quick = f.hp < f.maxHp * 0.5f ? 0.7f : 1; f.st -= dt;
+    f.vy = Mathf.Min(f.vy + GRAV * dt, MAXFALL);
+    float ny = f.y + f.vy * dt; bool on = false;
+    if (f.vy >= 0 && (SolidAt(f.x + f.d.w / 2, ny + f.d.h) || SolidAt(f.x + 4, ny + f.d.h) || SolidAt(f.x + f.d.w - 4, ny + f.d.h))) { ny = Mathf.Floor((ny + f.d.h) / TILE) * TILE - f.d.h; if (f.vy > 500) { Blow(0, 7); Dust(f.x + f.d.w / 2, ny + f.d.h, 8, 160); } f.vy = 0; on = true; }
+    f.y = ny;
+    if (f.act == 0) {                                                        // comes closer
+      f.face = hdx > 0 ? 1 : -1; f.vx = Mathf.Abs(hdx) > 150 ? f.face * 75 / quick : 0;
+      if (f.st <= 0 && Mathf.Abs(hdx) < 380 && on) { f.act = 1; f.st = 0.55f * quick; f.vx = 0; }
+    } else if (f.act == 1) { if (f.st <= 0) { f.count++; if (f.count % 3 == 0) { f.act = 3; f.vy = -760; f.vx = Mathf.Clamp(hdx * 1.3f, -420, 420); f.st = 2; } else { f.act = 2; f.st = 0.38f; f.vx = f.face * 460 / quick; } Play("nail_down", 0.5f); } }
+    else if (f.act == 2) { if (f.st <= 0) { f.act = 0; f.st = 0.9f * quick; f.vx = 0; } }
+    else if (f.act == 3) { if (on && f.vy == 0 && f.st < 1.8f) { f.act = 0; f.st = 1.0f * quick; f.vx = 0; } }
+    float nx = f.x + f.vx * dt;
+    if (!SolidAt(f.vx > 0 ? nx + f.d.w : nx, f.y + f.d.h - 8) && !SolidAt(f.vx > 0 ? nx + f.d.w : nx, f.y + 8)) f.x = nx; else f.vx = 0;
+  }
   bool SolidAt(float px, float py) { return Solid(Tile(Mathf.FloorToInt(px / TILE), Mathf.FloorToInt(py / TILE))); }
   void StepFoes(float dt) {
     atkT -= dt; atkCD -= dt;
     float hx = face > 0 ? x + PW : x + PW - 64 - PW, hy = y - 4, hw = 64, hh = PH + 8;      // the blade's reach in front of the hero
     for (int i = foes.Count - 1; i >= 0; i--) {
-      var f = foes[i]; f.t += dt; f.flash -= dt;
+      var f = foes[i]; f.t += dt; f.flash -= dt; f.px = f.x; f.py = f.y;
+      if (f.mode == 3) { f.st -= dt; if (f.st <= 0) { Destroy(f.sr.gameObject); foes.RemoveAt(i); } continue; }      // falling apart: drawn fading in Update
+      if (f.mode == 4) StepBoss(f, dt);
       if (f.mode == 0) {                                                       // a walker: gravity, its ledge, a turn at a wall or an edge
         f.vy = Mathf.Min(f.vy + GRAV * dt, MAXFALL);
         float ny = f.y + f.vy * dt; bool on = false;
@@ -298,12 +352,14 @@ public class Game : MonoBehaviour {
       bool touch = x < f.x + f.d.w && x + PW > f.x && y < f.y + f.d.h && y + PH > f.y;
       if (atkT > 0 && !struck.Contains(f) && hx < f.x + f.d.w && hx + hw > f.x && hy < f.y + f.d.h && hy + hh > f.y) {
         Play("nail_hit", 0.7f); Play(f.d.type + (f.hp <= 5 ? "_die" : "_hurt"), 0.6f);
-        struck.Add(f); f.hp -= 5; f.flash = 0.15f; if (f.mode != 2) f.x += face * 14; vx = -face * 150;
-        if (f.hp <= 0) { Destroy(f.sr.gameObject); foes.RemoveAt(i); continue; }
-      } else if (touch && hurtT <= 0) { Play("hero_hurt0", 0.6f); hp--; hurtT = 1.2f; vx = (x + PW / 2 < f.x + f.d.w / 2 ? -1 : 1) * 320; vy = -380; if (hp <= 0) { hp = 5; x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0; } }
-      f.sr.sprite = f.fr[(int)(f.t * 6) % 4]; f.sr.flipX = f.face < 0;
-      f.sr.color = f.flash > 0 ? new Color(1, 0.55f, 0.55f, 1) : Color.white;
-      f.sr.transform.position = new Vector3(f.x + f.d.w / 2, -(f.y + f.d.h), 0);
+        struck.Add(f); f.hp -= 5; f.flash = 0.15f; if (f.mode < 2) f.x += face * 14; vx = -face * 150;
+        Blow(f.boss ? 0.05f : 0.035f, f.boss ? 4 : 2.5f); Dust(f.x + f.d.w / 2, f.y + f.d.h / 2, 3, 120);
+        if (f.hp <= 0) {
+          Dust(f.x + f.d.w / 2, f.y + f.d.h / 2, f.boss ? 24 : 8, f.boss ? 260 : 170); Blow(f.boss ? 0.25f : 0.07f, f.boss ? 12 : 5);
+          if (f.boss) { PlayerPrefs.SetInt("beat_" + f.d.type.Replace("boss_", ""), 1); PlayerPrefs.Save(); bossNow = null; }
+          f.mode = 3; f.st = f.boss ? 1.2f : 0.3f; continue;
+        }
+      } else if (touch && hurtT <= 0) { Blow(0.08f, 6); Play("hero_hurt0", 0.6f); hp--; hurtT = 1.2f; vx = (x + PW / 2 < f.x + f.d.w / 2 ? -1 : 1) * 320; vy = -380; if (hp <= 0) { hp = 5; x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0; } }
     }
   }
   void Hurt() {
@@ -337,20 +393,45 @@ public class Game : MonoBehaviour {
   void Update() {
     ReadInput();
     acc += Mathf.Min(Time.deltaTime, 0.1f);
-    while (acc >= STEP) { StepHero(STEP); acc -= STEP; }
+    if (stopT > 0) { stopT -= Time.unscaledDeltaTime; acc = Mathf.Min(acc, STEP * 0.99f); }
+    while (acc >= STEP) { x0 = x; y0 = y; wasGround = ground; float fall = vy; StepHero(STEP); acc -= STEP; if (ground && !wasGround && fall > 420) Dust(x + PW / 2, y + PH, 5, 110); }
+    float al = Mathf.Clamp01(acc / STEP), rx = Mathf.Lerp(x0, x, al), ry = Mathf.Lerp(y0, y, al);
+    if (Mathf.Abs(x - x0) > 200 || Mathf.Abs(y - y0) > 200) { rx = x; ry = y; }
+    // creatures: blended places, a breath, a flash when struck, a swell and a fade when they fall apart
+    foreach (var f in foes) {
+      float fx = Mathf.Lerp(f.px, f.x, al), fy = Mathf.Lerp(f.py, f.y, al), br = 1 + 0.02f * Mathf.Sin(f.t * 3);
+      int frame = f.boss ? (f.act == 1 ? 1 : f.act == 2 ? 2 : f.act == 3 ? 3 : 0) : (int)(f.t * 6) % 4;
+      f.sr.sprite = f.fr[frame]; f.sr.flipX = f.face < 0;
+      float dk = f.mode == 3 ? Mathf.Clamp01(f.st / (f.boss ? 1.2f : 0.3f)) : 1;
+      f.sr.color = f.flash > 0 ? new Color(1, 0.55f, 0.55f, 1) : new Color(1, 1, 1, dk);
+      f.sr.transform.position = new Vector3(fx + f.d.w / 2, -(fy + f.d.h), 0); f.sr.transform.localScale = new Vector3(1 + (1 - dk) * 0.3f, br + (1 - dk) * 0.3f, 1);
+    }
+    for (int i = puffs.Count - 1; i >= 0; i--) {
+      var pf = puffs[i]; pf.t += Time.deltaTime; float pk = pf.t / pf.life;
+      if (pk >= 1) { Destroy(pf.sr.gameObject); puffs.RemoveAt(i); continue; }
+      pf.sr.transform.position += new Vector3(pf.vx, -pf.vy, 0) * Time.deltaTime; float sz = pf.size * (0.6f + pk);
+      pf.sr.transform.localScale = new Vector3(sz, sz, 1); pf.sr.color = new Color(0.85f, 0.88f, 0.95f, 0.6f * (1 - pk));
+    }
     // the picture
     animT += Time.deltaTime; fade -= Time.deltaTime * 3;
     string a = dashT > 0 ? "dash" : atkT > 0 ? "slash1" : !ground && wallCoy > 0.1f ? "wall" : !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
     Sprite[] fr; if (!anims.TryGetValue(a, out fr)) fr = anims["idle"];
     int idx = a == "slash1" ? Mathf.Clamp((int)((0.2f - atkT) / 0.2f * fr.Length), 0, fr.Length - 1) : a == "jump" ? Mathf.Clamp((int)((vy + 500) / 1000f * fr.Length), 0, fr.Length - 1) : (int)(animT * (a == "run" ? 14 : 6)) % fr.Length;
     hero.sprite = fr[idx]; hero.flipX = face < 0;
-    hero.transform.position = new Vector3(x + PW / 2, -(y + PH), 0); hero.transform.localScale = new Vector3(HERO_SCALE, HERO_SCALE, 1);
+    float land = ground && !wasGround ? 0.9f : 1;
+    hero.transform.position = new Vector3(rx + PW / 2, -(ry + PH), 0); hero.transform.localScale = new Vector3(HERO_SCALE / land, HERO_SCALE * land, 1);
+    slash.enabled = atkT > 0 && slashFr[0] != null;
+    if (slash.enabled) { slash.sprite = slashFr[Mathf.Clamp((int)((0.2f - atkT) / 0.2f * 4), 0, 3)]; slash.flipX = face < 0; slash.transform.position = new Vector3(rx + PW / 2 + face * 10, -(ry + PH / 2), 0); }
     hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : Color.white;
     // the camera follows, kept inside the room
     float hw = 270 * cam.aspect, W = room.w * TILE, H = room.h * TILE;
-    float tx2 = W <= hw * 2 ? W / 2 : Mathf.Clamp(x + PW / 2 + face * 40, hw, W - hw), ty2 = H <= 540 ? H / 2 : Mathf.Clamp(y + PH / 2 - 40, 270, H - 270);
+    float tx2 = W <= hw * 2 ? W / 2 : Mathf.Clamp(rx + PW / 2 + face * 40, hw, W - hw), ty2 = H <= 540 ? H / 2 : Mathf.Clamp(ry + PH / 2 - 40, 270, H - 270);
     var p = cam.transform.position; float k = 1 - Mathf.Exp(-8 * Time.deltaTime);
     if (Mathf.Abs(p.x - tx2) > 600 || Mathf.Abs(-p.y - ty2) > 400) k = 1;
-    cam.transform.position = new Vector3(Mathf.Lerp(p.x, tx2, k), Mathf.Lerp(p.y, -ty2, k), -100);
+    p = new Vector3(Mathf.Lerp(p.x - shakeX, tx2, k), Mathf.Lerp(p.y - shakeY, -ty2, k), -100);
+    shakeT -= Time.deltaTime; if (shakeT > 0) { shakeX = (UnityEngine.Random.value - 0.5f) * 2 * shakeAmp * shakeT / 0.18f; shakeY = (UnityEngine.Random.value - 0.5f) * 2 * shakeAmp * shakeT / 0.18f; } else { shakeX = shakeY = shakeAmp = 0; }
+    cam.transform.position = p + new Vector3(shakeX, shakeY, 0);
+    // the far picture drifts a little against the view
+    sky.transform.localPosition = new Vector3(-(p.x - W / 2) * 0.05f, (-p.y - H / 2) * 0.05f, 90);
   }
 }

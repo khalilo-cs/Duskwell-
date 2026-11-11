@@ -37,6 +37,9 @@ public class Game : MonoBehaviour {
   readonly Dictionary<string, CreatureData> kinds = new Dictionary<string, CreatureData>();
   readonly Dictionary<string, Sprite[]> kindFrames = new Dictionary<string, Sprite[]>();
   readonly List<Foe> foes = new List<Foe>();
+  AudioSource music, amb, sfx; string track = ""; readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
+  float dashT, dashCD, lockX, wallCoy, fade = 1; bool airDash, airJump, dashWas, dashTouch; int wallDir; Texture2D btnDash;
+  static readonly Dictionary<string, string> TRACK = new Dictionary<string, string> { { "town", "hushvale" }, { "cave", "adventure" }, { "webbed", "abyss" }, { "bone", "ossuary" } };
   float atkT, atkCD; bool atkWas, atkHeldTouch; readonly HashSet<Foe> struck = new HashSet<Foe>();
   const string FLYERS = " flyer diver moth jelly skullbat veil orrery frostwisp stormkite ", STILL = " icicle censer shard dummy ";
 
@@ -59,9 +62,20 @@ public class Game : MonoBehaviour {
     btnBase = Resources.Load<Texture2D>("btn/base"); btnJump = Resources.Load<Texture2D>("btn/jump"); btnAtk = Resources.Load<Texture2D>("btn/attack");
     heartFull = Resources.Load<Texture2D>("ui/life_full"); heartEmpty = Resources.Load<Texture2D>("ui/life_empty");
     foreach (var c in JsonUtility.FromJson<CreatureList>(Resources.Load<TextAsset>("creatures").text).list) kinds[c.type] = c;
-    Enter(world.start.room, world.start.x, world.start.y);
+    btnDash = Resources.Load<Texture2D>("btn/dash");
+    music = gameObject.AddComponent<AudioSource>(); music.loop = true; music.volume = 0.5f;
+    amb = gameObject.AddComponent<AudioSource>(); amb.loop = true; amb.volume = 0.3f;
+    sfx = gameObject.AddComponent<AudioSource>();
+    // the game goes on from the room last entered
+    string saved = PlayerPrefs.GetString("room", "");
+    if (saved != "" && rooms.ContainsKey(saved)) { hp = Mathf.Clamp(PlayerPrefs.GetInt("hp", 5), 1, 5); Enter(saved, PlayerPrefs.GetFloat("fx", world.start.x), PlayerPrefs.GetFloat("fy", world.start.y)); }
+    else Enter(world.start.room, world.start.x, world.start.y);
   }
 
+  void Play(string name, float vol) {
+    AudioClip c; if (!clips.TryGetValue(name, out c)) { c = Resources.Load<AudioClip>("sfx/" + name); clips[name] = c; }
+    if (c != null) sfx.PlayOneShot(c, vol);
+  }
   // ---------------------------------------------------------------- the room
   int Tile(int tx, int ty) { if (tx < 0 || ty < 0 || tx >= room.w || ty >= room.h) return ty >= room.h ? 0 : 1; return room.t[ty * room.w + tx] - '0'; }
   static bool Solid(int v) { return v == 1 || v == 4 || v == 5 || v == 7 || v == 9 || v == 6; }
@@ -91,6 +105,13 @@ public class Game : MonoBehaviour {
       float s = Mathf.Max(560f / bg.height, 560f * cam.aspect / bg.width); sky.transform.localScale = new Vector3(s, s, 1);
     }
     x = feetX - PW / 2; y = feetY - PH; vx = 0; vy = 0; spawnX = feetX; spawnY = feetY; armed = false;
+    fade = 1;
+    PlayerPrefs.SetString("room", id); PlayerPrefs.SetFloat("fx", feetX); PlayerPrefs.SetFloat("fy", feetY); PlayerPrefs.SetInt("hp", hp); PlayerPrefs.Save();
+    string tr; if (!TRACK.TryGetValue(room.theme, out tr)) tr = room.theme;
+    if (tr != track) {                                                     // each area its own piece and its own air
+      track = tr; var mc = Resources.Load<AudioClip>("music/" + tr); if (mc != null) { music.clip = mc; music.Play(); }
+      var ac = Resources.Load<AudioClip>("amb/" + room.theme); if (ac != null) { amb.clip = ac; amb.Play(); } else amb.Stop();
+    }
     foes.Clear();
     foreach (var e in room.enemies) {
       CreatureData d; if (!kinds.TryGetValue(e.type, out d)) continue;
@@ -131,15 +152,19 @@ public class Game : MonoBehaviour {
   Rect BtnRight { get { var r = BtnLeft; r.x += r.width * 1.25f; return r; } }
   Rect BtnJump { get { float s = Screen.height * 0.22f; return new Rect(Screen.width * 0.97f - s, Screen.height - s * 1.25f, s, s); } }
   Rect BtnAtk { get { var r = BtnJump; r.x -= r.width * 1.2f; return r; } }
+  Rect BtnDash { get { var r = BtnJump; r.y -= r.height * 1.15f; return r; } }
   void ReadInput() {
-    inX = 0; atkHeldTouch = false; bool held = Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.Space);
+    inX = 0; atkHeldTouch = false; dashTouch = false; bool held = Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.Space);
     if (Input.GetKey(KeyCode.LeftArrow)) inX -= 1; if (Input.GetKey(KeyCode.RightArrow)) inX += 1;
     for (int i = 0; i < Input.touchCount; i++) {
       var p = Input.GetTouch(i).position; var q = new Vector2(p.x, Screen.height - p.y);
-      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (q.x > Screen.width * 0.5f) held = true;
+      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (BtnDash.Contains(q)) dashTouch = true; else if (q.x > Screen.width * 0.5f) held = true;
     }
     bool atk = Input.GetKey(KeyCode.X) || atkHeldTouch;
-    if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = 0.42f; struck.Clear(); }
+    if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = 0.42f; struck.Clear(); Play("nail_side", 0.7f); }
+    bool dash = Input.GetKey(KeyCode.C) || dashTouch;
+    if (dash && !dashWas && dashCD <= 0 && (ground || airDash)) { dashT = 0.18f; dashCD = 0.5f; if (!ground) airDash = false; vy = 0; }
+    dashWas = dash;
     atkWas = atk;
     if (held && !jumpWas) jumpBuf = 0.12f;
     jumpWas = held; jumpHeld = held;
@@ -147,11 +172,12 @@ public class Game : MonoBehaviour {
   void OnGUI() {
     if (btnBase == null) return;
     var old = GUI.color; GUI.color = new Color(1, 1, 1, 0.75f);
-    GUI.DrawTexture(BtnLeft, btnBase); GUI.DrawTexture(BtnRight, btnBase); GUI.DrawTexture(BtnJump, btnJump != null ? btnJump : btnBase); GUI.DrawTexture(BtnAtk, btnAtk != null ? btnAtk : btnBase);
+    GUI.DrawTexture(BtnLeft, btnBase); GUI.DrawTexture(BtnRight, btnBase); GUI.DrawTexture(BtnJump, btnJump != null ? btnJump : btnBase); GUI.DrawTexture(BtnAtk, btnAtk != null ? btnAtk : btnBase); GUI.DrawTexture(BtnDash, btnDash != null ? btnDash : btnBase);
     var st = new GUIStyle(GUI.skin.label); st.alignment = TextAnchor.MiddleCenter; st.fontSize = (int)(Screen.height * 0.08f);
     GUI.Label(BtnLeft, "◀", st); GUI.Label(BtnRight, "▶", st);
     GUI.color = Color.white; float hs = Screen.height * 0.07f;
     for (int i = 0; i < 5; i++) { var ht = i < hp ? heartFull : heartEmpty; if (ht != null) GUI.DrawTexture(new Rect(Screen.width * 0.03f + i * hs * 1.1f, Screen.height * 0.03f, hs, hs), ht); }
+    if (fade > 0) { GUI.color = new Color(0, 0, 0, Mathf.Clamp01(fade)); GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture); }   // a room opens out of the dark
     GUI.color = old;
   }
 
@@ -163,11 +189,22 @@ public class Game : MonoBehaviour {
     return false;
   }
   void StepHero(float dt) {
-    vx = Approach(vx, inX * RUN, (inX == 0 ? 4200 : 3600) * dt * (ground ? 1 : 0.85f));
-    if (inX != 0) face = inX > 0 ? 1 : -1;
-    vy = Mathf.Min(vy + GRAV * (vy > 0 ? FALL_MULT : 1) * dt, MAXFALL);
+    dashT -= dt; dashCD -= dt; lockX -= dt; wallCoy -= dt;
+    if (ground) { airDash = true; airJump = true; }
+    if (dashT > 0) { vx = face * 690; vy = 0; }                              // a dash: straight, weightless
+    else {
+      if (lockX <= 0) { vx = Approach(vx, inX * RUN, (inX == 0 ? 4200 : 3600) * dt * (ground ? 1 : 0.85f)); if (inX != 0) face = inX > 0 ? 1 : -1; }
+      vy = Mathf.Min(vy + GRAV * (vy > 0 ? FALL_MULT : 1) * dt, MAXFALL);
+      // a wall held to while falling is slid down slowly, and can be jumped from
+      int wd = 0; if (!ground && inX != 0 && BoxHits(x + inX * 2, y)) wd = (int)inX;
+      if (wd != 0) { wallDir = wd; wallCoy = 0.12f; airDash = true; airJump = true; if (vy > 70) vy = 70; }
+    }
     coyote = ground ? 0.1f : coyote - dt; jumpBuf -= dt;
-    if (jumpBuf > 0 && coyote > 0) { vy = -JUMP; jumping = true; coyote = 0; jumpBuf = 0; ground = false; }
+    if (jumpBuf > 0 && dashT <= 0) {
+      if (coyote > 0) { vy = -JUMP; jumping = true; coyote = 0; jumpBuf = 0; ground = false; Play("hero_jump", 0.25f); }
+      else if (wallCoy > 0) { vy = -650; vx = -wallDir * 310; face = -wallDir; lockX = 0.13f; jumping = true; jumpBuf = 0; wallCoy = 0; }
+      else if (airJump) { vy = -630; airJump = false; jumping = true; jumpBuf = 0; }
+    }
     if (jumping && !jumpHeld && vy < -260) vy = -260;                        // letting go cuts the rise
     if (vy >= 0) jumping = false;
     // sideways
@@ -223,9 +260,10 @@ public class Game : MonoBehaviour {
       }
       bool touch = x < f.x + f.d.w && x + PW > f.x && y < f.y + f.d.h && y + PH > f.y;
       if (atkT > 0 && !struck.Contains(f) && hx < f.x + f.d.w && hx + hw > f.x && hy < f.y + f.d.h && hy + hh > f.y) {
+        Play("nail_hit", 0.7f); Play(f.d.type + (f.hp <= 5 ? "_die" : "_hurt"), 0.6f);
         struck.Add(f); f.hp -= 5; f.flash = 0.15f; if (f.mode != 2) f.x += face * 14; vx = -face * 150;
         if (f.hp <= 0) { Destroy(f.sr.gameObject); foes.RemoveAt(i); continue; }
-      } else if (touch && hurtT <= 0) { hp--; hurtT = 1.2f; vx = (x + PW / 2 < f.x + f.d.w / 2 ? -1 : 1) * 320; vy = -380; if (hp <= 0) { hp = 5; x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0; } }
+      } else if (touch && hurtT <= 0) { Play("hero_hurt0", 0.6f); hp--; hurtT = 1.2f; vx = (x + PW / 2 < f.x + f.d.w / 2 ? -1 : 1) * 320; vy = -380; if (hp <= 0) { hp = 5; x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0; } }
       f.sr.sprite = f.fr[(int)(f.t * 6) % 4]; f.sr.flipX = f.face < 0;
       f.sr.color = f.flash > 0 ? new Color(1, 0.55f, 0.55f, 1) : Color.white;
       f.sr.transform.position = new Vector3(f.x + f.d.w / 2, -(f.y + f.d.h), 0);
@@ -233,7 +271,7 @@ public class Game : MonoBehaviour {
   }
   void Hurt() {
     if (hurtT > 0 && y <= room.h * TILE + 200) return;
-    hp--; hurtT = 1.2f; if (hp <= 0) hp = 5;
+    Play("hero_hurt1", 0.6f); hp--; hurtT = 1.2f; if (hp <= 0) hp = 5;
     x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0;
   }
   void Doors() {
@@ -264,8 +302,8 @@ public class Game : MonoBehaviour {
     acc += Mathf.Min(Time.deltaTime, 0.1f);
     while (acc >= STEP) { StepHero(STEP); acc -= STEP; }
     // the picture
-    animT += Time.deltaTime;
-    string a = atkT > 0 ? "slash1" : !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
+    animT += Time.deltaTime; fade -= Time.deltaTime * 3;
+    string a = dashT > 0 ? "dash" : atkT > 0 ? "slash1" : !ground && wallCoy > 0.1f ? "wall" : !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
     Sprite[] fr; if (!anims.TryGetValue(a, out fr)) fr = anims["idle"];
     int idx = a == "slash1" ? Mathf.Clamp((int)((0.2f - atkT) / 0.2f * fr.Length), 0, fr.Length - 1) : a == "jump" ? Mathf.Clamp((int)((vy + 500) / 1000f * fr.Length), 0, fr.Length - 1) : (int)(animT * (a == "run" ? 14 : 6)) % fr.Length;
     hero.sprite = fr[idx]; hero.flipX = face < 0;

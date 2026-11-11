@@ -30,4 +30,10 @@ public class TexImport : AssetPostprocessor {
     t.textureType = TextureImporterType.Default; t.mipmapEnabled = false; t.npotScale = TextureImporterNPOTScale.None;
     t.maxTextureSize = 4096; t.textureCompression = TextureImporterCompression.CompressedHQ; t.alphaIsTransparency = true; t.wrapMode = TextureWrapMode.Clamp;
   }
+  // music and the air of an area are played from the file as they go; the short sounds are kept ready
+  void OnPreprocessAudio() {
+    var a = (AudioImporter)assetImporter; var st = a.defaultSampleSettings; bool long_ = assetPath.Contains("/music/") || assetPath.Contains("/amb/");
+    st.loadType = long_ ? AudioClipLoadType.Streaming : AudioClipLoadType.DecompressOnLoad; st.compressionFormat = AudioCompressionFormat.Vorbis; st.quality = 0.6f;
+    a.defaultSampleSettings = st;
+  }
 }

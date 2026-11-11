@@ -353,6 +353,7 @@ void main() {
     // 'auto' starts high and steps down if the game runs slowly; 0, 1 and 2 pin a level (0 = the old 2D lighting)
     setMode(m) { mode = m; quality = m === 'auto' ? 2 : m; slow = frames = 0; try { localStorage.setItem('duskwell_gfx', String(m)); } catch (e) { /* ignore */ } },
     setQuality(q) { mode = q; quality = q; },
+    lower(q) { if (mode === 'auto' && q < quality) quality = Math.max(0, q); slow = frames = 0; },
     // called every frame with the time since the last one; in auto mode, 90 slow frames in a row lower the quality
     adapt(dtMs) {
       if (mode !== 'auto' || !ok || quality === 0 || dtMs > 250) return;

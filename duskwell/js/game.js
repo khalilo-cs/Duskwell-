@@ -566,7 +566,7 @@ function setZoom(z) { G.zoom = ZOOMS.includes(z) ? z : 1.25; try { localStorage.
 function pauseItems() {
   return [{ id: 'resume', label: tr('resume') }, { id: 'map', label: tr('map') }, { id: 'charms', label: tr('charms') }, { id: 'gear', label: sx('المعدات', 'Equipment') }, { id: 'quests', label: sx('المهام', 'Quests') + (Quests.active().length ? '  (' + Quests.active().length + ')' : '') }, { id: 'moves', label: sx('الحركات والقوى', 'Moves and powers') + (Coach.unseen().length ? '  ●' : '') }, { id: 'bestiary', label: tr('bestiary') },
     { id: 'music', label: sx('الموسيقى والصوت', 'Music and sound') },
-    { id: 'lang', label: tr('lang') }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'comfort', label: comfortLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'quit', label: tr('quit') }];
+    { id: 'lang', label: tr('lang') }, { id: 'gfx', label: tr('gfx') + ': ' + gfxLabel() }, { id: 'perf', label: sx('عدّاد الأداء: ', 'Performance meter: ') + (G.perfShow ? sx('ظاهر', 'on') : sx('مخفي', 'off')) }, { id: 'comfort', label: comfortLabel() }, { id: 'zoom', label: sx('تقريب الصورة: ', 'Zoom: ') + zoomLabel() }, { id: 'diff', label: diffLabel() }, { id: 'quit', label: tr('quit') }];
 }
 // pause menu input
 function updatePause() {
@@ -590,7 +590,8 @@ function updatePause() {
     else if (id === 'look') HeroStyle.next();
     else if (id === 'diff') { Diff.setMode(Diff.nextMode()); G.toastMsg(sx('تسري الصعوبة على الغرف التي تدخلها بعد الآن', 'The setting applies to the rooms you enter from now on'), 2.4); }
     else if (id === 'zoom') setZoom({ 1: 1.25, 1.25: 1.5, 1.5: 1 }[G.zoom] || 1.25);
-    else if (id === 'gfx' && Lumen.ready()) Lumen.setMode({ auto: 2, 2: 1, 1: 0, 0: 'auto' }[Lumen.mode()]);
+    else if (id === 'gfx' && Lumen.ready()) { G.res = 2; try { localStorage.removeItem('duskwell_rung'); } catch (e) { /* ignore */ } resize(); } if (id === 'gfx' && Lumen.ready()) Lumen.setMode({ auto: 2, 2: 1, 1: 0, 0: 'auto' }[Lumen.mode()]);
+    else if (id === 'perf') { G.perfShow = !G.perfShow; try { localStorage.setItem('duskwell_perf', G.perfShow ? '1' : '0'); } catch (e) { /* ignore */ } }
     else if (id === 'quit') { G.fadeTo(() => { G.state = 'title'; G.afterTrans = 'title'; G.menuSel = 0; Sound.boss(false); Sound.setTheme('title'); G.hasSave = readSave() !== null; }, 0.4, 0.1, 0.4); }
   }
 }
@@ -1067,7 +1068,7 @@ function drawWorld(g) {
   // the room's tiles are painted once, as sharp as the zoom the player chose needs; the biggest rooms a little less sharp, so
   // the picture of the room stays within about twelve million pixels (a phone's memory)
   const s = Math.min(G.k * Math.max(1, G.zoom), 1.8, Math.sqrt(12e6 / (L.pw * L.ph)));
-  if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.renderLevel(L, s); G.tileScale = s; G.tileRoom = L.id; }
+  if (!G.tileCanvas || G.tileScale !== s || G.tileRoom !== L.id) { G.tileCanvas = Art.sliceLevel(Art.renderLevel(L, s)); G.tileScale = s; G.tileRoom = L.id; }
   const vx = clamp(cx, 0, L.pw), vy = clamp(cy, 0, L.ph), vw = Math.min(VW / Z + 1, L.pw - vx), vh = Math.min(VH / Z + 1, L.ph - vy);
   if (vw > 0 && vh > 0) {
     const tc = G.tileCanvas;
@@ -1395,6 +1396,30 @@ function drawEnding(g) {
 }
 
 // draw the current state
+// the performance meter (pause menu): frames a second, the slowest frame of the last second, the time the game's rules and its
+// drawing took, the lighting level, the picture's sharpness and size, the unpacked pictures and the memory in use
+try { G.perfShow = localStorage.getItem('duskwell_perf') === '1'; } catch (e) { /* ignore */ }
+try { const r = JSON.parse(localStorage.getItem('duskwell_rung') || 'null'); if (r) { G.res = r.res; if (Lumen.mode() === 'auto') Lumen.lower(r.q); } } catch (e) { /* ignore */ }
+const perfAcc = { n: 0, worst: 0, up: 0, dr: 0, t: 0, show: null };
+function perfNote(ms, up, dr) {
+  const a = perfAcc; a.n++; a.worst = Math.max(a.worst, ms); a.up += up; a.dr += dr; a.t += ms;
+  if (a.t >= 1000) { a.show = { fps: Math.round(a.n * 1000 / a.t), worst: Math.round(a.worst), up: (a.up / a.n).toFixed(1), dr: (a.dr / a.n).toFixed(1) }; a.n = a.worst = a.up = a.dr = a.t = 0; }
+}
+function drawPerf(g) {
+  const s = perfAcc.show; if (!s) return;
+  const ic = typeof ImgCache !== 'undefined' ? ImgCache.stats() : null, mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : '?';
+  const lines = [
+    sx('إطارات/ث ', 'FPS ') + s.fps + sx('   أبطأ إطار ', '   slowest ') + s.worst + 'ms',
+    sx('القواعد ', 'rules ') + s.up + sx('ms   الرسم ', 'ms   drawing ') + s.dr + 'ms',
+    sx('الإضاءة ', 'light ') + (Lumen.ready() ? Lumen.quality() : 0) + sx('   الدقة ', '   res ') + G.k.toFixed(2) + ' (' + G.canvas.width + 'x' + G.canvas.height + ')',
+    sx('صور جاهزة ', 'pictures ') + (ic ? ic.kept + ' / ' + ic.mb + 'MB' + (ic.waiting ? ' +' + ic.waiting : '') : '-') + sx('   ذاكرة ', '   memory ') + mem + 'MB   ' + (G.level ? G.level.id : ''),
+  ];
+  g.save(); g.setTransform(G.k, 0, 0, G.k, 0, 0); g.direction = 'ltr'; g.textAlign = 'left'; g.textBaseline = 'top'; g.font = '600 13px sans-serif';
+  g.fillStyle = 'rgba(0,0,0,0.62)'; g.fillRect(VW / 2 - 170, 4, 340, lines.length * 16 + 8);
+  g.fillStyle = s.fps >= 55 ? '#9dffb0' : s.fps >= 40 ? '#ffe28a' : '#ff8a8a';
+  lines.forEach((l, i) => g.fillText(l, VW / 2 - 162, 8 + i * 16));
+  g.restore();
+}
 function draw() {
   const g = G.g;
   Guard.unwind(g);                                        // what a failed drawing left open last frame is closed
@@ -1432,6 +1457,7 @@ function draw() {
     }
     g.fillStyle = 'rgba(0,0,0,' + (mist ? k * k : k) + ')'; g.fillRect(0, 0, VW, VH);
   }
+  if (G.perfShow) drawPerf(g);                            // the performance meter, over everything
 }
 
 // ---------------------------------------------------------------- boot
@@ -1489,14 +1515,22 @@ function boot() {
   let last = performance.now(), acc = 0;
   function frame(now) {
     requestAnimationFrame(frame);
-    const dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
+    let dt = Math.min(0.1, (now - last) / 1000); last = now;
+    // a screen's beat is never exactly the game's sixty: a frame close to one step (or half a step, on 120 Hz screens) counts as
+    // exactly that, so no step is doubled or dropped every few seconds
+    const beat = dt / STEP;
+    if (Math.abs(beat - 1) < 0.14) dt = STEP; else if (Math.abs(beat - 0.5) < 0.07) dt = STEP / 2;
+    acc += dt;
     Input.poll();
     let guard = 0;
     if (G.manual) { acc = 0; return; }     // bots step the game themselves and ask for a picture with DW.draw()
     Lumen.adapt(dt * 1000);
+    const pt0 = performance.now();
     while (acc >= STEP && guard++ < 6) { update(STEP); acc -= STEP; Input.endStep(); }
     if (guard >= 6) acc = 0;
+    const pt1 = performance.now();
     draw();
+    perfNote(dt * 1000, pt1 - pt0, performance.now() - pt1);
     // too slow for this phone: draw a little softer (the time between frames, looked at over two seconds of play, never while
     // a room is being laid or the game waits in the background)
     if (G.state === 'play' && !G.trans) {
@@ -1505,7 +1539,11 @@ function boot() {
       if (a.n >= 120) {
         const avg = a.sum / a.n; a.n = a.sum = 0;
         const cur = Math.min(window.devicePixelRatio || 1, 2, G.res || 2);
-        if (avg > 24 && cur > 1.31) { G.res = Math.max(1.3, cur - 0.35); resize(); }          // never softer than 1.3 of the page's pixels
+        if (avg > 22) {                                        // lighting gives way first, then sharpness; kept for the next launch
+          if (Lumen.ready() && Lumen.mode() === 'auto' && Lumen.quality() > 0) Lumen.lower(Lumen.quality() - 1);
+          else if (cur > 1.01) { G.res = Math.max(1, cur - 0.35); resize(); }
+          try { localStorage.setItem('duskwell_rung', JSON.stringify({ q: Lumen.quality(), res: G.res || 2 })); } catch (e) { /* ignore */ }
+        }
       }
     }
   }

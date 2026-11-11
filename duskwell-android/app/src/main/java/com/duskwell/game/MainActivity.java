@@ -109,6 +109,8 @@ public class MainActivity extends Activity {
         });
 
         setContentView(web);
+        // the game steps sixty times a second: the screen is asked for sixty too, so every step is shown for the same time
+        android.view.WindowManager.LayoutParams lp = getWindow().getAttributes(); lp.preferredRefreshRate = 60f; getWindow().setAttributes(lp);
         hideSystemBars();
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(START_URL);

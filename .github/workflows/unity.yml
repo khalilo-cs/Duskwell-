@@ -3,9 +3,6 @@
 name: Build the Unity version
 on:
   workflow_dispatch:
-  push:
-    branches: [clean-main]
-    paths: ['duskwell-unity/**', '.github/workflows/unity.yml']
 jobs:
   build:
     runs-on: ubuntu-latest

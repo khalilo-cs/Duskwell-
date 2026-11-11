@@ -1,4 +1,5 @@
-# Builds the Unity version of Duskwell for Android (needs the secrets UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD).
+# Builds the Unity version of Duskwell for Android. Needs the secrets UNITY_EMAIL and UNITY_PASSWORD (a free Personal account);
+# UNITY_LICENSE (the contents of a .ulf file) is used too when it is there.
 name: Build the Unity version
 on:
   workflow_dispatch:
@@ -8,23 +9,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: jlumbroso/free-disk-space@main
-        with: { tool-cache: false, android: false, dotnet: true, haskell: true, large-packages: false, swap-storage: false }
+        with: { tool-cache: true, android: false, dotnet: true, haskell: true, large-packages: false, swap-storage: false }
       - uses: actions/checkout@v4
         with: { sparse-checkout: duskwell-unity }
       - uses: actions/cache@v4
-        with: { path: duskwell-unity/Library, key: unity-library-android }
-      - uses: game-ci/unity-builder@v4
+        with: { path: duskwell-unity/Library, key: unity-library-android-2022 }
+      - name: Build in the Unity editor
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          projectPath: duskwell-unity
-          targetPlatform: Android
-          buildMethod: Build.Android
-          buildName: duskwell-unity
-          allowDirtyBuild: true
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -z "$UNITY_EMAIL" ] || [ -z "$UNITY_PASSWORD" ]; then echo "::error::Add the secrets UNITY_EMAIL and UNITY_PASSWORD"; exit 1; fi
+          docker run --rm -e UNITY_EMAIL -e UNITY_PASSWORD -e UNITY_LICENSE -v "$PWD:/w" -w /w unityci/editor:ubuntu-2022.3.62f1-android-3 bash -c '
+            set +e
+            if [ -n "$UNITY_LICENSE" ]; then printf "%s" "$UNITY_LICENSE" > /tmp/l.ulf; unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /tmp/l.ulf | tail -20; fi
+            echo "== signing in"; unity-editor -batchmode -nographics -quit -logFile - -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" 2>&1 | grep -i -E "licens|entitle|activat|error|sign" | tail -40
+            echo "== building"; unity-editor -batchmode -nographics -quit -logFile /w/build.log -projectPath /w/duskwell-unity -buildTarget Android -executeMethod Build.Android -customBuildPath /w/out/duskwell-unity.apk -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD"
+            code=$?; grep -E "error CS|Build: |licens|Licens|entitle|Exception" /w/build.log | head -80; tail -30 /w/build.log; unity-editor -batchmode -nographics -quit -returnlicense -logFile - >/dev/null 2>&1; exit $code'
       - uses: actions/upload-artifact@v4
-        with: { name: duskwell-unity-apk, path: build/Android }
+        if: always()
+        with:
+          name: duskwell-unity
+          path: |
+            out
+            build.log

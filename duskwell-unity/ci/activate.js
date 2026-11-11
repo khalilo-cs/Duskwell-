@@ -10,9 +10,15 @@ const puppeteer = require('puppeteer-core'), fs = require('fs'), path = require(
   const click = async sel => { await page.waitForSelector(sel); await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {}), page.click(sel)]); };
   try {
     await page.goto('https://license.unity3d.com/manual', { waitUntil: 'networkidle2' }); await where('opened');
-    await page.waitForSelector('#conversations_create_session_form_email');
-    await page.type('#conversations_create_session_form_email', process.env.UNITY_EMAIL); await page.type('#conversations_create_session_form_password', process.env.UNITY_PASSWORD);
-    await click('input[name="commit"]'); await where('signed in');
+    // the sign-in page: the mail, Continue, then the password (or both on one page, as it used to be)
+    const mail = await page.waitForSelector('input[type="email"], input[name="email"], input[name="username"], #conversations_create_session_form_email, input[type="text"]', { visible: true });
+    await mail.type(process.env.UNITY_EMAIL);
+    let pw = await page.$('input[type="password"]');
+    if (!pw || !(await pw.boundingBox())) { await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}), page.keyboard.press('Enter')]); await where('mail given'); pw = await page.waitForSelector('input[type="password"]', { visible: true }); }
+    await pw.type(process.env.UNITY_PASSWORD);
+    await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}), page.keyboard.press('Enter')]);
+    await new Promise(r => setTimeout(r, 4000)); await where('signed in');
+    if (!/license\.unity3d\.com/.test(page.url())) { await page.goto('https://license.unity3d.com/manual', { waitUntil: 'networkidle2' }); await where('back at the licence page'); }
     const up = await page.waitForSelector('input[type="file"]'); await up.uploadFile(alf);
     await click('input[name="commit"]'); await where('uploaded');
     // the Personal choice is hidden on this page now: it is shown again, then chosen

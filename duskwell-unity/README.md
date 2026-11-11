@@ -7,6 +7,8 @@ numbers (run, jump with a cut rise, coyote time, jump buffer, one-way ledges, sp
 and acid, the camera, the painted backgrounds and rock, keys and touch buttons; the 37 kinds of creature with their painted frames (walkers, flyers and hanging things in a first, simple
 form), the blade's swing, wounds and knock-back, and the painted hearts. Stage three: the dash, the wall slide and wall jump, the double jump (all open from the start for now), each area's music and
 air, the blade's and the creatures' sounds, a fade as a room opens, and the game goes on from the room last entered.
+Stage four: every room looks as it was painted in the first version: each piece laid there (rock edges, ledges, spikes,
+furnishings, set pieces, hills, cave arches: about 138,000 of them) is listed in `Resources/draws/` and laid the same way.
 Not yet here: each creature's own behaviour, bosses,
 the painted tile kits and decor, menus, sound, saving.
 

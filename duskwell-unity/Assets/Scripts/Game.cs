@@ -15,6 +15,7 @@ using UnityEngine;
 [Serializable] public class AnimData { public string name; public FrameData[] f; }
 [Serializable] public class HeroData { public AnimData[] anims; }
 [Serializable] public class CreatureData { public string type; public int fw, fh; public float w, h, hp; }
+[Serializable] public class DrawList { public string[] src; public int[] dim; public float[] d; }
 [Serializable] public class CreatureList { public CreatureData[] list; }
 // a creature of the room: walkers pace their ledge and turn at its ends, flyers drift toward the hero, hanging things stay
 public class Foe { public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, vx, vy, hp, flash, t, homeY; public int face = 1; public int mode; }
@@ -51,7 +52,7 @@ public class Game : MonoBehaviour {
     cam.orthographic = true; cam.orthographicSize = 270; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
     camGo.transform.position = new Vector3(0, 0, -100);
     var skyGo = new GameObject("Sky"); skyGo.transform.SetParent(camGo.transform, false); skyGo.transform.localPosition = new Vector3(0, 0, 90);
-    sky = skyGo.AddComponent<SpriteRenderer>(); sky.sortingOrder = -100; spriteMat = sky.sharedMaterial;
+    sky = skyGo.AddComponent<SpriteRenderer>(); sky.sortingOrder = -10000; spriteMat = sky.sharedMaterial;
     var heroGo = new GameObject("Hero"); hero = heroGo.AddComponent<SpriteRenderer>(); hero.sortingOrder = 10;
     var tex = Resources.Load<Texture2D>("hero"); var hd = JsonUtility.FromJson<HeroData>(Resources.Load<TextAsset>("hero").text);
     foreach (var a in hd.anims) {
@@ -98,7 +99,8 @@ public class Game : MonoBehaviour {
       else if (t == 3) for (int s = 0; s < 3; s++) Spike(v2, uv2, col2, tri2, px + s * TILE / 3f, py + TILE, TILE / 3f, 22, new Color(0.85f, 0.88f, 0.95f, 1));
       else if (t == 8) Quad(v2, uv2, col2, tri2, px, py + 8, TILE, TILE - 8, new Color(0.45f, 0.9f, 0.5f, 0.75f), 0);
     }
-    Layer("Rock", v, uv, col, tri, fill, 0); Layer("Edges", v2, uv2, col2, tri2, Texture2D.whiteTexture, 1);
+    Layer("Rock", v, uv, col, tri, fill, -6000);
+    if (!Painted(id)) Layer("Edges", v2, uv2, col2, tri2, Texture2D.whiteTexture, -5999);
     var bg = Resources.Load<Texture2D>("bg/" + room.bg); if (bg == null) bg = Resources.Load<Texture2D>("bg/" + room.theme);
     if (bg != null) {
       sky.sprite = Sprite.Create(bg, new Rect(0, 0, bg.width, bg.height), new Vector2(0.5f, 0.5f), 1);
@@ -125,6 +127,38 @@ public class Game : MonoBehaviour {
       f.sr.sortingOrder = 5; f.homeY = f.y; f.mode = STILL.Contains(" " + e.type + " ") ? 2 : FLYERS.Contains(" " + e.type + " ") ? 1 : 0; f.vx = 40; f.t = e.x;
       foes.Add(f);
     }
+  }
+  // the room as it was painted in the first version: every piece laid there (rock edges, ledges, spikes, furnishings, hills,
+  // arches) is listed in Resources/draws/<room>.json with its sheet, its place and its turn, and laid here the same way and in
+  // the same order; pieces of one sheet that follow one another share a mesh
+  bool Painted(string id) {
+    var ta = Resources.Load<TextAsset>("draws/" + id); if (ta == null) return false;
+    var L = JsonUtility.FromJson<DrawList>(ta.text); if (L == null || L.d == null || L.d.Length == 0) return false;
+    var v = new List<Vector3>(); var uv = new List<Vector2>(); var col = new List<Color>(); var tri = new List<int>();
+    int cur = -1, run = 0; float[] d = L.d;
+    for (int i = 0; i + 16 < d.Length + 1 && i + 16 < d.Length; i += 17) {
+      int si = (int)d[i];
+      if (si != cur) { Flush(L, cur, run++, v, uv, col, tri); cur = si; }
+      float W = L.dim[si * 2], H = L.dim[si * 2 + 1], sx = d[i + 1], sy = d[i + 2], sw = d[i + 3], sh = d[i + 4], dx = d[i + 5], dy = d[i + 6], dw = d[i + 7], dh = d[i + 8];
+      float a = d[i + 9], b = d[i + 10], c = d[i + 11], e = d[i + 12], tx = d[i + 13], ty = d[i + 14], k = d[i + 16]; var cl = new Color(k, k, k, d[i + 15]);
+      int n = v.Count;
+      for (int q = 0; q < 4; q++) {
+        float px = dx + (q == 1 || q == 2 ? dw : 0), py = dy + (q >= 2 ? dh : 0);
+        v.Add(new Vector3(a * px + c * py + tx, -(b * px + e * py + ty)));
+        uv.Add(new Vector2((sx + (q == 1 || q == 2 ? sw : 0)) / W, 1 - (sy + (q >= 2 ? sh : 0)) / H)); col.Add(cl);
+      }
+      tri.Add(n); tri.Add(n + 1); tri.Add(n + 2); tri.Add(n); tri.Add(n + 2); tri.Add(n + 3);
+    }
+    Flush(L, cur, run, v, uv, col, tri);
+    return true;
+  }
+  readonly Dictionary<string, Texture2D> sheets = new Dictionary<string, Texture2D>();
+  void Flush(DrawList L, int si, int run, List<Vector3> v, List<Vector2> uv, List<Color> col, List<int> tri) {
+    if (si >= 0 && v.Count > 0) {
+      Texture2D t; if (!sheets.TryGetValue(L.src[si], out t)) { t = Resources.Load<Texture2D>("atlas/" + L.src[si]); sheets[L.src[si]] = t; }
+      if (t != null) Layer("Painted " + L.src[si], v, uv, col, tri, t, -5000 + run);
+    }
+    v.Clear(); uv.Clear(); col.Clear(); tri.Clear();
   }
   void Layer(string name, List<Vector3> v, List<Vector2> uv, List<Color> col, List<int> tri, Texture2D tex, int order) {
     var go = new GameObject(name); go.transform.SetParent(roomGo.transform, false);
@@ -245,8 +279,11 @@ public class Game : MonoBehaviour {
         if (SolidAt(f.x + f.d.w / 2, ny + f.d.h)) { ny = Mathf.Floor((ny + f.d.h) / TILE) * TILE - f.d.h; f.vy = 0; on = true; }
         f.y = ny;
         if (on) {
+          // one that sees the hero on its own ledge comes for them, faster
+          float hdx = x + PW / 2 - (f.x + f.d.w / 2); bool sees = Mathf.Abs(hdx) < 280 && Mathf.Abs(y + PH - (f.y + f.d.h)) < 48;
+          f.vx = sees && Mathf.Abs(hdx) > 12 ? Mathf.Sign(hdx) * 85 : Mathf.Sign(f.vx == 0 ? 1 : f.vx) * 40;
           float ahead = f.vx > 0 ? f.x + f.d.w + 2 : f.x - 2;
-          if (SolidAt(ahead, f.y + f.d.h - 4) || !SolidAt(ahead, f.y + f.d.h + 4)) f.vx = -f.vx; else f.x += f.vx * dt;
+          if (SolidAt(ahead, f.y + f.d.h - 4) || !SolidAt(ahead, f.y + f.d.h + 4)) { if (!sees) f.vx = -f.vx; } else f.x += f.vx * dt;
         }
         if (Mathf.Abs(f.vx) > 1) f.face = f.vx > 0 ? 1 : -1;
         if (f.y > room.h * TILE + 300) { Destroy(f.sr.gameObject); foes.RemoveAt(i); continue; }

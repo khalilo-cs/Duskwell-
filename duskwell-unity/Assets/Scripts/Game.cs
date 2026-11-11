@@ -14,6 +14,10 @@ using UnityEngine;
 [Serializable] public class FrameData { public float x, y, w, h, ax, ay; }
 [Serializable] public class AnimData { public string name; public FrameData[] f; }
 [Serializable] public class HeroData { public AnimData[] anims; }
+[Serializable] public class CreatureData { public string type; public int fw, fh; public float w, h, hp; }
+[Serializable] public class CreatureList { public CreatureData[] list; }
+// a creature of the room: walkers pace their ledge and turn at its ends, flyers drift toward the hero, hanging things stay
+public class Foe { public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, vx, vy, hp, flash, t, homeY; public int face = 1; public int mode; }
 
 public class Game : MonoBehaviour {
   const int TILE = 32; const float STEP = 1f / 60f;
@@ -29,7 +33,12 @@ public class Game : MonoBehaviour {
   // the hero, in pixels of the room (x, y is the top-left of the body; y grows downward as in the first version)
   float x, y, vx, vy, coyote, jumpBuf, animT, acc, hurtT; int face = 1, hp = 5; bool ground, jumping, armed;
   float spawnX, spawnY; bool jumpHeld, jumpWas; float inX;
-  Texture2D btnBase, btnJump;
+  Texture2D btnBase, btnJump, btnAtk, heartFull, heartEmpty;
+  readonly Dictionary<string, CreatureData> kinds = new Dictionary<string, CreatureData>();
+  readonly Dictionary<string, Sprite[]> kindFrames = new Dictionary<string, Sprite[]>();
+  readonly List<Foe> foes = new List<Foe>();
+  float atkT, atkCD; bool atkWas, atkHeldTouch; readonly HashSet<Foe> struck = new HashSet<Foe>();
+  const string FLYERS = " flyer diver moth jelly skullbat veil orrery frostwisp stormkite ", STILL = " icicle censer shard dummy ";
 
   void Awake() {
     Application.targetFrameRate = 60; QualitySettings.vSyncCount = 1; Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -47,7 +56,9 @@ public class Game : MonoBehaviour {
       for (int i = 0; i < list.Length; i++) { var f = a.f[i]; list[i] = Sprite.Create(tex, new Rect(f.x, tex.height - f.y - f.h, f.w, f.h), new Vector2(f.ax / f.w, 1 - f.ay / f.h), 1); }
       anims[a.name] = list;
     }
-    btnBase = Resources.Load<Texture2D>("btn/base"); btnJump = Resources.Load<Texture2D>("btn/jump");
+    btnBase = Resources.Load<Texture2D>("btn/base"); btnJump = Resources.Load<Texture2D>("btn/jump"); btnAtk = Resources.Load<Texture2D>("btn/attack");
+    heartFull = Resources.Load<Texture2D>("ui/life_full"); heartEmpty = Resources.Load<Texture2D>("ui/life_empty");
+    foreach (var c in JsonUtility.FromJson<CreatureList>(Resources.Load<TextAsset>("creatures").text).list) kinds[c.type] = c;
     Enter(world.start.room, world.start.x, world.start.y);
   }
 
@@ -80,6 +91,19 @@ public class Game : MonoBehaviour {
       float s = Mathf.Max(560f / bg.height, 560f * cam.aspect / bg.width); sky.transform.localScale = new Vector3(s, s, 1);
     }
     x = feetX - PW / 2; y = feetY - PH; vx = 0; vy = 0; spawnX = feetX; spawnY = feetY; armed = false;
+    foes.Clear();
+    foreach (var e in room.enemies) {
+      CreatureData d; if (!kinds.TryGetValue(e.type, out d)) continue;
+      Sprite[] fr; if (!kindFrames.TryGetValue(e.type, out fr)) {
+        var ct = Resources.Load<Texture2D>("creatures/" + e.type); if (ct == null) continue;
+        fr = new Sprite[4]; for (int i = 0; i < 4; i++) fr[i] = Sprite.Create(ct, new Rect(i * d.fw, 0, d.fw, d.fh), new Vector2(0.5f, 0), 2);
+        kindFrames[e.type] = fr;
+      }
+      var go = new GameObject(e.type); go.transform.SetParent(roomGo.transform, false);
+      var f = new Foe { d = d, fr = fr, sr = go.AddComponent<SpriteRenderer>(), hp = d.hp, x = (e.x + 0.5f) * TILE - d.w / 2, y = (e.y + 1) * TILE - d.h };
+      f.sr.sortingOrder = 5; f.homeY = f.y; f.mode = STILL.Contains(" " + e.type + " ") ? 2 : FLYERS.Contains(" " + e.type + " ") ? 1 : 0; f.vx = 40; f.t = e.x;
+      foes.Add(f);
+    }
   }
   void Layer(string name, List<Vector3> v, List<Vector2> uv, List<Color> col, List<int> tri, Texture2D tex, int order) {
     var go = new GameObject(name); go.transform.SetParent(roomGo.transform, false);
@@ -106,24 +130,28 @@ public class Game : MonoBehaviour {
   Rect BtnLeft { get { float s = Screen.height * 0.2f; return new Rect(Screen.width * 0.03f, Screen.height - s * 1.25f, s, s); } }
   Rect BtnRight { get { var r = BtnLeft; r.x += r.width * 1.25f; return r; } }
   Rect BtnJump { get { float s = Screen.height * 0.22f; return new Rect(Screen.width * 0.97f - s, Screen.height - s * 1.25f, s, s); } }
+  Rect BtnAtk { get { var r = BtnJump; r.x -= r.width * 1.2f; return r; } }
   void ReadInput() {
-    inX = 0; bool held = Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.Space);
+    inX = 0; atkHeldTouch = false; bool held = Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.Space);
     if (Input.GetKey(KeyCode.LeftArrow)) inX -= 1; if (Input.GetKey(KeyCode.RightArrow)) inX += 1;
     for (int i = 0; i < Input.touchCount; i++) {
       var p = Input.GetTouch(i).position; var q = new Vector2(p.x, Screen.height - p.y);
-      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (q.x > Screen.width * 0.5f) held = true;
+      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (q.x > Screen.width * 0.5f) held = true;
     }
+    bool atk = Input.GetKey(KeyCode.X) || atkHeldTouch;
+    if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = 0.42f; struck.Clear(); }
+    atkWas = atk;
     if (held && !jumpWas) jumpBuf = 0.12f;
     jumpWas = held; jumpHeld = held;
   }
   void OnGUI() {
     if (btnBase == null) return;
     var old = GUI.color; GUI.color = new Color(1, 1, 1, 0.75f);
-    GUI.DrawTexture(BtnLeft, btnBase); GUI.DrawTexture(BtnRight, btnBase); GUI.DrawTexture(BtnJump, btnJump != null ? btnJump : btnBase);
+    GUI.DrawTexture(BtnLeft, btnBase); GUI.DrawTexture(BtnRight, btnBase); GUI.DrawTexture(BtnJump, btnJump != null ? btnJump : btnBase); GUI.DrawTexture(BtnAtk, btnAtk != null ? btnAtk : btnBase);
     var st = new GUIStyle(GUI.skin.label); st.alignment = TextAnchor.MiddleCenter; st.fontSize = (int)(Screen.height * 0.08f);
     GUI.Label(BtnLeft, "◀", st); GUI.Label(BtnRight, "▶", st);
-    st.alignment = TextAnchor.UpperLeft; st.fontSize = (int)(Screen.height * 0.05f); GUI.color = new Color(1, 0.35f, 0.35f, 1);
-    GUI.Label(new Rect(Screen.width * 0.03f, Screen.height * 0.03f, Screen.width, Screen.height * 0.1f), new string('♥', Mathf.Max(0, hp)), st);
+    GUI.color = Color.white; float hs = Screen.height * 0.07f;
+    for (int i = 0; i < 5; i++) { var ht = i < hp ? heartFull : heartEmpty; if (ht != null) GUI.DrawTexture(new Rect(Screen.width * 0.03f + i * hs * 1.1f, Screen.height * 0.03f, hs, hs), ht); }
     GUI.color = old;
   }
 
@@ -165,7 +193,43 @@ public class Game : MonoBehaviour {
     hurtT -= dt;
     int cx = Mathf.FloorToInt((x + PW / 2) / TILE), cy = Mathf.FloorToInt((y + PH - 4) / TILE), tt = Tile(cx, cy);
     if (tt == 3 || tt == 8 || y > room.h * TILE + 200) Hurt();
+    StepFoes(dt);
     Doors();
+  }
+  bool SolidAt(float px, float py) { return Solid(Tile(Mathf.FloorToInt(px / TILE), Mathf.FloorToInt(py / TILE))); }
+  void StepFoes(float dt) {
+    atkT -= dt; atkCD -= dt;
+    float hx = face > 0 ? x + PW : x + PW - 64 - PW, hy = y - 4, hw = 64, hh = PH + 8;      // the blade's reach in front of the hero
+    for (int i = foes.Count - 1; i >= 0; i--) {
+      var f = foes[i]; f.t += dt; f.flash -= dt;
+      if (f.mode == 0) {                                                       // a walker: gravity, its ledge, a turn at a wall or an edge
+        f.vy = Mathf.Min(f.vy + GRAV * dt, MAXFALL);
+        float ny = f.y + f.vy * dt; bool on = false;
+        if (SolidAt(f.x + f.d.w / 2, ny + f.d.h)) { ny = Mathf.Floor((ny + f.d.h) / TILE) * TILE - f.d.h; f.vy = 0; on = true; }
+        f.y = ny;
+        if (on) {
+          float ahead = f.vx > 0 ? f.x + f.d.w + 2 : f.x - 2;
+          if (SolidAt(ahead, f.y + f.d.h - 4) || !SolidAt(ahead, f.y + f.d.h + 4)) f.vx = -f.vx; else f.x += f.vx * dt;
+        }
+        if (Mathf.Abs(f.vx) > 1) f.face = f.vx > 0 ? 1 : -1;
+        if (f.y > room.h * TILE + 300) { Destroy(f.sr.gameObject); foes.RemoveAt(i); continue; }
+      } else if (f.mode == 1) {                                                // a flyer: bobs, and drifts toward the hero when near
+        float dx = x + PW / 2 - (f.x + f.d.w / 2), dy = y + PH / 2 - (f.y + f.d.h / 2); bool near = Mathf.Abs(dx) < 320 && Mathf.Abs(dy) < 220;
+        f.vx = Approach(f.vx, near ? Mathf.Sign(dx) * 70 : 0, 160 * dt); f.vy = Approach(f.vy, near ? Mathf.Sign(dy) * 50 : (f.homeY - f.y), 160 * dt);
+        float nx = f.x + f.vx * dt, ny = f.y + f.vy * dt + Mathf.Sin(f.t * 3) * 0.4f;
+        if (!SolidAt(nx + f.d.w / 2, f.y + f.d.h / 2)) f.x = nx; else f.vx = 0;
+        if (!SolidAt(f.x + f.d.w / 2, ny + f.d.h / 2)) f.y = ny; else f.vy = 0;
+        if (Mathf.Abs(f.vx) > 5) f.face = f.vx > 0 ? 1 : -1;
+      }
+      bool touch = x < f.x + f.d.w && x + PW > f.x && y < f.y + f.d.h && y + PH > f.y;
+      if (atkT > 0 && !struck.Contains(f) && hx < f.x + f.d.w && hx + hw > f.x && hy < f.y + f.d.h && hy + hh > f.y) {
+        struck.Add(f); f.hp -= 5; f.flash = 0.15f; if (f.mode != 2) f.x += face * 14; vx = -face * 150;
+        if (f.hp <= 0) { Destroy(f.sr.gameObject); foes.RemoveAt(i); continue; }
+      } else if (touch && hurtT <= 0) { hp--; hurtT = 1.2f; vx = (x + PW / 2 < f.x + f.d.w / 2 ? -1 : 1) * 320; vy = -380; if (hp <= 0) { hp = 5; x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0; } }
+      f.sr.sprite = f.fr[(int)(f.t * 6) % 4]; f.sr.flipX = f.face < 0;
+      f.sr.color = f.flash > 0 ? new Color(1, 0.55f, 0.55f, 1) : Color.white;
+      f.sr.transform.position = new Vector3(f.x + f.d.w / 2, -(f.y + f.d.h), 0);
+    }
   }
   void Hurt() {
     if (hurtT > 0 && y <= room.h * TILE + 200) return;
@@ -201,9 +265,9 @@ public class Game : MonoBehaviour {
     while (acc >= STEP) { StepHero(STEP); acc -= STEP; }
     // the picture
     animT += Time.deltaTime;
-    string a = !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
+    string a = atkT > 0 ? "slash1" : !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
     Sprite[] fr; if (!anims.TryGetValue(a, out fr)) fr = anims["idle"];
-    int idx = a == "jump" ? Mathf.Clamp((int)((vy + 500) / 1000f * fr.Length), 0, fr.Length - 1) : (int)(animT * (a == "run" ? 14 : 6)) % fr.Length;
+    int idx = a == "slash1" ? Mathf.Clamp((int)((0.2f - atkT) / 0.2f * fr.Length), 0, fr.Length - 1) : a == "jump" ? Mathf.Clamp((int)((vy + 500) / 1000f * fr.Length), 0, fr.Length - 1) : (int)(animT * (a == "run" ? 14 : 6)) % fr.Length;
     hero.sprite = fr[idx]; hero.flipX = face < 0;
     hero.transform.position = new Vector3(x + PW / 2, -(y + PH), 0); hero.transform.localScale = new Vector3(HERO_SCALE, HERO_SCALE, 1);
     hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : Color.white;

@@ -24,12 +24,20 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         run: |
           if [ -z "$UNITY_EMAIL" ] || [ -z "$UNITY_PASSWORD" ]; then echo "::error::Add the secrets UNITY_EMAIL and UNITY_PASSWORD"; exit 1; fi
-          docker run --rm -e UNITY_EMAIL -e UNITY_PASSWORD -e UNITY_LICENSE -v "$PWD:/w" -w /w unityci/editor:ubuntu-2022.3.62f1-android-3 bash -c '
+          IMG=unityci/editor:ubuntu-2022.3.62f1-android-3
+          mkdir -p lic out
+          if [ -n "$UNITY_LICENSE" ]; then printf "%s" "$UNITY_LICENSE" > lic/l.ulf; else
+            docker run --rm -v "$PWD:/w" -w /w/lic $IMG bash -c 'unity-editor -batchmode -nographics -quit -logFile - -createManualActivationFile >/dev/null 2>&1; ls'
+            npm i --no-save --silent puppeteer-core >/dev/null 2>&1
+            node duskwell-unity/ci/activate.js "$(ls lic/*.alf | head -1)" lic || { echo "::error::Unity did not give a licence file this way"; exit 1; }
+            mv lic/*.ulf lic/l.ulf
+          fi
+          docker run --rm -v "$PWD:/w" -w /w $IMG bash -c '
             set +e
-            if [ -n "$UNITY_LICENSE" ]; then printf "%s" "$UNITY_LICENSE" > /tmp/l.ulf; unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /tmp/l.ulf | tail -20; fi
-            echo "== signing in"; unity-editor -batchmode -nographics -quit -logFile - -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" 2>&1 | grep -i -E "licens|entitle|activat|error|sign" | tail -40
-            echo "== building"; unity-editor -batchmode -nographics -quit -logFile /w/build.log -projectPath /w/duskwell-unity -buildTarget Android -executeMethod Build.Android -customBuildPath /w/out/duskwell-unity.apk -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD"
-            code=$?; grep -E "error CS|Build: |licens|Licens|entitle|Exception" /w/build.log | head -80; tail -30 /w/build.log; unity-editor -batchmode -nographics -quit -returnlicense -logFile - >/dev/null 2>&1; exit $code'
+            unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /w/lic/l.ulf 2>&1 | grep -i -E "licens|activat" | tail -5
+            echo "== building"; unity-editor -batchmode -nographics -quit -logFile /w/build.log -projectPath /w/duskwell-unity -buildTarget Android -executeMethod Build.Android -customBuildPath /w/out/duskwell-unity.apk
+            code=$?; grep -E "error CS|Build: |No valid Unity|Exception" /w/build.log | head -80; tail -30 /w/build.log; exit $code'
+          rm -rf lic
       - uses: actions/upload-artifact@v4
         if: always()
         with:

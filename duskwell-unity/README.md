@@ -12,7 +12,8 @@ furnishings, set pieces, hills, cave arches: about 138,000 of them) is listed in
 Stage five: the seventeen lords of the halls with their painted poses (approach, wind-up, lunge, a leap every third time, quicker
 below half strength), their painted health bar, a beaten lord stays beaten; places blended between steps (smooth on any
 screen), a stop of time and a shake at a blow, the blade's painted arc, dust at landings and deaths, a breath in every creature,
-a drifting backdrop. Not yet here: each creature's and lord's own attacks,
+a drifting backdrop. Stage six: the life of every room (each area's own swaying plants, fluttering and scurrying things, which bend and flee
+as the hero passes), shadowed edges of the view, pale shapes behind a dash. Not yet here: each creature's and lord's own attacks,
 the painted tile kits and decor, menus, sound, saving.
 
 Everything is built from code at start (`Assets/Scripts/Game.cs`), so there is no hand-made scene.

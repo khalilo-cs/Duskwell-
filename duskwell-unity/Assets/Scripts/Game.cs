@@ -21,7 +21,11 @@ using UnityEngine;
 [Serializable] public class CreatureList { public CreatureData[] list; }
 // a creature of the room: walkers pace their ledge and turn at its ends, flyers drift toward the hero, hanging things stay
 public class Foe { public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, px, py, vx, vy, hp, maxHp, flash, t, homeY, st; public int face = 1; public int mode, act, count; public bool boss; }
-public class Puff { public SpriteRenderer sr; public float t, life, vx, vy, size; }
+public class Puff { public SpriteRenderer sr; public float t, life, vx, vy, size; public bool ghost; }
+[Serializable] public class LifeTheme { public string theme, ground; public string[] air, plant; }
+[Serializable] public class LifeData { public LifeTheme[] themes; }
+// a small living thing of the room: a plant that sways (0), something that flutters (1), something that scurries (2)
+public class Live { public SpriteRenderer sr; public Sprite[] fr; public float x, y, vx, vy, ph, size; public int kind; }
 
 public class Game : MonoBehaviour {
   const int TILE = 32; const float STEP = 1f / 60f;
@@ -49,6 +53,8 @@ public class Game : MonoBehaviour {
   float x0, y0, stopT, shakeT, shakeAmp, shakeX, shakeY; bool wasGround; SpriteRenderer slash; Sprite[] slashFr; Sprite puffSprite;
   readonly List<Puff> puffs = new List<Puff>(); readonly Dictionary<string, ArenaData> arenas = new Dictionary<string, ArenaData>();
   Texture2D barFrame, barFill; Foe bossNow;
+  readonly Dictionary<string, LifeTheme> lifeOf = new Dictionary<string, LifeTheme>(); readonly Dictionary<string, Sprite[]> lifeFr = new Dictionary<string, Sprite[]>();
+  readonly List<Live> lives = new List<Live>(); float ghostT;
   float atkT, atkCD; bool atkWas, atkHeldTouch; readonly HashSet<Foe> struck = new HashSet<Foe>();
   const string FLYERS = " flyer diver moth jelly skullbat veil orrery frostwisp stormkite ", STILL = " icicle censer shard dummy ";
 
@@ -75,6 +81,13 @@ public class Game : MonoBehaviour {
     var bl = JsonUtility.FromJson<BossList>(Resources.Load<TextAsset>("bosses").text);
     foreach (var c in bl.list) kinds["boss_" + c.type] = c; foreach (var a in bl.arenas) arenas[a.room] = a;
     slashFr = new Sprite[4]; for (int i = 0; i < 4; i++) { var st = Resources.Load<Texture2D>("fx/wf_nail_" + i); if (st != null) slashFr[i] = Sprite.Create(st, new Rect(0, 0, st.width, st.height), new Vector2(0.2f, 0.5f), st.height / 96f); }
+    foreach (var lt in JsonUtility.FromJson<LifeData>(Resources.Load<TextAsset>("life").text).themes) lifeOf[lt.theme] = lt;
+    // the edges of the view fall into shadow
+    var vt = new Texture2D(128, 128, TextureFormat.RGBA32, false); var vp = new Color[128 * 128];
+    for (int vy2 = 0; vy2 < 128; vy2++) for (int vx2 = 0; vx2 < 128; vx2++) { float dd = Mathf.Sqrt((vx2 - 63.5f) * (vx2 - 63.5f) + (vy2 - 63.5f) * (vy2 - 63.5f)) / 63.5f; vp[vy2 * 128 + vx2] = new Color(0, 0, 0, Mathf.SmoothStep(0, 0.62f, (dd - 0.55f) / 0.6f)); }
+    vt.SetPixels(vp); vt.Apply();
+    var vg = new GameObject("Vignette"); vg.transform.SetParent(camGo.transform, false); vg.transform.localPosition = new Vector3(0, 0, 10);
+    var vr = vg.AddComponent<SpriteRenderer>(); vr.sprite = Sprite.Create(vt, new Rect(0, 0, 128, 128), new Vector2(0.5f, 0.5f), 128); vr.sortingOrder = 50; vg.transform.localScale = new Vector3(540 * cam.aspect * 1.25f, 540 * 1.25f, 1);
     var sg = new GameObject("Slash"); slash = sg.AddComponent<SpriteRenderer>(); slash.sortingOrder = 11; slash.enabled = false;
     var pt = Resources.Load<Texture2D>("fx/fx_puff"); if (pt != null) puffSprite = Sprite.Create(pt, new Rect(0, 0, pt.width, pt.height), new Vector2(0.5f, 0.5f), pt.height);
     music = gameObject.AddComponent<AudioSource>(); music.loop = true; music.volume = 0.5f;
@@ -128,6 +141,7 @@ public class Game : MonoBehaviour {
       var ac = Resources.Load<AudioClip>("amb/" + room.theme); if (ac != null) { amb.clip = ac; amb.Play(); } else amb.Stop();
     }
     foes.Clear(); bossNow = null; x0 = x; y0 = y; foreach (var pf in puffs) if (pf.sr != null) Destroy(pf.sr.gameObject); puffs.Clear();
+    Populate();
     ArenaData ar; if (arenas.TryGetValue(id, out ar) && PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0) {            // the lord of this hall, if not yet beaten
       var bd = kinds["boss_" + ar.boss]; var bt = Resources.Load<Texture2D>("bosses/" + ar.boss);
       if (bt != null) {
@@ -181,6 +195,60 @@ public class Game : MonoBehaviour {
       if (t != null) Layer("Painted " + L.src[si], v, uv, col, tri, t, -5000 + run);
     }
     v.Clear(); uv.Clear(); col.Clear(); tri.Clear();
+  }
+  // the life of the room, laid the same way on every visit: plants on its floors, things that flutter above them and things
+  // that scurry along them, each area its own (Resources/life.json)
+  static float Hash(float a, float b, float c) { float v = Mathf.Sin(a * 127.1f + b * 311.7f + c * 74.7f) * 43758.547f; return v - Mathf.Floor(v); }
+  Sprite[] LifeSprites(string k) {
+    Sprite[] fr; if (lifeFr.TryGetValue(k, out fr)) return fr;
+    var t = Resources.Load<Texture2D>("life/" + k); if (t == null) { lifeFr[k] = null; return null; }
+    fr = new Sprite[2]; for (int i = 0; i < 2; i++) fr[i] = Sprite.Create(t, new Rect(i * t.width / 2, 0, t.width / 2, t.height), new Vector2(0.5f, 0), t.height);
+    lifeFr[k] = fr; return fr;
+  }
+  void AddLive(string k, int kind, float px, float py, float size, float ph) {
+    var fr = LifeSprites(k); if (fr == null) return;
+    var go = new GameObject(k); go.transform.SetParent(roomGo.transform, false);
+    var l = new Live { sr = go.AddComponent<SpriteRenderer>(), fr = fr, x = px, y = py, size = size, ph = ph, kind = kind, vx = kind == 2 ? (ph > 3 ? 22 : -22) : 0 };
+    l.sr.sortingOrder = kind == 0 ? 3 : 8; lives.Add(l);
+  }
+  void Populate() {
+    lives.Clear(); LifeTheme lt; if (!lifeOf.TryGetValue(room.theme, out lt)) return;
+    var cells = new List<Vector2Int>();
+    for (int ty = 2; ty < room.h - 1; ty++) for (int tx = 1; tx < room.w - 1; tx++) if (Solid(Tile(tx, ty + 1)) && Tile(tx, ty) == 0 && Tile(tx, ty - 1) == 0) cells.Add(new Vector2Int(tx, ty));
+    if (cells.Count == 0) return;
+    int plants = 0;
+    if (lt.plant != null && lt.plant.Length > 0) foreach (var c in cells) {
+      if (plants >= 180 || Hash(c.x, c.y, 33) >= 0.42f) continue; plants++;
+      AddLive(lt.plant[(int)(Hash(c.x, c.y, 5) * lt.plant.Length) % lt.plant.Length], 0, c.x * TILE + 16, (c.y + 1) * TILE + 2, 40 * (0.8f + Hash(c.x, c.y, 8) * 0.6f), Hash(c.x, c.y, 4) * 6);
+    }
+    int nAir = Mathf.Min(22, 8 + room.w * room.h / 160);
+    if (lt.air != null && lt.air.Length > 0) for (int i = 0; i < nAir; i++) {
+      var c = cells[(int)(Hash(i, room.w, 17) * cells.Count) % cells.Count]; string k = lt.air[(int)(Hash(i, 3, 9) * lt.air.Length) % lt.air.Length];
+      AddLive(k, 1, c.x * TILE, (c.y - 2 - Hash(i, 3, 5) * 3) * TILE, k == "bat" || k == "crow" ? 28 : k == "glow" || k == "spore" ? 14 : 22, i * 1.7f);
+    }
+    if (!string.IsNullOrEmpty(lt.ground)) for (int i = 0; i < Mathf.Min(14, 2 + cells.Count / 18); i++) {
+      var c = cells[(int)(Hash(i, room.h, 71) * cells.Count) % cells.Count]; AddLive(lt.ground, 2, c.x * TILE + 16, (c.y + 1) * TILE, 14, Hash(i, 9, 2) * 6);
+    }
+  }
+  void StepLife(float dt, float hx, float hy) {
+    float t = Time.time;
+    foreach (var l in lives) {
+      float rot = 0;
+      if (l.kind == 0) rot = Mathf.Sin(t * 1.6f + l.ph) * 5 + (Mathf.Abs(hx - l.x) < 28 && Mathf.Abs(hy - l.y) < 50 ? Mathf.Sign(l.x - hx) * -14 : 0);      // sways, and bends away as the hero passes
+      else if (l.kind == 1) {                                                // wanders, and drifts away from the hero
+        float ax = Mathf.Sin(t * 0.7f + l.ph) * 30 + (Mathf.Abs(l.x - hx) < 90 && Mathf.Abs(l.y - hy) < 90 ? Mathf.Sign(l.x - hx) * 120 : 0), ay = Mathf.Cos(t * 0.9f + l.ph * 1.3f) * 22;
+        l.vx += (ax - l.vx) * dt * 2; l.vy += (ay - l.vy) * dt * 2; float nx = l.x + l.vx * dt, ny = l.y + l.vy * dt;
+        if (SolidAt(nx, ny)) { l.vx = -l.vx; l.vy = -l.vy; } else { l.x = nx; l.y = ny; }
+      } else {                                                               // scurries along its floor, turns at its ends, runs from the hero
+        bool near = Mathf.Abs(l.x - hx) < 110 && Mathf.Abs(l.y - hy) < 60; float sp = near ? 80 : 22;
+        l.vx = near ? Mathf.Sign(l.x - hx == 0 ? 1 : l.x - hx) * sp : Mathf.Sign(l.vx == 0 ? 1 : l.vx) * sp;
+        float nx = l.x + l.vx * dt, ex = nx + Mathf.Sign(l.vx) * 8;
+        if (SolidAt(ex, l.y - 4) || !SolidAt(ex, l.y + 4)) l.vx = -l.vx; else l.x = nx;
+      }
+      l.sr.sprite = l.fr[(int)((t + l.ph) * (l.kind == 0 ? 1.2f : l.kind == 1 ? 10 : 8)) % 2]; l.sr.flipX = l.vx < 0;
+      l.sr.transform.position = new Vector3(l.x, -l.y - (l.kind == 1 ? -l.size / 2 : 0), 0); l.sr.transform.localScale = new Vector3(l.size, l.size, 1);
+      l.sr.transform.rotation = Quaternion.Euler(0, 0, rot);
+    }
   }
   void Layer(string name, List<Vector3> v, List<Vector2> uv, List<Color> col, List<int> tri, Texture2D tex, int order) {
     var go = new GameObject(name); go.transform.SetParent(roomGo.transform, false);
@@ -409,6 +477,7 @@ public class Game : MonoBehaviour {
     for (int i = puffs.Count - 1; i >= 0; i--) {
       var pf = puffs[i]; pf.t += Time.deltaTime; float pk = pf.t / pf.life;
       if (pk >= 1) { Destroy(pf.sr.gameObject); puffs.RemoveAt(i); continue; }
+      if (pf.ghost) { pf.sr.color = new Color(0.6f, 0.82f, 1, 0.45f * (1 - pk)); continue; }
       pf.sr.transform.position += new Vector3(pf.vx, -pf.vy, 0) * Time.deltaTime; float sz = pf.size * (0.6f + pk);
       pf.sr.transform.localScale = new Vector3(sz, sz, 1); pf.sr.color = new Color(0.85f, 0.88f, 0.95f, 0.6f * (1 - pk));
     }
@@ -420,6 +489,12 @@ public class Game : MonoBehaviour {
     hero.sprite = fr[idx]; hero.flipX = face < 0;
     float land = ground && !wasGround ? 0.9f : 1;
     hero.transform.position = new Vector3(rx + PW / 2, -(ry + PH), 0); hero.transform.localScale = new Vector3(HERO_SCALE / land, HERO_SCALE * land, 1);
+    StepLife(Time.deltaTime, rx + PW / 2, ry + PH);
+    ghostT -= Time.deltaTime;
+    if (dashT > 0 && ghostT <= 0) {                                            // a dash leaves pale shapes of the hero behind it
+      ghostT = 0.035f; var gg = new GameObject("Ghost"); var gp = new Puff { sr = gg.AddComponent<SpriteRenderer>(), life = 0.22f, ghost = true };
+      gp.sr.sprite = hero.sprite; gp.sr.flipX = hero.flipX; gp.sr.sortingOrder = 9; gg.transform.position = hero.transform.position; gg.transform.localScale = new Vector3(HERO_SCALE, HERO_SCALE, 1); puffs.Add(gp);
+    }
     slash.enabled = atkT > 0 && slashFr[0] != null;
     if (slash.enabled) { slash.sprite = slashFr[Mathf.Clamp((int)((0.2f - atkT) / 0.2f * 4), 0, 3)]; slash.flipX = face < 0; slash.transform.position = new Vector3(rx + PW / 2 + face * 10, -(ry + PH / 2), 0); }
     hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : Color.white;

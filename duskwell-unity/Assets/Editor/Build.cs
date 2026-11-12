@@ -6,9 +6,20 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class Build {
+  // from the command line (GitHub Actions)
   public static void Android() {
     string outPath = "build/Android/duskwell-unity.apk"; var args = Environment.GetCommandLineArgs();
     for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-customBuildPath") outPath = args[i + 1];
+    EditorApplication.Exit(Run(outPath) ? 0 : 1);
+  }
+  // from the editor's menu: Duskwell > Build Android APK (the file is made in the project's Build folder and shown)
+  [MenuItem("Duskwell/Build Android APK")]
+  public static void FromMenu() {
+    string outPath = "Build/duskwell-unity.apk";
+    if (Run(outPath)) { EditorUtility.RevealInFinder(outPath); EditorUtility.DisplayDialog("Duskwell", "The app is ready: " + Path.GetFullPath(outPath), "OK"); }
+    else EditorUtility.DisplayDialog("Duskwell", "The build failed. Open Window > General > Console and send a picture of the red lines.", "OK");
+  }
+  static bool Run(string outPath) {
     Directory.CreateDirectory("Assets/Scenes"); Directory.CreateDirectory(Path.GetDirectoryName(outPath));
     var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
     EditorSceneManager.SaveScene(scene, "Assets/Scenes/Main.unity");
@@ -20,7 +31,7 @@ public static class Build {
     PlayerSettings.stripEngineCode = false;
     var report = BuildPipeline.BuildPlayer(new[] { "Assets/Scenes/Main.unity" }, outPath, BuildTarget.Android, BuildOptions.None);
     Debug.Log("Build: " + report.summary.result + " " + outPath);
-    EditorApplication.Exit(report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+    return report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded;
   }
 }
 // The pictures are used as they are painted: full size, no mip levels, not squeezed.

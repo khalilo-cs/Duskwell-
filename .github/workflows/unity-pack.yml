@@ -1,0 +1,12 @@
+# Packs the Unity project alone as a zip to download (Actions > this run > Artifacts).
+name: Pack the Unity project
+on:
+  workflow_dispatch:
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: duskwell-unity }
+      - uses: actions/upload-artifact@v4
+        with: { name: duskwell-unity-project, path: duskwell-unity, compression-level: 1 }

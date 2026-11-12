@@ -1,0 +1,20 @@
+# Puts the Android build of Duskwell on the releases page.
+name: Publish release
+on:
+  push:
+    branches: [clean-main]
+    paths: ['.github/workflows/release.yml']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create 4.4 duskwell-android/duskwell.apk duskwell-android/duskwell-apk.zip \
+            --target "$GITHUB_SHA" --title "Duskwell 4.4 - أرض الغسق" --latest \
+            --notes "نسخة أندرويد 4.4 (versionCode 35): سلاسة أكبر على الجوال. كل قطعة مرسومة تُقصّ مرة واحدة وتُحفظ صغيرة بدل تحميل الصور الكبيرة كاملة كل إطار، والغرف الكبيرة ترسم على مربعات صغيرة، وخطوات اللعبة تتطابق مع إيقاع الشاشة (60 و90 و120)، وإذا لم يلحق الجوال تنخفض الإضاءة ثم الدقة تلقائياً وتُحفظ للمرة القادمة، وعدّاد أداء في قائمة الإيقاف. تثبت فوق النسخ السابقة ويبقى الحفظ. — Android build 4.4: smoother on phones, with a performance meter in the pause menu. Installs over earlier versions and keeps the save."

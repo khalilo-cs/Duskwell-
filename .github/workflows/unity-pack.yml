@@ -2,6 +2,9 @@
 name: Pack the Unity project
 on:
   workflow_dispatch:
+  push:
+    branches: [clean-main]
+    paths: ['.github/workflows/unity-pack.yml', 'duskwell-unity/Assets/**']
 jobs:
   pack:
     runs-on: ubuntu-latest

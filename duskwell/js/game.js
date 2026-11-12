@@ -1420,6 +1420,31 @@ function drawPerf(g) {
   lines.forEach((l, i) => g.fillText(l, VW / 2 - 162, 8 + i * 16));
   g.restore();
 }
+// Blended motion: the rules step sixty times a second, but a screen may show ninety or a hundred and twenty; each picture is drawn
+// where the hero, the creatures and the view are between their last step and this one, so movement is smooth on any screen
+G.alpha = 1;
+function markPlaces() {
+  P._px = P.x; P._py = P.y; for (const e of G.enemies) { e._px = e.x; e._py = e.y; }
+  G._pcx = G.cam.x; G._pcy = G.cam.y;
+}
+function blendPlaces() {
+  const a = G.alpha; if (!(a < 0.999) || G.state !== 'play' || G.manual) return () => {};
+  const saved = [], mix = (o, kx, ky, px, py) => {
+    if (px === undefined || py === undefined) return; const dx = o[kx] - px, dy = o[ky] - py;
+    if (Math.abs(dx) > 90 || Math.abs(dy) > 90) return;
+    saved.push([o, kx, ky, o[kx], o[ky]]); o[kx] = px + dx * a; o[ky] = py + dy * a;
+  };
+  mix(P, 'x', 'y', P._px, P._py);
+  for (const e of G.enemies) mix(e, 'x', 'y', e._px, e._py);
+  mix(G.cam, 'x', 'y', G._pcx, G._pcy);
+  return () => { for (const [o, kx, ky, x, y] of saved) { o[kx] = x; o[ky] = y; } };
+}
+// the edges of the view fall into shadow (one picture made once)
+let vigPic = null;
+function drawVignette(g) {
+  if (!vigPic) { vigPic = document.createElement('canvas'); vigPic.width = 256; vigPic.height = 144; const q = vigPic.getContext('2d'), gr = q.createRadialGradient(128, 72, 40, 128, 72, 150); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.5)'); q.fillStyle = gr; q.fillRect(0, 0, 256, 144); }
+  g.drawImage(vigPic, 0, 0, VW, VH);
+}
 function draw() {
   const g = G.g;
   Guard.unwind(g);                                        // what a failed drawing left open last frame is closed
@@ -1432,7 +1457,10 @@ function draw() {
     case 'ending': drawEnding(g); break;
     default:
       if (G.level) {
-        Guard.run(g, 'world', () => drawWorld(g)); drawHUD(g); drawCoach(g);
+        const back = blendPlaces();
+        try { Guard.run(g, 'world', () => drawWorld(g)); } finally { back(); }
+        drawVignette(g);
+        drawHUD(g); drawCoach(g);
         if (G.state === 'map') drawMap(g);
         if (G.state === 'pause') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, VW, VH); setDir(g); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font(40, '700'); textShadow(g, tr('pause'), VW / 2, 42, '#eef5ff'); drawMenu(g, pauseItems(), G.menuSel, 80, 27, { w: 340, h: 24 }); drawGearCard(g); g.font = font(15, '500'); g.fillStyle = 'rgba(200,215,240,0.6)'; g.fillText(tr('ctl'), VW / 2, VH - 14); }
         if (G.state === 'dialog') drawDialog(g);
@@ -1526,8 +1554,9 @@ function boot() {
     if (G.manual) { acc = 0; return; }     // bots step the game themselves and ask for a picture with DW.draw()
     Lumen.adapt(dt * 1000);
     const pt0 = performance.now();
-    while (acc >= STEP && guard++ < 6) { update(STEP); acc -= STEP; Input.endStep(); }
+    while (acc >= STEP && guard++ < 6) { markPlaces(); update(STEP); acc -= STEP; Input.endStep(); }
     if (guard >= 6) acc = 0;
+    G.alpha = Math.min(1, acc / STEP);
     const pt1 = performance.now();
     draw();
     perfNote(dt * 1000, pt1 - pt0, performance.now() - pt1);

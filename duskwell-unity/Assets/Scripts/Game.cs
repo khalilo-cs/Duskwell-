@@ -71,7 +71,7 @@ public class Game : MonoBehaviour {
     var tex = Resources.Load<Texture2D>("hero"); var hd = JsonUtility.FromJson<HeroData>(Resources.Load<TextAsset>("hero").text);
     foreach (var a in hd.anims) {
       var list = new Sprite[a.f.Length];
-      for (int i = 0; i < list.Length; i++) { var f = a.f[i]; list[i] = Sprite.Create(tex, new Rect(f.x, tex.height - f.y - f.h, f.w, f.h), new Vector2(f.ax / f.w, 1 - f.ay / f.h), 1); }
+      for (int i = 0; i < list.Length; i++) { var f = a.f[i]; list[i] = Sprite.Create(tex, new Rect(f.x, tex.height - f.y - f.h, f.w, f.h), new Vector2(f.ax / f.w, 1 - f.ay / f.h), 1, 0, SpriteMeshType.FullRect); }
       anims[a.name] = list;
     }
     btnBase = Resources.Load<Texture2D>("btn/base"); btnJump = Resources.Load<Texture2D>("btn/jump"); btnAtk = Resources.Load<Texture2D>("btn/attack");
@@ -80,16 +80,16 @@ public class Game : MonoBehaviour {
     btnDash = Resources.Load<Texture2D>("btn/dash"); barFrame = Resources.Load<Texture2D>("fx/bar_frame"); barFill = Resources.Load<Texture2D>("fx/bar_fill");
     var bl = JsonUtility.FromJson<BossList>(Resources.Load<TextAsset>("bosses").text);
     foreach (var c in bl.list) kinds["boss_" + c.type] = c; foreach (var a in bl.arenas) arenas[a.room] = a;
-    slashFr = new Sprite[4]; for (int i = 0; i < 4; i++) { var st = Resources.Load<Texture2D>("fx/wf_nail_" + i); if (st != null) slashFr[i] = Sprite.Create(st, new Rect(0, 0, st.width, st.height), new Vector2(0.2f, 0.5f), st.height / 96f); }
+    slashFr = new Sprite[4]; for (int i = 0; i < 4; i++) { var st = Resources.Load<Texture2D>("fx/wf_nail_" + i); if (st != null) slashFr[i] = Sprite.Create(st, new Rect(0, 0, st.width, st.height), new Vector2(0.2f, 0.5f), st.height / 96f, 0, SpriteMeshType.FullRect); }
     foreach (var lt in JsonUtility.FromJson<LifeData>(Resources.Load<TextAsset>("life").text).themes) lifeOf[lt.theme] = lt;
     // the edges of the view fall into shadow
     var vt = new Texture2D(128, 128, TextureFormat.RGBA32, false); var vp = new Color[128 * 128];
     for (int vy2 = 0; vy2 < 128; vy2++) for (int vx2 = 0; vx2 < 128; vx2++) { float dd = Mathf.Sqrt((vx2 - 63.5f) * (vx2 - 63.5f) + (vy2 - 63.5f) * (vy2 - 63.5f)) / 63.5f; vp[vy2 * 128 + vx2] = new Color(0, 0, 0, Mathf.SmoothStep(0, 0.62f, (dd - 0.55f) / 0.6f)); }
     vt.SetPixels(vp); vt.Apply();
     var vg = new GameObject("Vignette"); vg.transform.SetParent(camGo.transform, false); vg.transform.localPosition = new Vector3(0, 0, 10);
-    var vr = vg.AddComponent<SpriteRenderer>(); vr.sprite = Sprite.Create(vt, new Rect(0, 0, 128, 128), new Vector2(0.5f, 0.5f), 128); vr.sortingOrder = 50; vg.transform.localScale = new Vector3(540 * cam.aspect * 1.25f, 540 * 1.25f, 1);
+    var vr = vg.AddComponent<SpriteRenderer>(); vr.sprite = Sprite.Create(vt, new Rect(0, 0, 128, 128), new Vector2(0.5f, 0.5f), 128, 0, SpriteMeshType.FullRect); vr.sortingOrder = 50; vg.transform.localScale = new Vector3(540 * cam.aspect * 1.25f, 540 * 1.25f, 1);
     var sg = new GameObject("Slash"); slash = sg.AddComponent<SpriteRenderer>(); slash.sortingOrder = 11; slash.enabled = false;
-    var pt = Resources.Load<Texture2D>("fx/fx_puff"); if (pt != null) puffSprite = Sprite.Create(pt, new Rect(0, 0, pt.width, pt.height), new Vector2(0.5f, 0.5f), pt.height);
+    var pt = Resources.Load<Texture2D>("fx/fx_puff"); if (pt != null) puffSprite = Sprite.Create(pt, new Rect(0, 0, pt.width, pt.height), new Vector2(0.5f, 0.5f), pt.height, 0, SpriteMeshType.FullRect);
     music = gameObject.AddComponent<AudioSource>(); music.loop = true; music.volume = 0.5f;
     amb = gameObject.AddComponent<AudioSource>(); amb.loop = true; amb.volume = 0.3f;
     sfx = gameObject.AddComponent<AudioSource>();
@@ -129,7 +129,7 @@ public class Game : MonoBehaviour {
     if (!Painted(id)) Layer("Edges", v2, uv2, col2, tri2, Texture2D.whiteTexture, -5999);
     var bg = Resources.Load<Texture2D>("bg/" + room.bg); if (bg == null) bg = Resources.Load<Texture2D>("bg/" + room.theme);
     if (bg != null) {
-      sky.sprite = Sprite.Create(bg, new Rect(0, 0, bg.width, bg.height), new Vector2(0.5f, 0.5f), 1);
+      sky.sprite = Sprite.Create(bg, new Rect(0, 0, bg.width, bg.height), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect);
       float s = Mathf.Max(560f / bg.height, 560f * cam.aspect / bg.width) * 1.15f; sky.transform.localScale = new Vector3(s, s, 1);
     }
     x = feetX - PW / 2; y = feetY - PH; vx = 0; vy = 0; spawnX = feetX; spawnY = feetY; armed = false;
@@ -145,7 +145,7 @@ public class Game : MonoBehaviour {
     ArenaData ar; if (arenas.TryGetValue(id, out ar) && PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0) {            // the lord of this hall, if not yet beaten
       var bd = kinds["boss_" + ar.boss]; var bt = Resources.Load<Texture2D>("bosses/" + ar.boss);
       if (bt != null) {
-        var bf = new Sprite[4]; for (int i = 0; i < 4; i++) bf[i] = Sprite.Create(bt, new Rect(i * bd.fw, 0, bd.fw, bd.fh), new Vector2(0.5f, 0), bd.ppu);
+        var bf = new Sprite[4]; for (int i = 0; i < 4; i++) bf[i] = Sprite.Create(bt, new Rect(i * bd.fw, 0, bd.fw, bd.fh), new Vector2(0.5f, 0), bd.ppu, 0, SpriteMeshType.FullRect);
         var bgo = new GameObject("Boss " + ar.boss); bgo.transform.SetParent(roomGo.transform, false);
         var b = new Foe { d = bd, fr = bf, sr = bgo.AddComponent<SpriteRenderer>(), hp = bd.hp, maxHp = bd.hp, x = (ar.x + 0.5f) * TILE - bd.w / 2, y = (ar.y + 1) * TILE - bd.h, mode = 4, boss = true, st = 1.5f };
         b.sr.sortingOrder = 6; b.px = b.x; b.py = b.y; foes.Add(b); bossNow = b;
@@ -155,7 +155,7 @@ public class Game : MonoBehaviour {
       CreatureData d; if (!kinds.TryGetValue(e.type, out d)) continue;
       Sprite[] fr; if (!kindFrames.TryGetValue(e.type, out fr)) {
         var ct = Resources.Load<Texture2D>("creatures/" + e.type); if (ct == null) continue;
-        fr = new Sprite[4]; for (int i = 0; i < 4; i++) fr[i] = Sprite.Create(ct, new Rect(i * d.fw, 0, d.fw, d.fh), new Vector2(0.5f, 0), d.ppu > 0 ? d.ppu : 2);
+        fr = new Sprite[4]; for (int i = 0; i < 4; i++) fr[i] = Sprite.Create(ct, new Rect(i * d.fw, 0, d.fw, d.fh), new Vector2(0.5f, 0), d.ppu > 0 ? d.ppu : 2, 0, SpriteMeshType.FullRect);
         kindFrames[e.type] = fr;
       }
       var go = new GameObject(e.type); go.transform.SetParent(roomGo.transform, false);
@@ -202,7 +202,7 @@ public class Game : MonoBehaviour {
   Sprite[] LifeSprites(string k) {
     Sprite[] fr; if (lifeFr.TryGetValue(k, out fr)) return fr;
     var t = Resources.Load<Texture2D>("life/" + k); if (t == null) { lifeFr[k] = null; return null; }
-    fr = new Sprite[2]; for (int i = 0; i < 2; i++) fr[i] = Sprite.Create(t, new Rect(i * t.width / 2, 0, t.width / 2, t.height), new Vector2(0.5f, 0), t.height);
+    fr = new Sprite[2]; for (int i = 0; i < 2; i++) fr[i] = Sprite.Create(t, new Rect(i * t.width / 2, 0, t.width / 2, t.height), new Vector2(0.5f, 0), t.height, 0, SpriteMeshType.FullRect);
     lifeFr[k] = fr; return fr;
   }
   void AddLive(string k, int kind, float px, float py, float size, float ph) {

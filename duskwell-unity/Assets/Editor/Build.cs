@@ -26,8 +26,9 @@ public static class Build {
     PlayerSettings.companyName = "Duskwell"; PlayerSettings.productName = "Duskwell Unity";
     PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.duskwell.unity");
     PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
-    PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.Mono2x);
-    PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARMv7;
+    // phones of today run 64-bit apps only
+    PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
+    PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
     PlayerSettings.stripEngineCode = false;
     var report = BuildPipeline.BuildPlayer(new[] { "Assets/Scenes/Main.unity" }, outPath, BuildTarget.Android, BuildOptions.None);
     Debug.Log("Build: " + report.summary.result + " " + outPath);

@@ -23,7 +23,9 @@ jobs:
           if [ -z "$UNITY_EMAIL" ] || [ -z "$UNITY_PASSWORD" ]; then echo "::error::Add the secrets UNITY_EMAIL and UNITY_PASSWORD"; exit 1; fi
           IMG=unityci/editor:ubuntu-2022.3.62f1-android-3
           mkdir -p lic out
-          if [ -n "$UNITY_LICENSE" ]; then printf "%s" "$UNITY_LICENSE" > lic/l.ulf; else
+          if [ -n "$UNITY_LICENSE" ]; then printf "%s" "$UNITY_LICENSE" > lic/l.ulf
+            echo "licence secret: $(wc -c < lic/l.ulf) bytes, $(wc -l < lic/l.ulf) lines; starts with xml: $(head -c 5 lic/l.ulf | grep -c "<?xml"); License tag: $(grep -c "<License" lic/l.ulf); DeveloperData: $(grep -c "DeveloperData" lic/l.ulf); Signature: $(grep -c "<Signature" lic/l.ulf); Entitlement: $(grep -ci "entitlement" lic/l.ulf); json: $(head -c 1 lic/l.ulf | grep -c "{")"
+          else
             docker run --rm -v "$PWD:/w" -w /w/lic $IMG bash -c 'unity-editor -batchmode -nographics -quit -logFile - -createManualActivationFile >/dev/null 2>&1; ls'
             npm i --no-save --silent puppeteer-core >/dev/null 2>&1
             node duskwell-unity/ci/activate.js "$(ls lic/*.alf | head -1)" lic || { echo "::error::Unity did not give a licence file this way"; exit 1; }
@@ -31,7 +33,8 @@ jobs:
           fi
           docker run --rm -v "$PWD:/w" -w /w $IMG bash -c '
             set +e
-            unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /w/lic/l.ulf 2>&1 | grep -i -E "licens|activat" | tail -5
+            mkdir -p /root/.local/share/unity3d/Unity && cp /w/lic/l.ulf /root/.local/share/unity3d/Unity/Unity_lic.ulf
+            unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /w/lic/l.ulf 2>&1 | grep -i -E "licens|activat|ulf" | grep -v -i "machine id" | tail -12
             echo "== building"; unity-editor -batchmode -nographics -quit -logFile /w/build.log -projectPath /w/duskwell-unity -buildTarget Android -executeMethod Build.Android -customBuildPath /w/out/duskwell-unity.apk
             code=$?; grep -E "error CS|Build: |No valid Unity|Exception" /w/build.log | head -80; tail -30 /w/build.log; exit $code'
           rm -rf lic

@@ -34,9 +34,10 @@ jobs:
           docker run --rm -v "$PWD:/w" -w /w $IMG bash -c '
             set +e
             mkdir -p /root/.local/share/unity3d/Unity && cp /w/lic/l.ulf /root/.local/share/unity3d/Unity/Unity_lic.ulf
-            unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /w/lic/l.ulf 2>&1 | grep -i -E "licens|activat|ulf" | grep -v -i "machine id" | tail -6 > /w/act.txt; cat /w/act.txt
+            if grep -q EntitlementGroups /w/lic/l.ulf; then rm /root/.local/share/unity3d/Unity/Unity_lic.ulf; for d in /root/.config/unity3d/Unity/licenses /root/.local/share/unity3d/Unity/licenses; do mkdir -p $d; cp /w/lic/l.ulf $d/UnityEntitlementLicense.xml; done; fi
+            grep -q EntitlementGroups /w/lic/l.ulf || unity-editor -batchmode -nographics -quit -logFile - -manualLicenseFile /w/lic/l.ulf 2>&1 | grep -i -E "licens|activat|ulf" | grep -v -i "machine id" | tail -6 > /w/act.txt; cat /w/act.txt
             echo "== building"; unity-editor -batchmode -nographics -quit -logFile /w/build.log -projectPath /w/duskwell-unity -buildTarget Android -executeMethod Build.Android -customBuildPath /w/out/duskwell-unity.apk
-            code=$?; grep -E "error CS|Build: |No valid Unity|Exception" /w/build.log | head -80; tail -8 /w/build.log; exit $code' || { echo '## activation said:'; cat act.txt; cat diag.txt; exit 1; }
+            code=$?; grep -E "error CS|Build: |No valid Unity|Exception|Licensing::.*(Error|entitle|mismatch|machine)" /w/build.log | head -60; tail -8 /w/build.log; exit $code' || { echo '## activation said:'; cat act.txt 2>/dev/null; cat diag.txt; exit 1; }
           rm -rf lic
       - uses: actions/upload-artifact@v4
         if: always()

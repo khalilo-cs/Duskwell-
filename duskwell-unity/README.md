@@ -19,7 +19,5 @@ the painted tile kits and decor, menus, sound, saving.
 Everything is built from code at start (`Assets/Scripts/Game.cs`), so there is no hand-made scene.
 
 ## Building
-`.github/workflows/unity.yml` builds the Android app with GameCI. It needs three repository secrets:
-`UNITY_LICENSE` (the contents of the `.ulf` licence file of a free Personal licence), `UNITY_EMAIL` and `UNITY_PASSWORD`.
-Or open the folder in Unity Hub and run **Build.Android** from a menu-less command line:
-`Unity -batchmode -quit -projectPath duskwell-unity -executeMethod Build.Android`.
+Open the folder in Unity 2022.3 (with Android Build Support) from Unity Hub, then choose **Duskwell > Build Android APK** in the
+menu; the app is written to `Build/duskwell-unity.apk`. The workflow *Pack the Unity project* offers the folder alone as a download.

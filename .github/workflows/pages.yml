@@ -2,7 +2,7 @@
 name: Publish the game
 on:
   push:
-    branches: [main]
+    branches: [main, clean-main]
     paths: ['duskwell/**', 'duskwell-android/duskwell.apk', 'duskwell-android/duskwell-apk.zip', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:

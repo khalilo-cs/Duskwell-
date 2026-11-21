@@ -2,24 +2,50 @@
  "events": {
   "slash": {
    "files": [
-    "medieval_fantasy_sounds_woosh_1",
-    "medieval_fantasy_sounds_woosh_2",
-    "western_fps_2d_sounds_woosh_1",
-    "western_fps_2d_sounds_woosh_2",
-    "western_fps_2d_sounds_woosh_3"
+    "w_slash_0",
+    "w_slash_1",
+    "w_slash_2",
+    "w_slash_3"
    ],
    "rate": [
-    0.92,
-    1.1
+    0.94,
+    1.08
    ],
-   "gain": 0.8,
+   "gain": 0.75,
    "layer": false
   },
   "hit": {
    "files": [
-    "prehistoric_platformer_sound_hit_1",
-    "prehistoric_platformer_sound_hit_2",
-    "western_fps_2d_sounds_impact_1"
+    "w_hit_0",
+    "w_hit_1",
+    "w_hit_2",
+    "w_hit_3"
+   ],
+   "rate": [
+    0.92,
+    1.08
+   ],
+   "gain": 0.9,
+   "layer": false
+  },
+  "bossHit": {
+   "files": [
+    "w_bossHit_0",
+    "w_bossHit_1",
+    "w_bossHit_2"
+   ],
+   "rate": [
+    0.85,
+    1.0
+   ],
+   "gain": 1.0,
+   "layer": false
+  },
+  "enemyDie": {
+   "files": [
+    "w_enemyDie_0",
+    "w_enemyDie_1",
+    "w_enemyDie_2"
    ],
    "rate": [
     0.9,
@@ -28,133 +54,110 @@
    "gain": 0.9,
    "layer": false
   },
-  "bossHit": {
+  "roar": {
    "files": [
-    "prehistoric_platformer_sound_hit_1",
-    "prehistoric_platformer_sound_hit_2",
-    "western_fps_2d_sounds_impact_1"
+    "w_roar_0",
+    "w_roar_1",
+    "w_roar_2"
    ],
    "rate": [
-    0.7,
-    0.85
+    0.95,
+    1.05
    ],
    "gain": 1.0,
    "layer": false
   },
-  "enemyDie": {
-   "files": [
-    "medieval_fantasy_sounds_monster_1",
-    "medieval_fantasy_sounds_monster_2",
-    "prehistoric_platformer_sound_dinosaur_5"
-   ],
-   "rate": [
-    0.8,
-    1.0
-   ],
-   "gain": 0.9,
-   "layer": true
-  },
-  "roar": {
-   "files": [
-    "prehistoric_platformer_sound_dinosaur_1",
-    "prehistoric_platformer_sound_dinosaur_3",
-    "prehistoric_platformer_sound_dinosaur_4"
-   ],
-   "rate": [
-    0.55,
-    0.7
-   ],
-   "gain": 1.0,
-   "layer": true
-  },
   "bossDie": {
    "files": [
-    "western_fps_2d_sounds_explosion_1",
-    "western_fps_2d_sounds_explosion_2",
-    "western_fps_2d_sounds_explosion_3"
-   ],
-   "rate": [
-    0.5,
-    0.65
-   ],
-   "gain": 1.0,
-   "layer": true
-  },
-  "slam": {
-   "files": [
-    "western_fps_2d_sounds_explosion_2",
-    "western_fps_2d_sounds_explosion_3"
-   ],
-   "rate": [
-    0.75,
-    0.9
-   ],
-   "gain": 0.9,
-   "layer": true
-  },
-  "break": {
-   "files": [
-    "prehistoric_platformer_sound_wood_1",
-    "prehistoric_platformer_sound_wood_2",
-    "prehistoric_platformer_sound_wood_3",
-    "prehistoric_platformer_sound_wood_4",
-    "prehistoric_platformer_sound_wood_5"
-   ],
-   "rate": [
-    0.7,
-    0.85
-   ],
-   "gain": 0.9,
-   "layer": true
-  },
-  "geo": {
-   "files": [
-    "ninja_adventure_sounds_gold_1"
+    "w_bossDie_0",
+    "w_bossDie_1"
    ],
    "rate": [
     0.95,
+    1.02
+   ],
+   "gain": 1.0,
+   "layer": false
+  },
+  "slam": {
+   "files": [
+    "w_slam_0",
+    "w_slam_1",
+    "w_slam_2"
+   ],
+   "rate": [
+    0.9,
     1.1
    ],
-   "gain": 0.7,
+   "gain": 1.0,
+   "layer": false
+  },
+  "break": {
+   "files": [
+    "w_break_0",
+    "w_break_1",
+    "w_break_2"
+   ],
+   "rate": [
+    0.9,
+    1.1
+   ],
+   "gain": 0.9,
+   "layer": false
+  },
+  "geo": {
+   "files": [
+    "w_geo_0",
+    "w_geo_1",
+    "w_geo_2",
+    "w_geo_3"
+   ],
+   "rate": [
+    0.95,
+    1.08
+   ],
+   "gain": 0.6,
    "layer": false
   },
   "ability": {
    "files": [
-    "ninja_adventure_sounds_power_up"
+    "w_ability_0",
+    "w_ability_1"
    ],
    "rate": [
-    1.0,
-    1.0
+    0.96,
+    1.04
    ],
    "gain": 0.8,
-   "layer": true
+   "layer": false
   },
   "heal": {
    "files": [
-    "ninja_adventure_sounds_power_up_2"
+    "w_heal_0",
+    "w_heal_1"
    ],
    "rate": [
-    1.0,
-    1.0
+    0.98,
+    1.02
    ],
    "gain": 0.7,
-   "layer": true
+   "layer": false
   },
   "bench": {
    "files": [
-    "ninja_adventure_sounds_secret_1"
+    "w_bench_0"
    ],
    "rate": [
-    1.0,
-    1.0
+    1,
+    1
    ],
    "gain": 0.8,
-   "layer": true
+   "layer": false
   }
  },
  "ambience": {
   "forest": {
-   "file": "amb_forest",
+   "file": "w_amb_deep",
    "loop": 28.5002,
    "gain": 0.5
   }

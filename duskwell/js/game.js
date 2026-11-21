@@ -1101,8 +1101,8 @@ function drawWorld(g) {
   for (const e of G.enemies) Guard.run(ge, e.isBoss ? 'boss ' + e.bossKey : 'enemy ' + e.kind, () => {      // one that fails to draw must not hide the rest
     const skin = Skins.get(e.isBoss ? 'boss_' + e.bossKey : e.kind);      // a picture chosen in "Your images"
     if (skin) Skins.draw(ge, skin, e.body(), e.face || 1, e.flash, e.isBoss ? 1.15 : 1.7);
-    else if (e.isBoss) { if (Art.boss[e.bossKey]) Art.boss[e.bossKey](ge, e, t); }
-    else if (Art.enemy[e.kind]) Art.enemy[e.kind](ge, e, t);
+    else if (e.isBoss) { if (Art.boss[e.bossKey]) Motion.wrap(ge, e, () => Art.boss[e.bossKey](ge, e, t)); }
+    else if (Art.enemy[e.kind]) Motion.wrap(ge, e, () => Art.enemy[e.kind](ge, e, t));
     if (e.frozenT > 0) Art.frozenFx(ge, e, t);
   });
   Guard.run(ge, 'hero', () => Art.drawPlayer(ge, P, t));

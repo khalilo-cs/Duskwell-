@@ -24,7 +24,7 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   ok('every one of the 159 rooms (the Depths too) has a place on the map', r.n === 159, r.n);
   ok('no two rooms overlap', r.overlaps.length === 0, r.overlaps);
   ok('the blocks of the fifteen areas do not overlap', r.areas === 15 && r.blockClash === 0, r);
-  ok('the doors of rooms in one area are lined up with the doors they open into (all but a few)', r.pairs > 80 && r.aligned / r.pairs >= 0.9,   // the Depths hang under their areas, a few of their doors are offset { pairs: r.pairs, aligned: r.aligned, off: r.off });
+  ok('the doors of rooms in one area are lined up with the doors they open into (all but a few)', r.pairs > 80 && r.aligned / r.pairs >= 0.9, { pairs: r.pairs, aligned: r.aligned, off: r.off });   // the Depths hang under their areas, a few of their doors are offset
   ok('the whole world (grown with the Depths) is packed to be seen at over 0.5 pixel to the tile, and is not a thin strip', r.fit >= 0.5 && r.w / r.h < 3.2, { fit: r.fit, w: r.w, h: r.h });
   // ---- the drawings of the rooms
   r = await ev(() => {

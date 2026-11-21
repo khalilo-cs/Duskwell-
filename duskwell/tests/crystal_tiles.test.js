@@ -31,8 +31,8 @@ const ok = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + nam
   const probe = () => ev(() => {
     enter('cs2'); const { L, g } = layer(); const T = TILE, o = {};
     const solid = (x, y) => [1, 4, 5, 7].includes(L.get(x, y));
-    // a tile deep in the rock: all its neighbours rock
-    let deep = null; for (let y = 1; y < L.h - 1 && !deep; y++) for (let x = 1; x < L.w - 1 && !deep; x++) { let all = true; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (L.get(x + i, y + j) !== 1) all = false; if (all) deep = [x, y]; }
+    // a tile deep in the rock: all its neighbours rock (looked for from the floor up: the ceilings now have hanging teeth)
+    let deep = null; for (let y = L.h - 2; y > 0 && !deep; y--) for (let x = 1; x < L.w - 1 && !deep; x++) { let all = true; for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (L.get(x + i, y + j) !== 1) all = false; if (all) deep = [x, y]; }
     const px = (x, y, w, h) => g.getImageData(x, y, w, h).data;
     const colours = d => { const s = new Set(); for (let i = 0; i < d.length; i += 4) s.add((d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4)); return s.size; };
     const d = px(deep[0] * T, deep[1] * T, T, T); o.deepColours = colours(d); let gr = 0, bl = 0; for (let i = 0; i < d.length; i += 4) { gr += d[i + 1]; bl += d[i + 2]; } o.teal = gr / bl > 0.7;

@@ -43,8 +43,24 @@ const Motion = (() => {
   // which side a blow came from, so the body gives the right way
   if (typeof Enemy !== 'undefined') {
     const hurt = Enemy.prototype.hurt;
-    Enemy.prototype.hurt = function (dmg, dir) { if (typeof dir === 'number') state(this).hitDir = dir > 0 ? 1 : dir < 0 ? -1 : 0; return hurt.apply(this, arguments); };
+    const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no vibration here */ } };
+    Enemy.prototype.hurt = function (dmg, dir, how) {
+      if (typeof dir === 'number') state(this).hitDir = dir > 0 ? 1 : dir < 0 ? -1 : 0;
+      const was = this.dead, r = hurt.apply(this, arguments);
+      if (how !== 'burn' && !was) buzz(this.dead ? (this.isBoss ? [60, 40, 120] : 22) : this.isBoss ? 16 : 10);   // the phone feels the blow
+      return r;
+    };
     Object.assign(Enemy.prototype.hurt, hurt);
+    if (typeof Boss !== 'undefined' && Boss.prototype.hasOwnProperty('hurt')) {
+      const hb = Boss.prototype.hurt;
+      Boss.prototype.hurt = function (dmg, dir, how) {
+        if (typeof dir === 'number') state(this).hitDir = dir > 0 ? 1 : dir < 0 ? -1 : 0;
+        const live = this.state === 'fight' && !this.invul && !this.ghostly, r = hb.apply(this, arguments);
+        if (live && how !== 'burn') buzz(this.state === 'dying' ? [60, 40, 160] : 16);
+        return r;
+      };
+      Object.assign(Boss.prototype.hurt, hb);
+    }
   }
   return { wrap };
 })();

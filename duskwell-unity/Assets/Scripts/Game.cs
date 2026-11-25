@@ -8,7 +8,18 @@ using UnityEngine;
 
 [Serializable] public class DoorData { public string id; public int x, y, w, h; public string to, toDoor; }
 [Serializable] public class EnemyData { public string type; public int x, y; }
-[Serializable] public class RoomData { public string id; public int w, h; public string theme, bg, area, t; public DoorData[] doors; public EnemyData[] enemies; }
+[Serializable] public class RoomData { public string id; public int w, h; public string theme, bg, area, t; public DoorData[] doors; public EnemyData[] enemies;
+  public NpcData[] npcs; public PosData[] benches; public SignData[] signs; public ItemData[] items; public LeverData[] levers; public SealData seal; public ArenaInfo arena; }
+[Serializable] public class NpcData { public string type, shop; public int x, y; }
+[Serializable] public class PosData { public int x, y; }
+[Serializable] public class SignData { public string key; public int x, y; }
+[Serializable] public class ItemData { public string id, kind, name, guard; public int x, y, amount, guards; }
+[Serializable] public class RectData { public int x, y, w, h; public string close; }
+[Serializable] public class LeverData { public string id; public int x, y; public RectData[] gates; }
+[Serializable] public class SealData { public int x, y, w, h, need; }
+[Serializable] public class RewardData { public string id, kind, name; public int amount, x, y; }
+[Serializable] public class ArenaInfo { public string boss; public int trigger, x, y; public bool ending; public RectData[] gates; public RewardData reward; }
+[Serializable] public class TextData { public string[] keys, ar, en; }
 [Serializable] public class StartData { public string room; public float x, y; }
 [Serializable] public class WorldData { public StartData start; public RoomData[] rooms; }
 [Serializable] public class FrameData { public float x, y, w, h, ax, ay; }
@@ -20,14 +31,14 @@ using UnityEngine;
 [Serializable] public class DrawList { public string[] src; public int[] dim; public float[] d; }
 [Serializable] public class CreatureList { public CreatureData[] list; }
 // a creature of the room: walkers pace their ledge and turn at its ends, flyers drift toward the hero, hanging things stay
-public class Foe { public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, px, py, vx, vy, hp, maxHp, flash, t, homeY, st; public int face = 1; public int mode, act, count; public bool boss; }
+public class Foe { public bool champ, enraged, half; public int special; public float tele, sx = 1, sy = 1, svx, svy; public string guardOf; public CreatureData d; public Sprite[] fr; public SpriteRenderer sr; public float x, y, px, py, vx, vy, hp, maxHp, flash, t, homeY, st; public int face = 1; public int mode, act, count; public bool boss; }
 public class Puff { public SpriteRenderer sr; public float t, life, vx, vy, size; public bool ghost; }
 [Serializable] public class LifeTheme { public string theme, ground; public string[] air, plant; }
 [Serializable] public class LifeData { public LifeTheme[] themes; }
 // a small living thing of the room: a plant that sways (0), something that flutters (1), something that scurries (2)
 public class Live { public SpriteRenderer sr; public Sprite[] fr; public float x, y, vx, vy, ph, size; public int kind; }
 
-public class Game : MonoBehaviour {
+public partial class Game : MonoBehaviour {
   const int TILE = 32; const float STEP = 1f / 60f;
   const float GRAV = 2200, MAXFALL = 900, FALL_MULT = 1.25f, RUN = 250, JUMP = 700;
   const float PW = 22, PH = 38, HERO_SCALE = 0.58f;
@@ -95,8 +106,10 @@ public class Game : MonoBehaviour {
     sfx = gameObject.AddComponent<AudioSource>();
     // the game goes on from the room last entered
     string saved = PlayerPrefs.GetString("room", "");
-    if (saved != "" && rooms.ContainsKey(saved)) { hp = Mathf.Clamp(PlayerPrefs.GetInt("hp", 5), 1, 5); Enter(saved, PlayerPrefs.GetFloat("fx", world.start.x), PlayerPrefs.GetFloat("fy", world.start.y)); }
+    if (saved != "" && rooms.ContainsKey(saved)) { hp = Mathf.Clamp(PlayerPrefs.GetInt("hp", 5), 1, Mathf.Clamp(PlayerPrefs.GetInt("maxhp", 5), 5, 9)); Enter(saved, PlayerPrefs.GetFloat("fx", world.start.x), PlayerPrefs.GetFloat("fy", world.start.y)); }
     else Enter(world.start.room, world.start.x, world.start.y);
+    startRoom = world.start.room; startX = world.start.x; startY = world.start.y;
+    InitMore();
   }
 
   void Play(string name, float vol) {
@@ -104,11 +117,11 @@ public class Game : MonoBehaviour {
     if (c != null) sfx.PlayOneShot(c, vol);
   }
   // ---------------------------------------------------------------- the room
-  int Tile(int tx, int ty) { if (tx < 0 || ty < 0 || tx >= room.w || ty >= room.h) return ty >= room.h ? 0 : 1; return room.t[ty * room.w + tx] - '0'; }
+  int Tile(int tx, int ty) { if (tx < 0 || ty < 0 || tx >= room.w || ty >= room.h) return ty >= room.h ? 0 : 1; return cur[ty * room.w + tx]; }
   static bool Solid(int v) { return v == 1 || v == 4 || v == 5 || v == 7 || v == 9 || v == 6; }
 
   void Enter(string id, float feetX, float feetY) {
-    room = rooms[id];
+    SetRoom(rooms[id]);
     if (roomGo != null) Destroy(roomGo);
     roomGo = new GameObject("Room " + id);
     var fill = Resources.Load<Texture2D>("floors/" + room.theme); if (fill != null) fill.wrapMode = TextureWrapMode.Repeat;
@@ -116,7 +129,7 @@ public class Game : MonoBehaviour {
     var v2 = new List<Vector3>(); var uv2 = new List<Vector2>(); var col2 = new List<Color>(); var tri2 = new List<int>();
     for (int ty = 0; ty < room.h; ty++) for (int tx = 0; tx < room.w; tx++) {
       int t = Tile(tx, ty); float px = tx * TILE, py = ty * TILE;
-      if (Solid(t)) {
+      if (Solid(t) && !Dynamic(t)) {
         int air = 0; for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) if (!Solid(Tile(tx + i, ty + j))) air++;
         float k = 0.5f + 0.5f * Mathf.Clamp01(air / 10f);                       // rock deep inside is darker
         Quad(v, uv, col, tri, px, py, TILE, TILE, new Color(k, k, k, 1), 512);
@@ -142,15 +155,7 @@ public class Game : MonoBehaviour {
     }
     foes.Clear(); bossNow = null; x0 = x; y0 = y; foreach (var pf in puffs) if (pf.sr != null) Destroy(pf.sr.gameObject); puffs.Clear();
     Populate();
-    ArenaData ar; if (arenas.TryGetValue(id, out ar) && PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0) {            // the lord of this hall, if not yet beaten
-      var bd = kinds["boss_" + ar.boss]; var bt = Resources.Load<Texture2D>("bosses/" + ar.boss);
-      if (bt != null) {
-        var bf = new Sprite[4]; for (int i = 0; i < 4; i++) bf[i] = Sprite.Create(bt, new Rect(i * bd.fw, 0, bd.fw, bd.fh), new Vector2(0.5f, 0), bd.ppu, 0, SpriteMeshType.FullRect);
-        var bgo = new GameObject("Boss " + ar.boss); bgo.transform.SetParent(roomGo.transform, false);
-        var b = new Foe { d = bd, fr = bf, sr = bgo.AddComponent<SpriteRenderer>(), hp = bd.hp, maxHp = bd.hp, x = (ar.x + 0.5f) * TILE - bd.w / 2, y = (ar.y + 1) * TILE - bd.h, mode = 4, boss = true, st = 1.5f };
-        b.sr.sortingOrder = 6; b.px = b.x; b.py = b.y; foes.Add(b); bossNow = b;
-      }
-    }
+    ArenaData ar; pendingArena = arenas.TryGetValue(id, out ar) && PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0 ? ar : null;   // the lord of this hall waits for the hero to walk in (Fight.cs)
     foreach (var e in room.enemies) {
       CreatureData d; if (!kinds.TryGetValue(e.type, out d)) continue;
       Sprite[] fr; if (!kindFrames.TryGetValue(e.type, out fr)) {
@@ -163,6 +168,18 @@ public class Game : MonoBehaviour {
       f.sr.sortingOrder = 5; f.homeY = f.y; f.px = f.x; f.py = f.y; f.maxHp = d.hp; f.mode = STILL.Contains(" " + e.type + " ") ? 2 : FLYERS.Contains(" " + e.type + " ") ? 1 : 0; f.vx = 40; f.t = e.x;
       foes.Add(f);
     }
+    EnterMore(id);
+  }
+  Foe SpawnBoss(ArenaData ar) {
+    Foe made = null;
+      var bd = kinds["boss_" + ar.boss]; var bt = Resources.Load<Texture2D>("bosses/" + ar.boss);
+      if (bt != null) {
+        var bf = new Sprite[4]; for (int i = 0; i < 4; i++) bf[i] = Sprite.Create(bt, new Rect(i * bd.fw, 0, bd.fw, bd.fh), new Vector2(0.5f, 0), bd.ppu, 0, SpriteMeshType.FullRect);
+        var bgo = new GameObject("Boss " + ar.boss); bgo.transform.SetParent(roomGo.transform, false);
+        var b = new Foe { d = bd, fr = bf, sr = bgo.AddComponent<SpriteRenderer>(), hp = bd.hp, maxHp = bd.hp, x = (ar.x + 0.5f) * TILE - bd.w / 2, y = (ar.y + 1) * TILE - bd.h, mode = 4, boss = true, st = 1.5f };
+        b.sr.sortingOrder = 6; b.px = b.x; b.py = b.y; foes.Add(b); bossNow = b; made = b;
+      }
+    return made;
   }
   // the room as it was painted in the first version: every piece laid there (rock edges, ledges, spikes, furnishings, hills,
   // arches) is listed in Resources/draws/<room>.json with its sheet, its place and its turn, and laid here the same way and in
@@ -287,20 +304,21 @@ public class Game : MonoBehaviour {
     bool atk = Input.GetKey(KeyCode.X) || atkHeldTouch;
     if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = 0.42f; struck.Clear(); Play("nail_side", 0.7f); }
     bool dash = Input.GetKey(KeyCode.C) || dashTouch;
-    if (dash && !dashWas && dashCD <= 0 && (ground || airDash)) { dashT = 0.18f; dashCD = 0.5f; if (!ground) airDash = false; vy = 0; }
-    dashWas = dash;
+    if (dash && !dashWas && dashCD <= 0 && (ground || airDash) && Has("dash")) { dashT = 0.18f; dashCD = Charmed("dashmaster") ? 0.25f : 0.5f; if (!ground) airDash = false; vy = 0; }
+    dashWas = dash; ReadMore(dash);
     atkWas = atk;
     if (held && !jumpWas) jumpBuf = 0.12f;
     jumpWas = held; jumpHeld = held;
   }
   void OnGUI() {
+    if (DrawFull()) return;
     if (btnBase == null) return;
     var old = GUI.color; GUI.color = new Color(1, 1, 1, 0.75f);
     GUI.DrawTexture(BtnLeft, btnBase); GUI.DrawTexture(BtnRight, btnBase); GUI.DrawTexture(BtnJump, btnJump != null ? btnJump : btnBase); GUI.DrawTexture(BtnAtk, btnAtk != null ? btnAtk : btnBase); GUI.DrawTexture(BtnDash, btnDash != null ? btnDash : btnBase);
     var st = new GUIStyle(GUI.skin.label); st.alignment = TextAnchor.MiddleCenter; st.fontSize = (int)(Screen.height * 0.08f);
     GUI.Label(BtnLeft, "◀", st); GUI.Label(BtnRight, "▶", st);
     GUI.color = Color.white; float hs = Screen.height * 0.07f;
-    for (int i = 0; i < 5; i++) { var ht = i < hp ? heartFull : heartEmpty; if (ht != null) GUI.DrawTexture(new Rect(Screen.width * 0.03f + i * hs * 1.1f, Screen.height * 0.03f, hs, hs), ht); }
+    for (int i = 0; i < maxHp; i++) { var ht = i < hp ? heartFull : heartEmpty; if (ht != null) GUI.DrawTexture(new Rect(Screen.width * 0.03f + hs * 1.9f + i * hs * 1.1f, Screen.height * 0.03f, hs, hs), ht); }
     if (bossNow != null && bossNow.hp > 0 && barFrame != null && barFill != null) {
       GUI.color = Color.white; float bw = Screen.width * 0.5f, bh = bw * barFrame.height / barFrame.width, bx = (Screen.width - bw) / 2, by = Screen.height * 0.02f;
       float k = Mathf.Clamp01(bossNow.hp / bossNow.maxHp), ix = bx + bw * 0.085f, iw = bw * 0.83f, ih = bh * 0.2f;
@@ -308,6 +326,7 @@ public class Game : MonoBehaviour {
     }
     if (fade > 0) { GUI.color = new Color(0, 0, 0, Mathf.Clamp01(fade)); GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture); }   // a room opens out of the dark
     GUI.color = old;
+    DrawOver();
   }
 
   // ---------------------------------------------------------------- the hero
@@ -322,17 +341,17 @@ public class Game : MonoBehaviour {
     if (ground) { airDash = true; airJump = true; }
     if (dashT > 0) { vx = face * 690; vy = 0; }                              // a dash: straight, weightless
     else {
-      if (lockX <= 0) { vx = Approach(vx, inX * RUN, (inX == 0 ? 4200 : 3600) * dt * (ground ? 1 : 0.85f)); if (inX != 0) face = inX > 0 ? 1 : -1; }
+      if (lockX <= 0) { vx = Approach(vx, inX * RUN * (Charmed("swift") ? 1.15f : 1), (inX == 0 ? 4200 : 3600) * dt * (ground ? 1 : 0.85f)); if (inX != 0) face = inX > 0 ? 1 : -1; }
       vy = Mathf.Min(vy + GRAV * (vy > 0 ? FALL_MULT : 1) * dt, MAXFALL);
       // a wall held to while falling is slid down slowly, and can be jumped from
-      int wd = 0; if (!ground && inX != 0 && BoxHits(x + inX * 2, y)) wd = (int)inX;
+      int wd = 0; if (!ground && inX != 0 && Has("wall") && BoxHits(x + inX * 2, y)) wd = (int)inX;
       if (wd != 0) { wallDir = wd; wallCoy = 0.12f; airDash = true; airJump = true; if (vy > 70) vy = 70; }
     }
     coyote = ground ? 0.1f : coyote - dt; jumpBuf -= dt;
     if (jumpBuf > 0 && dashT <= 0) {
       if (coyote > 0) { vy = -JUMP; jumping = true; coyote = 0; jumpBuf = 0; ground = false; Play("hero_jump", 0.25f); }
       else if (wallCoy > 0) { vy = -650; vx = -wallDir * 310; face = -wallDir; lockX = 0.13f; jumping = true; jumpBuf = 0; wallCoy = 0; }
-      else if (airJump) { vy = -630; airJump = false; jumping = true; jumpBuf = 0; }
+      else if (airJump && Has("double")) { vy = -630; airJump = false; jumping = true; jumpBuf = 0; }
     }
     if (jumping && !jumpHeld && vy < -260) vy = -260;                        // letting go cuts the rise
     if (vy >= 0) jumping = false;
@@ -358,9 +377,10 @@ public class Game : MonoBehaviour {
     // spikes and acid: a wound, and back to where the room was entered
     hurtT -= dt;
     int cx = Mathf.FloorToInt((x + PW / 2) / TILE), cy = Mathf.FloorToInt((y + PH - 4) / TILE), tt = Tile(cx, cy);
-    if (tt == 3 || tt == 8 || y > room.h * TILE + 200) Hurt();
+    if (((tt == 3 || tt == 8) && !Charmed("soles")) || y > room.h * TILE + 200) Hurt();
     StepFoes(dt);
     Doors();
+    StepMore(dt);
   }
   void Dust(float px, float py, int n, float speed) {
     if (puffSprite == null) return;
@@ -391,10 +411,11 @@ public class Game : MonoBehaviour {
   void StepFoes(float dt) {
     atkT -= dt; atkCD -= dt;
     float hx = face > 0 ? x + PW : x + PW - 64 - PW, hy = y - 4, hw = 64, hh = PH + 8;      // the blade's reach in front of the hero
+    if (atkT > 0) NailWorld(hx, hy, hw, hh);
     for (int i = foes.Count - 1; i >= 0; i--) {
       var f = foes[i]; f.t += dt; f.flash -= dt; f.px = f.x; f.py = f.y;
       if (f.mode == 3) { f.st -= dt; if (f.st <= 0) { Destroy(f.sr.gameObject); foes.RemoveAt(i); } continue; }      // falling apart: drawn fading in Update
-      if (f.mode == 4) StepBoss(f, dt);
+      if (f.mode == 4) StepLord(f, dt);
       if (f.mode == 0) {                                                       // a walker: gravity, its ledge, a turn at a wall or an edge
         f.vy = Mathf.Min(f.vy + GRAV * dt, MAXFALL);
         float ny = f.y + f.vy * dt; bool on = false;
@@ -420,19 +441,20 @@ public class Game : MonoBehaviour {
       bool touch = x < f.x + f.d.w && x + PW > f.x && y < f.y + f.d.h && y + PH > f.y;
       if (atkT > 0 && !struck.Contains(f) && hx < f.x + f.d.w && hx + hw > f.x && hy < f.y + f.d.h && hy + hh > f.y) {
         Play("nail_hit", 0.7f); Play(f.d.type + (f.hp <= 5 ? "_die" : "_hurt"), 0.6f);
-        struck.Add(f); f.hp -= 5; f.flash = 0.15f; if (f.mode < 2) f.x += face * 14; vx = -face * 150;
+        struck.Add(f); f.hp -= NailDmg(); GainSoul(); f.svx -= 3; f.svy += 2; f.flash = 0.15f; if (f.mode < 2 && !f.champ) f.x += face * 14; vx = -face * 150;
         Blow(f.boss ? 0.05f : 0.035f, f.boss ? 4 : 2.5f); Dust(f.x + f.d.w / 2, f.y + f.d.h / 2, 3, 120);
         if (f.hp <= 0) {
           Dust(f.x + f.d.w / 2, f.y + f.d.h / 2, f.boss ? 24 : 8, f.boss ? 260 : 170); Blow(f.boss ? 0.25f : 0.07f, f.boss ? 12 : 5);
-          if (f.boss) { PlayerPrefs.SetInt("beat_" + f.d.type.Replace("boss_", ""), 1); PlayerPrefs.Save(); bossNow = null; }
+          OnFoeDown(f);
           f.mode = 3; f.st = f.boss ? 1.2f : 0.3f; continue;
         }
-      } else if (touch && hurtT <= 0) { Blow(0.08f, 6); Play("hero_hurt0", 0.6f); hp--; hurtT = 1.2f; vx = (x + PW / 2 < f.x + f.d.w / 2 ? -1 : 1) * 320; vy = -380; if (hp <= 0) { hp = 5; x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0; } }
+      } else if (touch && hurtT <= 0 && f.mode != 3) Wound(f.x + f.d.w / 2);
     }
   }
   void Hurt() {
     if (hurtT > 0 && y <= room.h * TILE + 200) return;
-    Play("hero_hurt1", 0.6f); hp--; hurtT = 1.2f; if (hp <= 0) hp = 5;
+    Play("hero_hurt1", 0.6f); hp--; hurtT = HurtTime(); Thorns();
+    if (hp <= 0) { Die(); return; }
     x = spawnX - PW / 2; y = spawnY - PH; vx = vy = 0;
   }
   void Doors() {
@@ -440,10 +462,11 @@ public class Game : MonoBehaviour {
     foreach (var d in room.doors) {
       if (x + PW <= d.x * TILE || x >= (d.x + d.w) * TILE || y + PH <= d.y * TILE || y >= (d.y + d.h) * TILE) continue;
       inside = true; if (!armed || string.IsNullOrEmpty(d.to) || !rooms.ContainsKey(d.to)) continue;
+      if (FightOn()) return;
       var to = rooms[d.to]; DoorData e = null;
       foreach (var q in to.doors) if (q.id == d.toDoor) e = q;
       if (e == null) continue;
-      float fx, fy; room = to;
+      float fx, fy; SetRoom(to);
       if (e.h > 1 || e.w == 1) { fx = (e.x == 0 ? e.x + 2.5f : e.x - 1.5f) * TILE; fy = (e.y + e.h) * TILE; }
       else if (e.y == 0) { fx = (e.x + e.w / 2f) * TILE; fy = (e.y + 3) * TILE; }
       else {                                                                   // up through a floor: the nearest ground beside the opening
@@ -459,20 +482,22 @@ public class Game : MonoBehaviour {
   }
 
   void Update() {
-    ReadInput();
+    if (mode == Mode.Play && deadT <= 0) ReadInput(); else { inX = 0; jumpHeld = false; UiInput(); }
     acc += Mathf.Min(Time.deltaTime, 0.1f);
     if (stopT > 0) { stopT -= Time.unscaledDeltaTime; acc = Mathf.Min(acc, STEP * 0.99f); }
+    if (mode != Mode.Play) acc = 0;
     while (acc >= STEP) { x0 = x; y0 = y; wasGround = ground; float fall = vy; StepHero(STEP); acc -= STEP; if (ground && !wasGround && fall > 420) Dust(x + PW / 2, y + PH, 5, 110); }
     float al = Mathf.Clamp01(acc / STEP), rx = Mathf.Lerp(x0, x, al), ry = Mathf.Lerp(y0, y, al);
     if (Mathf.Abs(x - x0) > 200 || Mathf.Abs(y - y0) > 200) { rx = x; ry = y; }
     // creatures: blended places, a breath, a flash when struck, a swell and a fade when they fall apart
     foreach (var f in foes) {
       float fx = Mathf.Lerp(f.px, f.x, al), fy = Mathf.Lerp(f.py, f.y, al), br = 1 + 0.02f * Mathf.Sin(f.t * 3);
-      int frame = f.boss ? (f.act == 1 ? 1 : f.act == 2 ? 2 : f.act == 3 ? 3 : 0) : (int)(f.t * 6) % 4;
+      int frame = f.boss ? (f.act == 1 || f.act >= 5 && f.tele > 0 ? 1 : f.act == 2 || f.act >= 5 ? 2 : f.act == 3 ? 3 : 0) : (int)(f.t * 6) % 4;
       f.sr.sprite = f.fr[frame]; f.sr.flipX = f.face < 0;
       float dk = f.mode == 3 ? Mathf.Clamp01(f.st / (f.boss ? 1.2f : 0.3f)) : 1;
       f.sr.color = f.flash > 0 ? new Color(1, 0.55f, 0.55f, 1) : new Color(1, 1, 1, dk);
       f.sr.transform.position = new Vector3(fx + f.d.w / 2, -(fy + f.d.h), 0); f.sr.transform.localScale = new Vector3(1 + (1 - dk) * 0.3f, br + (1 - dk) * 0.3f, 1);
+      FoeLook(f, dk);
     }
     for (int i = puffs.Count - 1; i >= 0; i--) {
       var pf = puffs[i]; pf.t += Time.deltaTime; float pk = pf.t / pf.life;
@@ -483,9 +508,9 @@ public class Game : MonoBehaviour {
     }
     // the picture
     animT += Time.deltaTime; fade -= Time.deltaTime * 3;
-    string a = dashT > 0 ? "dash" : atkT > 0 ? "slash1" : !ground && wallCoy > 0.1f ? "wall" : !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
+    string a = deadT > 0 ? "death" : healT > 0.12f ? "focus" : diving ? "down" : sdashT > 0 || sdashCharge > 0.3f ? "dash" : dashT > 0 ? "dash" : atkT > 0 ? "slash1" : !ground && wallCoy > 0.1f ? "wall" : !ground ? "jump" : Mathf.Abs(vx) > 20 ? "run" : "idle";
     Sprite[] fr; if (!anims.TryGetValue(a, out fr)) fr = anims["idle"];
-    int idx = a == "slash1" ? Mathf.Clamp((int)((0.2f - atkT) / 0.2f * fr.Length), 0, fr.Length - 1) : a == "jump" ? Mathf.Clamp((int)((vy + 500) / 1000f * fr.Length), 0, fr.Length - 1) : (int)(animT * (a == "run" ? 14 : 6)) % fr.Length;
+    int idx = a == "death" ? Mathf.Clamp((int)((1.6f - deadT) / 1.2f * fr.Length), 0, fr.Length - 1) : a == "slash1" ? Mathf.Clamp((int)((0.2f - atkT) / 0.2f * fr.Length), 0, fr.Length - 1) : a == "jump" ? Mathf.Clamp((int)((vy + 500) / 1000f * fr.Length), 0, fr.Length - 1) : (int)(animT * (a == "run" ? 14 : 6)) % fr.Length;
     hero.sprite = fr[idx]; hero.flipX = face < 0;
     float land = ground && !wasGround ? 0.9f : 1;
     hero.transform.position = new Vector3(rx + PW / 2, -(ry + PH), 0); hero.transform.localScale = new Vector3(HERO_SCALE / land, HERO_SCALE * land, 1);
@@ -498,6 +523,7 @@ public class Game : MonoBehaviour {
     slash.enabled = atkT > 0 && slashFr[0] != null;
     if (slash.enabled) { slash.sprite = slashFr[Mathf.Clamp((int)((0.2f - atkT) / 0.2f * 4), 0, 3)]; slash.flipX = face < 0; slash.transform.position = new Vector3(rx + PW / 2 + face * 10, -(ry + PH / 2), 0); }
     hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : Color.white;
+    UpdateMore(rx, ry);
     // the camera follows, kept inside the room
     float hw = 270 * cam.aspect, W = room.w * TILE, H = room.h * TILE;
     float tx2 = W <= hw * 2 ? W / 2 : Mathf.Clamp(rx + PW / 2 + face * 40, hw, W - hw), ty2 = H <= 540 ? H / 2 : Mathf.Clamp(ry + PH / 2 - 40, 270, H - 270);

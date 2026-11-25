@@ -100,7 +100,7 @@ public partial class Game {
       if (f.count % every == 0) {                                                    // instead of this lunge: its great move
         string fam; if (!FAMILY.TryGetValue(f.d.type.Replace("boss_", ""), out fam)) fam = f.champ ? "quake" : "ring";
         f.act = fam == "quake" ? 5 : fam == "ring" ? 6 : fam == "cut" ? 7 : 8; f.vx = 0; f.tele = 0.7f; f.special = 0; f.st = 0;
-        if (f.act == 5 && f.vy < 0) f.vy = 0;
+        f.vy = Mathf.Max(0, f.vy);
         Play("w_roar_" + Random.Range(0, 3), 0.6f);
       }
     }
@@ -167,7 +167,8 @@ public partial class Game {
       Sprite[] fr; if (!kindFrames.TryGetValue(d.type, out fr)) { var ct = Resources.Load<Texture2D>("creatures/" + d.type); if (ct == null) continue; fr = new Sprite[4]; for (int i = 0; i < 4; i++) fr[i] = Sprite.Create(ct, new Rect(i * d.fw, 0, d.fw, d.fh), new Vector2(0.5f, 0), d.ppu > 0 ? d.ppu : 2, 0, SpriteMeshType.FullRect); kindFrames[d.type] = fr; }
       for (int n = 0; n < Mathf.Max(1, it.guards); n++) {
         var go = new GameObject("Warden"); go.transform.SetParent(roomGo.transform, false);
-        var f = new Foe { d = big, fr = fr, sr = go.AddComponent<SpriteRenderer>(), hp = big.hp, maxHp = big.hp, x = ix + (n == 0 ? -3 : 3) * TILE - big.w / 2, y = TILE * 2, mode = 4, champ = true, st = 1.4f, guardOf = it.id };
+        float wx = ix + (n == 0 ? -2.5f : 2.5f) * TILE, wy = (it.y + 1) * TILE - big.h - 30; if (SolidAt(wx, wy + big.h / 2) || SolidAt(wx - big.w / 2, wy + 4) || SolidAt(wx + big.w / 2, wy + 4)) wx = ix;
+        var f = new Foe { d = big, fr = fr, sr = go.AddComponent<SpriteRenderer>(), hp = big.hp, maxHp = big.hp, x = wx - big.w / 2, y = wy, mode = 4, champ = true, st = 1.4f, guardOf = it.id };
         f.sr.sortingOrder = 6; f.px = f.x; f.py = f.y; foes.Add(f); bossNow = f;
       }
       Card(new[] { "حارس التعويذة", "Charm Warden" }, Story.Charm.ContainsKey(it.name) ? new[] { Story.Charm[it.name][0].Split('|')[0], Story.Charm[it.name][1].Split('|')[0] } : new[] { "تعويذة", "Charm" },

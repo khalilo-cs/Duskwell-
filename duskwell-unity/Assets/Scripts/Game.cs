@@ -299,7 +299,7 @@ public partial class Game : MonoBehaviour {
     if (Input.GetKey(KeyCode.LeftArrow)) inX -= 1; if (Input.GetKey(KeyCode.RightArrow)) inX += 1;
     for (int i = 0; i < Input.touchCount; i++) {
       var p = Input.GetTouch(i).position; var q = new Vector2(p.x, Screen.height - p.y);
-      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (BtnDash.Contains(q)) dashTouch = true; else if (q.x > Screen.width * 0.5f) held = true;
+      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (BtnDash.Contains(q)) dashTouch = true; else if (BtnSoul.Contains(q) || BtnUp.Contains(q) || Has("dive") && BtnDive.Contains(q)) { } else if (q.x > Screen.width * 0.5f) held = true;
     }
     bool atk = Input.GetKey(KeyCode.X) || atkHeldTouch;
     if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = 0.42f; struck.Clear(); Play("nail_side", 0.7f); }

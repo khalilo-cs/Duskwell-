@@ -144,7 +144,7 @@ public partial class Game {
 
   // ---------------------------------------------------------------- each step: the blade on the world, items, crumbling floors, the dive, death
   void NailWorld(float hx, float hy, float hw, float hh) {
-    if (atkT < 0.19f) return;                                                    // once, as the swing starts
+    if (atkT < 0.175f) return;                                                   // once, as the swing starts
     swing++;
     int x0 = Mathf.FloorToInt(hx / TILE), x1 = Mathf.FloorToInt((hx + hw) / TILE), y0 = Mathf.FloorToInt(hy / TILE), y1 = Mathf.FloorToInt((hy + hh) / TILE);
     bool broke = false;

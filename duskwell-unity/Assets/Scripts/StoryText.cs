@@ -22,7 +22,7 @@ public static class Story {
   public static readonly Panel[] Ending = {
     new Panel("story/e1", "سقط الملك المجوّف… وفي يده الأخيرة شظيةٌ ثالثة عشرة: قلبه.", "The Hollow King fell... and in his last hand lay a thirteenth shard: his heart."),
     new Panel("story/e2", "وفي قاع البئر، كان القنديل المكسور ينتظر.", "At the bottom of the well, the broken lantern waited."),
-    new Panel("story/e3", "وضعتَ الشظايا واحدةً واحدة… ثم دخلتَ أنت.", "You set the shards in one by one... and then you stepped in yourself."),
+    new Panel("story/e2", "وضعتَ الشظايا واحدةً واحدة… ثم دخلتَ أنت.", "You set the shards in one by one... and then you stepped in yourself."),
     new Panel("story/e3", "اشتعل القنديل. لا نهاراً قاسياً، ولا ليلاً أبدياً… بل غسقاً دافئاً.", "The lantern lit. Not a cruel day, nor an endless night... but a warm dusk."),
     new Panel("story/e4", "في وادي الهمس، جلس الشيخ أوراد عند البئر طويلاً… ثم ابتسم.", "In Hushvale, Elder Awrad sat by the well for a long time... and then he smiled."),
     new Panel("bg/title", "أرضُ الغسق تتنفّس من جديد.", "Duskwell breathes again."),

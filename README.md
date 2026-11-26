@@ -25,7 +25,7 @@
 | --- | --- |
 | `duskwell/` | اللعبة: HTML5 Canvas وجافاسكربت بلا خطوة بناء (`js/` الكود، `art/` الرسومات، `audio/` الصوت، `tests/` 49 اختباراً آلياً، `tools/` أدوات تجهيز الرسومات والأصوات) |
 | `duskwell-android/` | تطبيق أندرويد (WebView) وسكربت بناء الـ APK |
-| `duskwell-unity/` | نسخة Unity مستقلة قيد العمل (C#)، بالغرف والبطل والوحوش والزعماء والمؤثرات |
+| `duskwell-unity/` | نسخة Unity مستقلة (C#): الغرف والبطل والوحوش والزعماء والقصة والشخصيات والألغاز. المشروع مضغوطاً في [صفحة الإصدار unity-1](https://github.com/khalilo-cs/Duskwell-/releases/tag/unity-1)، وطريقة تشغيله خطوة بخطوة في [`duskwell-unity/START_HERE.md`](duskwell-unity/START_HERE.md) |
 | `game/`، `android/` | لعبة المنصّات Zaki Adventure ونسختها لأندرويد |
 | `institute-webset2/` | موقع المعهد |
 

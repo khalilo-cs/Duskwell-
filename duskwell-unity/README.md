@@ -37,5 +37,7 @@ Stage seven, the story and the rest of the game:
 Everything is built from code at start (`Assets/Scripts/Game.cs`), so there is no hand-made scene.
 
 ## Building
+**Step-by-step guide in Arabic: [`START_HERE.md`](START_HERE.md).** The zipped project is on the release *unity-1*.
+
 Open the folder in Unity 2022.3 (with Android Build Support) from Unity Hub, then choose **Duskwell > Build Android APK** in the
 menu; the app is written to `Build/duskwell-unity.apk`. The workflow *Pack the Unity project* offers the folder alone as a download.

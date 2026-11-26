@@ -76,6 +76,7 @@ public partial class Game : MonoBehaviour {
     var camGo = new GameObject("Camera"); cam = camGo.AddComponent<Camera>(); camGo.tag = "MainCamera";
     cam.orthographic = true; cam.orthographicSize = 270; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
     camGo.transform.position = new Vector3(0, 0, -100);
+    foreach (var other in Camera.allCameras) if (other != cam) other.enabled = false;            // the editor's own camera, if the open scene has one
     var skyGo = new GameObject("Sky"); skyGo.transform.SetParent(camGo.transform, false); skyGo.transform.localPosition = new Vector3(0, 0, 90);
     sky = skyGo.AddComponent<SpriteRenderer>(); sky.sortingOrder = -10000; spriteMat = sky.sharedMaterial;
     var heroGo = new GameObject("Hero"); hero = heroGo.AddComponent<SpriteRenderer>(); hero.sortingOrder = 10;

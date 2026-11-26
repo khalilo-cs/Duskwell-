@@ -35,6 +35,7 @@ public partial class Game {
   }
   void StepShots(float dt) {
     for (int i = shots.Count - 1; i >= 0; i--) {
+      if (i >= shots.Count) continue;                                            // a lord's fall may have cleared the shots meanwhile
       var s = shots[i]; s.t += dt; s.life -= dt;
       if (s.tele > 0) { s.tele -= dt; if (s.tele <= 0 && s.kind == "pillar") { Play("w_slam_" + Random.Range(0, 3), 0.5f); Blow(0, 4); } }
       else { s.vy += s.grav * dt; s.x += s.vx * dt; s.y += s.vy * dt; }
@@ -50,7 +51,7 @@ public partial class Game {
           }
         } else if (hurtT <= 0 && deadT <= 0 && x < bx + s.w && x + PW > bx && y < by + s.h && y + PH > by) Wound(s.x);
       }
-      if (gone) { Destroy(s.sr.gameObject); shots.RemoveAt(i); continue; }
+      if (gone) { if (s.sr != null) Destroy(s.sr.gameObject); shots.Remove(s); continue; }
     }
   }
   void DrawShots() {

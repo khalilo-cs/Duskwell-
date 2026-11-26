@@ -1,0 +1,30 @@
+# Puts the Android build 4.7 and the Unity project (zipped, with its guide) on the releases page.
+name: Publish release
+on:
+  push:
+    branches: [clean-main]
+    paths: ['.github/workflows/release.yml']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The Android build 4.7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view 4.7 >/dev/null 2>&1 || gh release create 4.7 duskwell-android/duskwell.apk duskwell-android/duskwell-apk.zip \
+            --target "$GITHUB_SHA" --title "Duskwell 4.7 - أرض الغسق" --latest \
+            --notes "نسخة أندرويد 4.7 (versionCode 38): لكل زعيم حركة كبرى خاصة به في مرحلته الثانية (هزّة أرض وحلقات أعمدة، حلقات نور، ضربات خاطفة، أعمدة ضوء تلاحقك)، واهتزاز الجوال مع الضربات؛ ومعها كل ما في 4.6: أصوات جديدة كلها، حركة نابضة للوحوش والزعماء، غرف متعرّجة. تثبت فوق النسخ السابقة ويبقى الحفظ."
+      - name: The Unity project, zipped, with its guide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip -q -r Duskwell-Unity-Project.zip duskwell-unity -x "duskwell-unity/Library/*" "duskwell-unity/Temp/*" "duskwell-unity/Build/*"
+          cp duskwell-unity/START_HERE.md START_HERE.md
+          gh release delete unity-1 --yes --cleanup-tag >/dev/null 2>&1 || true
+          gh release create unity-1 Duskwell-Unity-Project.zip START_HERE.md \
+            --target "$GITHUB_SHA" --title "Duskwell Unity - نسخة يونيتي (المشروع كاملاً)" --latest=false \
+            --notes "مشروع نسخة يونيتي كاملاً في ملف مضغوط واحد: القصة والشخصيات والحوارات والألغاز والزعماء والحرّاس ولوحات القصة المرسومة وكل الأصوات. نزّل Duskwell-Unity-Project.zip، ثم اتبع الدليل START_HERE.md خطوة بخطوة (تثبيت Unity Hub ومحرّر 2022.3 مع أدوات أندرويد، فتح المشروع، اللعب داخل يونيتي، صنع ملف APK للجوال)."

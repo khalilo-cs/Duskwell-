@@ -30,17 +30,17 @@ public partial class Game {
 
   bool DrawMenu(float W, float H) {
     if (mode != Mode.Menu) return false;
-    menuT += Time.deltaTime; if (Input.GetKeyDown(KeyCode.LeftArrow)) { menuTab = (menuTab + 2) % 3; pick = ""; } if (Input.GetKeyDown(KeyCode.RightArrow)) { menuTab = (menuTab + 1) % 3; pick = ""; }
+    menuT += Time.deltaTime; if (Input.GetKeyDown(KeyCode.LeftArrow)) { menuTab = (menuTab + 3) % 4; pick = ""; } if (Input.GetKeyDown(KeyCode.RightArrow)) { menuTab = (menuTab + 1) % 4; pick = ""; }
     GUI.DrawTexture(new Rect(0, 0, W, H), blackTex);
     var mbg = Tex("ui/menu_bg"); if (mbg != null) { GUI.color = new Color(1, 1, 1, 0.85f); GUI.DrawTexture(new Rect(0, 0, W, H), mbg, ScaleMode.ScaleAndCrop); GUI.color = Color.white; }   // a painted dark of the deep
     var orn = Tex("ui/ornament"); if (orn != null) { GUI.color = new Color(1, 1, 1, 0.9f); GUI.DrawTexture(new Rect(W * 0.03f, H * 0.03f, W * 0.94f, H * 0.94f), orn); GUI.color = Color.white; }
-    string[][] names = { new[] { "الخريطة", "Map" }, new[] { "الحقيبة", "Inventory" }, new[] { "التمائم", "Charms" } };
+    string[][] names = { new[] { "الخريطة", "Map" }, new[] { "الحقيبة", "Inventory" }, new[] { "التمائم", "Charms" }, new[] { "دفتر الصيّاد", "Hunter's Journal" } };
     Both(new Rect(0, H * 0.05f, W, H * 0.1f), names[menuTab], H * 0.05f, new Color(0.95f, 0.95f, 0.95f, 1), TextAnchor.UpperCenter);
     // the neighbouring pages, at the sides like a book's
-    if (TextButton(new Rect(W * 0.05f, H * 0.06f, W * 0.2f, H * 0.07f), "◀ " + names[(menuTab + 2) % 3][0])) { menuTab = (menuTab + 2) % 3; pick = ""; mapNear = false; }
-    if (TextButton(new Rect(W * 0.75f, H * 0.06f, W * 0.2f, H * 0.07f), names[(menuTab + 1) % 3][0] + " ▶")) { menuTab = (menuTab + 1) % 3; pick = ""; mapNear = false; }
+    if (TextButton(new Rect(W * 0.05f, H * 0.06f, W * 0.2f, H * 0.07f), "◀ " + names[(menuTab + 3) % 4][0])) { menuTab = (menuTab + 3) % 4; pick = ""; mapNear = false; }
+    if (TextButton(new Rect(W * 0.75f, H * 0.06f, W * 0.2f, H * 0.07f), names[(menuTab + 1) % 4][0] + " ▶")) { menuTab = (menuTab + 1) % 4; pick = ""; mapNear = false; }
     if (TextButton(new Rect(W * 0.42f, H * 0.9f, W * 0.16f, H * 0.07f), "✕ متابعة")) { mode = Mode.Play; return true; }
-    if (menuTab == 0) DrawMap(W, H); else if (menuTab == 1) DrawBag(W, H); else DrawCharms(W, H);
+    if (menuTab == 0) DrawMap(W, H); else if (menuTab == 1) DrawBag(W, H); else if (menuTab == 2) DrawCharms(W, H); else DrawJournal(W, H);
     return true;
   }
   bool TextButton(Rect r, string label) {

@@ -218,6 +218,7 @@ public partial class Game {
   void OnFoeDown(Foe f) {
     if (f.d.type == "shade") { ShadeDown(); return; }
     if (!f.boss && !f.champ) { kills++; PlayerPrefs.SetInt("kills", kills); }
+    if (!f.boss) Hunted(f.d.type);                                               // the hunter's journal (Journal.cs)
     int g = f.boss ? 120 : f.champ ? 60 : Random.Range(2, 7); geo += g; PlayerPrefs.SetInt("geo", geo);
     Play(f.boss ? "w_bossDie_" + Random.Range(0, 2) : "w_enemyDie_" + Random.Range(0, 3), 0.8f);
     if (f.champ) {

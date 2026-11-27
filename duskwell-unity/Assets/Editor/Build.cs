@@ -41,6 +41,8 @@ public class TexImport : AssetPostprocessor {
     var t = (TextureImporter)assetImporter;
     t.textureType = TextureImporterType.Default; t.mipmapEnabled = false; t.npotScale = TextureImporterNPOTScale.None;
     t.maxTextureSize = 4096; t.textureCompression = TextureImporterCompression.CompressedHQ; t.alphaIsTransparency = true; t.wrapMode = TextureWrapMode.Clamp;
+    // the painted ink of the map is read by the game to colour the rooms on it
+    if (assetPath.Contains("/ui/mapink")) { t.isReadable = true; t.textureCompression = TextureImporterCompression.Uncompressed; t.wrapMode = TextureWrapMode.Repeat; }
   }
   // music and the air of an area are played from the file as they go; the short sounds are kept ready
   void OnPreprocessAudio() {

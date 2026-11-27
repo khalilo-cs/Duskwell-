@@ -15,7 +15,7 @@ public partial class Game {
   readonly Dictionary<string, List<string>> wrapCache = new Dictionary<string, List<string>>();
 
   void InitUi() {
-    font = Resources.Load<Font>("font/cairo"); titleFont = Resources.Load<Font>("font/title"); if (titleFont == null) titleFont = font; flourish = Tex("ui/flourish"); shadeTex = MakeShade(); blackTex = new Texture2D(1, 1); blackTex.SetPixel(0, 0, Color.black); blackTex.Apply();
+    font = Resources.Load<Font>("font/cairo"); titleFont = Resources.Load<Font>("font/title"); if (titleFont == null) titleFont = font; flourish = Tex("ui/flourish"); shadeTex = Tex("ui/mist"); blackTex = new Texture2D(1, 1); blackTex.SetPixel(0, 0, Color.black); blackTex.Apply();
     frameTex = Tex("ui/frame"); vesselTex = Tex("ui/vessel"); vesselFull = Tex("ui/vessel_full"); geoTex = Tex("ui/geo"); shardTex = Tex("ui/shard");
     mode = Mode.Title; PlayMusic("legend");
   }
@@ -121,12 +121,6 @@ public partial class Game {
     if (below && flourish != null) { GUI.color = new Color(1, 1, 1, alpha); GUI.DrawTextureWithTexCoords(new Rect(fx, y, fw, fh), flourish, new Rect(0, 1, 1, -1)); GUI.color = Color.white; y += fh; }
     return y - r.y;
   }
-  // a soft darkness from the bottom up, under talks and notes
-  Texture2D MakeShade() {
-    var t = new Texture2D(1, 64, TextureFormat.RGBA32, false); t.wrapMode = TextureWrapMode.Clamp;
-    for (int i = 0; i < 64; i++) t.SetPixel(0, i, new Color(0, 0, 0, Mathf.SmoothStep(0.85f, 0, i / 63f))); t.Apply(); return t;
-  }
-
   // ---------------------------------------------------------------- the whole screen: the title and the told story
   bool DrawFull() {
     float H = Screen.height, W = Screen.width;
@@ -234,7 +228,7 @@ public partial class Game {
     if (mode == Mode.Talk) DrawTalk(W, H);
   }
   void DrawTalk(float W, float H) {
-    GUI.DrawTexture(new Rect(0, H * 0.45f, W, H * 0.55f), shadeTex);
+    if (shadeTex != null) GUI.DrawTexture(new Rect(0, H * 0.45f, W, H * 0.55f), shadeTex);   // a painted darkness rising from below, under talks and notes
     float ph = H * 0.5f;
     if (talkPic != null) { float pw = ph * talkPic.width * talkUv.width / talkPic.height; GUI.color = new Color(1, 1, 1, 0.85f); GUI.DrawTextureWithTexCoords(new Rect(W * 0.985f - pw, H - ph, pw, ph), talkPic, talkUv); GUI.color = Color.white; }
     float a = Mathf.Clamp01(talkT / 0.4f), cx = W * 0.14f, cw = W * 0.62f;

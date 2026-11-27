@@ -42,6 +42,9 @@ Stage seven, the story and the rest of the game:
 - **Creatures that fight** (`Fight.cs`): lunges, swoops and spit; champions; the lords' signature moves (quake, ring, cut,
   pillars) and their rage at half health.
 - **Depth** (`Ambience.cs`): motes of each area's air, slow fog, painted shafts of light and dark plants passing in front.
+- **Painted screen**: the dark round the view (`ui/vignette`), the mist under talks (`ui/mist`), the backdrop of the pause screen
+  (`ui/menu_bg`), the paper of the map (`ui/mapsheet`) and its ink (`ui/mapink`, which colours each room on the map), and the
+  charm notches (`ui/notch`).
 - **Arabic on screen** (`Arabic.cs`): letters joined and read from the right, with the Cairo font (`Resources/font`).
 
 Everything is built from code at start (`Assets/Scripts/Game.cs`), so there is no hand-made scene.

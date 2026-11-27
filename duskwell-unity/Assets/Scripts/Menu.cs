@@ -32,8 +32,9 @@ public partial class Game {
     if (mode != Mode.Menu) return false;
     menuT += Time.deltaTime; if (Input.GetKeyDown(KeyCode.LeftArrow)) { menuTab = (menuTab + 2) % 3; pick = ""; } if (Input.GetKeyDown(KeyCode.RightArrow)) { menuTab = (menuTab + 1) % 3; pick = ""; }
     GUI.DrawTexture(new Rect(0, 0, W, H), blackTex);
+    var mbg = Tex("ui/menu_bg"); if (mbg != null) { GUI.color = new Color(1, 1, 1, 0.85f); GUI.DrawTexture(new Rect(0, 0, W, H), mbg, ScaleMode.ScaleAndCrop); GUI.color = Color.white; }   // a painted dark of the deep
     var orn = Tex("ui/ornament"); if (orn != null) { GUI.color = new Color(1, 1, 1, 0.9f); GUI.DrawTexture(new Rect(W * 0.03f, H * 0.03f, W * 0.94f, H * 0.94f), orn); GUI.color = Color.white; }
-    string[][] names = { new[] { "الخريطة", "Map" }, new[] { "الحقيبة", "Inventory" }, new[] { "التعويذات", "Charms" } };
+    string[][] names = { new[] { "الخريطة", "Map" }, new[] { "الحقيبة", "Inventory" }, new[] { "التمائم", "Charms" } };
     Both(new Rect(0, H * 0.05f, W, H * 0.1f), names[menuTab], H * 0.05f, new Color(0.95f, 0.95f, 0.95f, 1), TextAnchor.UpperCenter);
     // the neighbouring pages, at the sides like a book's
     if (TextButton(new Rect(W * 0.05f, H * 0.06f, W * 0.2f, H * 0.07f), "◀ " + names[(menuTab + 2) % 3][0])) { menuTab = (menuTab + 2) % 3; pick = ""; mapNear = false; }
@@ -63,19 +64,27 @@ public partial class Game {
   }
 
   // ---------------------------------------------------------------- the map
+  // a room on the map: its open air washed in the area's colour with the painted ink of the map (Resources/ui/mapink, read
+  // where the room lies on the whole map, so neighbouring rooms share one wash), and its walls traced in a lighter line
+  Texture2D mapInk;
   Texture2D RoomMap(RoomData r) {
     Texture2D t; if (roomMaps.TryGetValue(r.id, out t)) return t;
     Color c; if (!AREA_COL.TryGetValue(r.area, out c)) c = new Color(0.8f, 0.8f, 0.8f);
-    t = new Texture2D(r.w, r.h, TextureFormat.RGBA32, false); t.filterMode = FilterMode.Bilinear; t.wrapMode = TextureWrapMode.Clamp;
-    var px = new Color[r.w * r.h];
+    if (mapInk == null) mapInk = Tex("ui/mapink");
+    const int S = 3; int w = r.w * S, h = r.h * S; float mw = Mathf.Max(1, world.mapW), mh = Mathf.Max(1, world.mapH);
+    t = new Texture2D(w, h, TextureFormat.RGBA32, false); t.filterMode = FilterMode.Bilinear; t.wrapMode = TextureWrapMode.Clamp;
+    var px = new Color[w * h];
     System.Func<int, int, bool> solid = (i, j) => i < 0 || j < 0 || i >= r.w || j >= r.h || Solid(r.t[j * r.w + i] - '0');
-    for (int j = 0; j < r.h; j++) for (int i = 0; i < r.w; i++) {
-      Color o = new Color(0, 0, 0, 0);
+    for (int sj = 0; sj < h; sj++) for (int si = 0; si < w; si++) {
+      int i = si / S, j = sj / S, fx = si % S, fy = sj % S; Color o = new Color(0, 0, 0, 0);
       if (!solid(i, j)) {
-        bool edge = solid(i - 1, j) || solid(i + 1, j) || solid(i, j - 1) || solid(i, j + 1);
-        o = edge ? new Color(Mathf.Min(1, c.r * 1.25f), Mathf.Min(1, c.g * 1.25f), Mathf.Min(1, c.b * 1.25f), 1) : new Color(c.r * 0.42f, c.g * 0.42f, c.b * 0.42f, 0.8f);
+        bool edge = (fx == 0 && solid(i - 1, j)) || (fx == S - 1 && solid(i + 1, j)) || (fy == 0 && solid(i, j - 1)) || (fy == S - 1 && solid(i, j + 1));
+        float ink = 0.6f;
+        if (mapInk != null) { var p = mapInk.GetPixelBilinear((r.mx + si / (float)S) / mw * 3f % 1f, 1 - (r.my + sj / (float)S) / mh * 2f % 1f); ink = (p.r + p.g + p.b) / 3f; }
+        o = edge ? new Color(Mathf.Min(1, c.r * 1.2f + 0.15f), Mathf.Min(1, c.g * 1.2f + 0.15f), Mathf.Min(1, c.b * 1.2f + 0.15f), 0.75f + 0.25f * ink)
+                 : new Color(c.r * (0.2f + 0.5f * ink), c.g * (0.2f + 0.5f * ink), c.b * (0.2f + 0.5f * ink), 0.82f);
       }
-      px[(r.h - 1 - j) * r.w + i] = o;
+      px[(h - 1 - sj) * w + si] = o;
     }
     t.SetPixels(px); t.Apply(); roomMaps[r.id] = t; return t;
   }
@@ -85,6 +94,7 @@ public partial class Game {
     float s = Mathf.Min(inner.width / world.mapW, inner.height / world.mapH), zoom = mapNear ? 4.5f : 1f, ox, oy;
     if (mapNear) { ox = inner.width / 2 - (room.mx + room.w / 2f) * s * zoom; oy = inner.height / 2 - (room.my + room.h / 2f) * s * zoom; }
     else { ox = (inner.width - world.mapW * s) / 2; oy = (inner.height - world.mapH * s) / 2; }
+    var sheet = Tex("ui/mapsheet"); if (sheet != null) { GUI.color = new Color(1, 1, 1, 0.75f); GUI.DrawTexture(new Rect(inner.x - W * 0.02f, inner.y - H * 0.02f, inner.width + W * 0.04f, inner.height + H * 0.04f), sheet, ScaleMode.ScaleAndCrop); GUI.color = Color.white; }   // the painted sheet the map is drawn on
     GUI.BeginGroup(inner);
     var areaBox = new Dictionary<string, Rect>(); float k = s * zoom;
     foreach (var r in world.rooms) {
@@ -161,7 +171,7 @@ public partial class Game {
     Say(new Rect(x0, H * 0.16f, W * 0.5f, H), "المرتداة", H * 0.034f, new Color(0.9f, 0.9f, 0.92f, 1), TextAnchor.UpperLeft);
     int i = 0; foreach (var kv in COST) if (Charmed(kv.Key)) { Icon(new Rect(x0 + i * cs * 1.15f, H * 0.22f, cs, cs), Tex("props/charm_" + kv.Key), true, "c:" + kv.Key); i++; }
     Say(new Rect(x0, H * 0.36f, W * 0.5f, H), "الفتحات " + NotchesUsed() + " / " + Notches(), H * 0.03f, new Color(0.9f, 0.9f, 0.92f, 1), TextAnchor.UpperLeft);
-    var nt = vesselFull; for (int n = 0; n < Notches(); n++) if (nt != null) { GUI.color = n < NotchesUsed() ? Color.white : new Color(0.35f, 0.35f, 0.4f, 0.8f); GUI.DrawTexture(new Rect(x0 + n * H * 0.05f, H * 0.41f, H * 0.04f, H * 0.04f), nt); GUI.color = Color.white; }
+    var nt = Tex("ui/notch") ?? vesselFull; for (int n = 0; n < Notches(); n++) if (nt != null) { GUI.color = n < NotchesUsed() ? Color.white : new Color(0.35f, 0.35f, 0.4f, 0.8f); GUI.DrawTexture(new Rect(x0 + n * H * 0.05f, H * 0.41f, H * 0.04f, H * 0.04f), nt); GUI.color = Color.white; }
     i = 0; foreach (var kv in COST) { Icon(new Rect(x0 + (i % 5) * cs * 1.15f, H * 0.5f + (i / 5) * cs * 1.2f, cs, cs), Tex("props/charm_" + kv.Key), Owned(kv.Key), "c:" + kv.Key); i++; }
     if (pick.StartsWith("c:")) {
       string c = pick.Substring(2); string[] d; Story.Charm.TryGetValue(c, out d);

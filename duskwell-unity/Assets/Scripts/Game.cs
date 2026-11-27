@@ -94,12 +94,13 @@ public partial class Game : MonoBehaviour {
     foreach (var c in bl.list) kinds["boss_" + c.type] = c; foreach (var a in bl.arenas) arenas[a.room] = a;
     slashFr = new Sprite[4]; for (int i = 0; i < 4; i++) { var st = Resources.Load<Texture2D>("fx/wf_nail_" + i); if (st != null) slashFr[i] = Sprite.Create(st, new Rect(0, 0, st.width, st.height), new Vector2(0.2f, 0.5f), st.height / 96f, 0, SpriteMeshType.FullRect); }
     foreach (var lt in JsonUtility.FromJson<LifeData>(Resources.Load<TextAsset>("life").text).themes) lifeOf[lt.theme] = lt;
-    // the edges of the view fall into shadow
-    var vt = new Texture2D(128, 128, TextureFormat.RGBA32, false); var vp = new Color[128 * 128];
-    for (int vy2 = 0; vy2 < 128; vy2++) for (int vx2 = 0; vx2 < 128; vx2++) { float dd = Mathf.Sqrt((vx2 - 63.5f) * (vx2 - 63.5f) + (vy2 - 63.5f) * (vy2 - 63.5f)) / 63.5f; vp[vy2 * 128 + vx2] = new Color(0, 0, 0, Mathf.SmoothStep(0, 0.62f, (dd - 0.55f) / 0.6f)); }
-    vt.SetPixels(vp); vt.Apply();
-    var vg = new GameObject("Vignette"); vg.transform.SetParent(camGo.transform, false); vg.transform.localPosition = new Vector3(0, 0, 10);
-    var vr = vg.AddComponent<SpriteRenderer>(); vr.sprite = Sprite.Create(vt, new Rect(0, 0, 128, 128), new Vector2(0.5f, 0.5f), 128, 0, SpriteMeshType.FullRect); vr.sortingOrder = 50; vg.transform.localScale = new Vector3(540 * cam.aspect * 1.25f, 540 * 1.25f, 1);
+    // the edges of the view fall into shadow: a painted wash of dark ink round the view (Resources/ui/vignette)
+    var vt = Resources.Load<Texture2D>("ui/vignette");
+    if (vt != null) {
+      var vg = new GameObject("Vignette"); vg.transform.SetParent(camGo.transform, false); vg.transform.localPosition = new Vector3(0, 0, 10);
+      var vr = vg.AddComponent<SpriteRenderer>(); vr.sprite = Sprite.Create(vt, new Rect(0, 0, vt.width, vt.height), new Vector2(0.5f, 0.5f), 1, 0, SpriteMeshType.FullRect); vr.sortingOrder = 50; vr.color = new Color(1, 1, 1, 0.7f);
+      vg.transform.localScale = new Vector3(540 * cam.aspect * 1.08f / vt.width, 540 * 1.08f / vt.height, 1);
+    }
     var sg = new GameObject("Slash"); slash = sg.AddComponent<SpriteRenderer>(); slash.sortingOrder = 11; slash.enabled = false;
     var pt = Resources.Load<Texture2D>("fx/fx_puff"); if (pt != null) puffSprite = Sprite.Create(pt, new Rect(0, 0, pt.width, pt.height), new Vector2(0.5f, 0.5f), pt.height, 0, SpriteMeshType.FullRect);
     music = gameObject.AddComponent<AudioSource>(); music.loop = true; music.volume = 0.5f;

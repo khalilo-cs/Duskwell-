@@ -34,8 +34,14 @@ Stage seven, the story and the rest of the game:
   are the middle lords; the painted shots of the first version (`Resources/proj`).
 - **One blade** (`Weapon.cs`): the Ember Blade, five stages forged by the smith, each asking pale ember ore (from the charm wardens
   and the road lords), geo, shards, creatures beaten and road lords; harder, longer, quicker, brighter at each stage (painted in
-  `Resources/blade`). The **shade**: the geo stays where the hero fell, with a shadow to beat. The **pause screen** (`Menu.cs`): the bag
-  and a map of the rooms walked into, on painted panels.
+  `Resources/blade`). The **shade**: the geo stays where the hero fell, with a shadow to beat. The **pause screen** (`Menu.cs`): three
+  pages on a painted frame — the map (rooms walked into, and whole areas whose map was bought from the wayfarer), the bag (blade,
+  masks, vessel, powers, shards, ore, completion) and the charms (worn on benches only, within a number of notches).
+- **Spells and powers**: the soul orb, the dusk cry (↑ + F) and the star fall (↓ + F in the air), the dash, wall cling, double
+  jump, dive and the charged superdash; each with a painted medallion (`Resources/ui/power_*`).
+- **Creatures that fight** (`Fight.cs`): lunges, swoops and spit; champions; the lords' signature moves (quake, ring, cut,
+  pillars) and their rage at half health.
+- **Depth** (`Ambience.cs`): motes of each area's air, slow fog, painted shafts of light and dark plants passing in front.
 - **Arabic on screen** (`Arabic.cs`): letters joined and read from the right, with the Cairo font (`Resources/font`).
 
 Everything is built from code at start (`Assets/Scripts/Game.cs`), so there is no hand-made scene.

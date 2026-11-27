@@ -60,7 +60,7 @@ public partial class Game {
     }
     foreach (var l in depth) {
       if (l.kind == 0) { float s = l.size * (1 + 0.08f * Mathf.Sin(t * 0.2f + l.ph)); l.sr.transform.position = new Vector3(l.bx + Mathf.Sin(t * 0.05f + l.ph) * 140, -l.by, 0); l.sr.transform.localScale = new Vector3(s * 1.8f, s, 1); }
-      else if (l.kind == 1) { l.sr.transform.position = new Vector3(l.bx, 40, 0); l.sr.transform.rotation = Quaternion.Euler(0, 0, -12 + Mathf.Sin(t * 0.15f + l.ph) * 3); var c = l.sr.color; c.a = 0.16f + 0.08f * Mathf.Sin(t * 0.4f + l.ph); l.sr.color = c; }
+      else if (l.kind == 1) { l.sr.transform.position = new Vector3(l.bx, 40, 0); l.sr.transform.rotation = Quaternion.Euler(0, 0, Mathf.Sin(t * 0.15f + l.ph) * 3); var c = l.sr.color; c.a = 0.16f + 0.08f * Mathf.Sin(t * 0.4f + l.ph); l.sr.color = c; }
       else { float sx = camX + (l.bx - camX) * l.k; l.sr.transform.position = new Vector3(sx, -(camY + hh + 30), 0); l.sr.transform.localScale = new Vector3(l.size, l.size * 1.25f, 1); l.sr.transform.rotation = Quaternion.Euler(0, 0, Mathf.Sin(t * 0.7f + l.ph) * 3); }
     }
   }

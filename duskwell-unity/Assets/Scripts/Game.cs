@@ -305,6 +305,7 @@ public partial class Game : MonoBehaviour {
     }
     bool atk = Input.GetKey(KeyCode.X) || atkHeldTouch;
     if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = AtkCD(); struck.Clear(); Play("nail_side", 0.7f); }
+    StepArtInput(atk);                                                         // the arts of the blade (Arts.cs)
     bool dash = Input.GetKey(KeyCode.C) || dashTouch;
     if (dash && !dashWas && dashCD <= 0 && (ground || airDash) && Has("dash")) { dashT = 0.18f; dashCD = Charmed("dashmaster") ? 0.25f : 0.5f; if (!ground) airDash = false; vy = 0; }
     dashWas = dash; ReadMore(dash);
@@ -411,7 +412,7 @@ public partial class Game : MonoBehaviour {
   }
   bool SolidAt(float px, float py) { return Solid(Tile(Mathf.FloorToInt(px / TILE), Mathf.FloorToInt(py / TILE))); }
   void StepFoes(float dt) {
-    atkT -= dt; atkCD -= dt;
+    atkT -= dt; atkCD -= dt; StepArt(dt);
     float hw = 64 + Reach(), hx = face > 0 ? x + PW : x - hw, hy = y - 4, hh = PH + 8;      // the blade's reach in front of the hero
     if (atkT > 0) NailWorld(hx, hy, hw, hh);
     for (int i = foes.Count - 1; i >= 0; i--) {
@@ -529,7 +530,7 @@ public partial class Game : MonoBehaviour {
     }
     slash.enabled = atkT > 0 && slashFr[0] != null;
     if (slash.enabled) { slash.sprite = slashFr[Mathf.Clamp((int)((0.2f - atkT) / 0.2f * 4), 0, 3)]; slash.flipX = face < 0; slash.transform.position = new Vector3(rx + PW / 2 + face * (10 + Reach() / 2f), -(ry + PH / 2), 0); slash.color = BLADE[blade].arc; slash.transform.localScale = Vector3.one * (1 + blade * 0.09f); }
-    hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : Color.white;
+    hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : ArtGlow();
     UpdateMore(rx, ry);
     // the camera follows, kept inside the room
     float hw = 270 * cam.aspect, W = room.w * TILE, H = room.h * TILE;

@@ -52,7 +52,11 @@ public partial class Game {
       PlayerPrefs.SetInt("ore", ore); PlayerPrefs.SetInt("geo", geo); PlayerPrefs.SetInt("blade", blade); PlayerPrefs.Save();
       Play("w_slam_0", 0.9f); Blow(0.1f, 8);
       StartScene(new[] { new Story.Panel("story/forge", "ضرب قَرن الحديد حتى غنّى… «" + next.name[0] + "». " + next.desc[0], "Qarn struck the iron until it sang... '" + next.name[1] + "'. " + next.desc[1]) }, "forge", () =>
-        StartTalk(next.name, Tex("blade/blade_" + blade), new List<string[]> { new[] { "ضرر " + next.dmg + " · مدى +" + next.reach + " · سرعة أعلى", "Damage " + next.dmg + " · reach +" + next.reach + " · quicker" } }, null, null, 0.4f));
+      {
+        var said = new List<string[]> { new[] { "ضرر " + next.dmg + " · مدى +" + next.reach + " · سرعة أعلى", "Damage " + next.dmg + " · reach +" + next.reach + " · quicker" } };
+        var learned = ArtLearned(blade); if (learned != null) said.Add(learned);            // a new art of the blade (Arts.cs)
+        StartTalk(next.name, Tex("blade/blade_" + blade), said, null, null, 0.4f);
+      });
     } });
     ch.Add(new Choice { label = new[] { "ماذا يحتاج نصلي؟", "What does my blade need?" }, act = () => {
       bool all; var need = NeedLines(next, out all); need.Insert(0, new[] { "لـ«" + next.name[0] + "» نحتاج:", "For '" + next.name[1] + "' we need:" });

@@ -106,7 +106,7 @@ public partial class Game {
       Rect ab; areaBox[r.area] = areaBox.TryGetValue(r.area, out ab) ? Rect.MinMaxRect(Mathf.Min(ab.xMin, rr.xMin), Mathf.Min(ab.yMin, rr.yMin), Mathf.Max(ab.xMax, rr.xMax), Mathf.Max(ab.yMax, rr.yMax)) : rr;
       if (!seen) continue;
       float m = Mathf.Clamp(k * 3.2f, 9, 30);
-      if (r.benches != null) foreach (var b in r.benches) MapMark(Tex("props/bench"), ox + (r.mx + b.x) * k, oy + (r.my + b.y) * k, m * 1.3f, m);
+      if (r.benches != null) foreach (var b in r.benches) { float bcx = ox + (r.mx + b.x) * k, bcy = oy + (r.my + b.y) * k; TravelMark(r, b, bcx, bcy, m); MapMark(Tex("props/bench"), bcx, bcy, m * 1.3f, m); }
       if (r.npcs != null) foreach (var n in r.npcs) { var nt = Tex("npc/npc_" + n.type); if (nt != null) GUI.DrawTextureWithTexCoords(new Rect(ox + (r.mx + n.x) * k - m / 2, oy + (r.my + n.y) * k - m, m, m * 1.2f), nt, new Rect(0, 0, 0.5f, 1)); }
       if (r.arena != null && !string.IsNullOrEmpty(r.arena.boss) && shardTex != null) { GUI.color = Beaten(r.arena.boss) ? new Color(0.4f, 0.4f, 0.45f, 0.7f) : Color.white; MapMark(shardTex, rr.center.x, rr.center.y, m * 1.1f, m * 1.3f); GUI.color = Color.white; }
       if (r.items != null) foreach (var it in r.items) if (it.kind == "charm" && !Got(it.id)) MapMark(Tex("props/charm_" + it.name), ox + (r.mx + it.x) * k, oy + (r.my + it.y) * k, m, m);
@@ -122,13 +122,13 @@ public partial class Game {
     System.Action<Texture2D, string, Rect> key = (t, label, uv) => { if (t != null) { if (uv.width > 0) GUI.DrawTextureWithTexCoords(new Rect(kx + W * 0.13f, ky, ks, ks), t, uv); else GUI.DrawTexture(new Rect(kx + W * 0.13f, ky, ks, ks), t); } Say(new Rect(kx, ky + ks * 0.1f, W * 0.125f, ks), label, H * 0.028f, new Color(0.9f, 0.9f, 0.92f, 1), TextAnchor.UpperRight); ky += ks * 1.3f; };
     key(Tex("props/bench"), "مقعد", default(Rect)); key(Tex("npc/npc_merchant"), "تاجر", new Rect(0, 0, 0.5f, 1)); key(Tex("npc/npc_smith"), "الحدّاد", new Rect(0, 0, 0.5f, 1));
     key(Tex("npc/npc_wizard"), "العرّافة", new Rect(0, 0, 0.5f, 1)); key(Tex("npc/npc_trader"), "رحّالة (يبيع الخرائط)", new Rect(0, 0, 0.5f, 1)); key(shardTex, "قاعة زعيم", default(Rect));
-    key(Tex("props/charm_thorn"), "تعويذة", default(Rect)); key(Tex("ui/ember"), "أنت هنا", default(Rect));
-    Say(new Rect(inner.x, inner.yMax + H * 0.005f, inner.width, H * 0.04f), mapNear ? "اضغط لرؤية العالم كله" : "اضغط على الخريطة للاقتراب", H * 0.024f, new Color(0.6f, 0.6f, 0.66f, 1), TextAnchor.UpperCenter);
+    key(Tex("props/charm_thorn"), "تميمة", default(Rect)); key(Tex("ui/ember"), "أنت هنا", default(Rect));
+    Say(new Rect(inner.x, inner.yMax + H * 0.005f, inner.width, H * 0.04f), AtBench() ? "أنت على مقعد: اضغط مقعداً مضيئاً لتسافر إليه" : mapNear ? "اضغط لرؤية العالم كله" : "اضغط على الخريطة للاقتراب", H * 0.024f, new Color(0.6f, 0.6f, 0.66f, 1), TextAnchor.UpperCenter);
   }
   void MapMark(Texture2D t, float cx, float cy, float w, float h) { if (t != null) GUI.DrawTexture(new Rect(cx - w / 2, cy - h, w, h), t); }
 
   // ---------------------------------------------------------------- the bag
-  static readonly string[] POWERS = { "dash", "wall", "double", "dive", "superdash", "cry", "star" };
+  static readonly string[] POWERS = { "dash", "wall", "double", "dive", "superdash", "cry", "star", "greatslash", "dashslash", "cyclone" };
   void DrawBag(float W, float H) {
     float hs = H * 0.065f;
     // the blade, the masks, the soul
@@ -141,7 +141,7 @@ public partial class Game {
     float gx = W * 0.32f, gy = H * 0.18f, gs = H * 0.1f;
     for (int i = 0; i < POWERS.Length; i++) Icon(new Rect(gx + (i % 4) * gs * 1.25f, gy + (i / 4) * gs * 1.25f, gs, gs), Tex("ui/power_" + POWERS[i]), Has(POWERS[i]), "p:" + POWERS[i]);
     // the shards and the ore
-    float sy = gy + gs * 2.7f;
+    float sy = gy + gs * (1.25f * Mathf.Ceil(POWERS.Length / 4f) + 0.2f);
     Icon(new Rect(gx, sy, gs, gs), shardTex, Seals() > 0, "shards"); Say(new Rect(gx + gs * 0.5f, sy + gs * 0.55f, gs, gs), Seals() + "", H * 0.04f, Color.white, TextAnchor.UpperLeft);
     Icon(new Rect(gx + gs * 1.25f, sy, gs, gs), Tex("ui/ore"), ore > 0, "ore"); Say(new Rect(gx + gs * 1.75f, sy + gs * 0.55f, gs, gs), ore + "", H * 0.04f, Color.white, TextAnchor.UpperLeft);
     Icon(new Rect(gx + gs * 2.5f, sy, gs, gs), heartFull, true, "masks"); Say(new Rect(gx + gs * 3f, sy + gs * 0.55f, gs, gs), maxHp + "", H * 0.04f, Color.white, TextAnchor.UpperLeft);

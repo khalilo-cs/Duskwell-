@@ -22,7 +22,7 @@ public partial class Game {
     for (int i = 0; i < count; i++) fr[i] = Sprite.Create(t, new Rect(i * fw, 0, fw, t.height), pivot, ppu, 0, SpriteMeshType.FullRect);
     return fr;
   }
-  bool Has(string a) { return PlayerPrefs.GetInt("abil_" + a, 0) == 1; }
+  bool Has(string a) { if (System.Array.IndexOf(ARTS, a) >= 0) return Knows(a); return PlayerPrefs.GetInt("abil_" + a, 0) == 1; }
   bool Charmed(string c) { return PlayerPrefs.GetInt("charm_" + c, 0) == 1 && PlayerPrefs.GetInt("charm_on_" + c, 0) == 1; }    // found, and worn
   bool Got(string id) { return PlayerPrefs.GetInt("got_" + id, 0) == 1; }
   int NailDmg() { return BLADE[blade].dmg + (Charmed("fury") && hp == 1 ? 4 : 0); }
@@ -148,7 +148,7 @@ public partial class Game {
     if (p.kind == "npc") TalkTo(p);
     else if (p.kind == "bench") {
       hp = maxHp; PlayerPrefs.SetString("bench_room", room.id); PlayerPrefs.SetFloat("bench_x", p.x); PlayerPrefs.SetFloat("bench_y", p.y); PlayerPrefs.SetInt("hp", hp); PlayerPrefs.Save();
-      spawnX = p.x; spawnY = p.y; Play("w_bench_0", 0.7f); Toast(new[] { "استرحتَ على المقعد. حُفظت رحلتك.", "You rest on the bench. Your journey is kept." });
+      spawnX = p.x; spawnY = p.y; RestedOn(p.x); Play("w_bench_0", 0.7f); Toast(new[] { "استرحتَ على المقعد. حُفظت رحلتك.", "You rest on the bench. Your journey is kept." });
     } else if (p.kind == "sign") {
       string[] t = p.id == "sign_controls" ? Story.Controls : Txt(p.id); if (t == null) return;
       StartTalk(new[] { "لوحة قديمة", "An Old Tablet" }, Tex("props/sign"), new List<string[]> { t }, null, null, 0);

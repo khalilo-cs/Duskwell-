@@ -39,6 +39,9 @@ Stage seven, the story and the rest of the game:
   masks, vessel, powers, shards, ore, completion) the charms (worn on benches only, within a number of notches), and
   the hunter's journal (`Journal.cs`, `Resources/journal.json`): every creature and lord in its painted picture, written in when
   first beaten and complete after ten.
+- **Arts of the blade** (`Arts.cs`): hold strike, then let go — the Great Slash, the Dash Slash and the Cyclone, learned as
+  the blade grows. **Travel** (`Travel.cs`): sitting on a bench, tap on the map any bench rested on before, and the lantern moth
+  carries the hero there.
 - **Spells and powers**: the soul orb, the dusk cry (↑ + F) and the star fall (↓ + F in the air), the dash, wall cling, double
   jump, dive and the charged superdash; each with a painted medallion (`Resources/ui/power_*`).
 - **Creatures that fight** (`Fight.cs`): lunges, swoops and spit; champions; the lords' signature moves (quake, ring, cut,

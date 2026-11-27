@@ -248,9 +248,10 @@ public partial class Game {
   }
   void Thorns() { if (!Charmed("thorn")) return; foreach (var f in foes) if (f.mode != 3 && Mathf.Abs(f.x + f.d.w / 2 - (x + PW / 2)) < 110 && Mathf.Abs(f.y + f.d.h / 2 - (y + PH / 2)) < 90) { f.hp -= 10; f.flash = 0.15f; if (f.hp <= 0) { f.mode = 3; f.st = 0.3f; OnFoeDown(f); } } }
   void Die() {
-    if (deadT > 0) return; LeaveShade(); deadT = 1.6f; hp = 0; vx = 0; vy = 0; Play("hero_die", 0.8f); Blow(0.2f, 10); Dust(x + PW / 2, y + PH / 2, 14, 180);
+    if (deadT > 0) return; if (!Dreaming()) LeaveShade(); deadT = 1.6f; hp = 0; vx = 0; vy = 0; Play("hero_die", 0.8f); Blow(0.2f, 10); Dust(x + PW / 2, y + PH / 2, 14, 180);
   }
   void Respawn() {
+    if (Dreaming()) { Wake(); return; }                                         // falling in a memory only wakes the hero
     hp = maxHp; soul = 0; fightOn = false; bossNow = null;
     string br = PlayerPrefs.GetString("bench_room", "");
     if (br != "" && rooms.ContainsKey(br)) Enter(br, PlayerPrefs.GetFloat("bench_x"), PlayerPrefs.GetFloat("bench_y"));

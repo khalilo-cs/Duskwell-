@@ -42,6 +42,8 @@ Stage seven, the story and the rest of the game:
 - **Arts of the blade** (`Arts.cs`): hold strike, then let go — the Great Slash, the Dash Slash and the Cyclone, learned as
   the blade grows. **Travel** (`Travel.cs`): sitting on a bench, tap on the map any bench rested on before, and the lantern moth
   carries the hero there.
+- **Memories of battle** (`Dream.cs`): from a bench, the journal calls back any beaten lord to fight again as a memory, with
+  nothing lost on falling; won memories are marked in the journal.
 - **Spells and powers**: the soul orb, the dusk cry (↑ + F) and the star fall (↓ + F in the air), the dash, wall cling, double
   jump, dive and the charged superdash; each with a painted medallion (`Resources/ui/power_*`).
 - **Creatures that fight** (`Fight.cs`): lunges, swoops and spit; champions; the lords' signature moves (quake, ring, cut,

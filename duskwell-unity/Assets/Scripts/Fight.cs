@@ -217,6 +217,7 @@ public partial class Game {
   // a creature, a warden or a lord falls
   void OnFoeDown(Foe f) {
     if (f.d.type == "shade") { ShadeDown(); return; }
+    if (f.boss && Dreaming()) { DreamDown(f.d.type.Replace("boss_", "")); return; }   // a lord beaten again in a memory (Dream.cs)
     if (!f.boss && !f.champ) { kills++; PlayerPrefs.SetInt("kills", kills); }
     if (!f.boss) Hunted(f.d.type);                                               // the hunter's journal (Journal.cs)
     int g = f.boss ? 120 : f.champ ? 60 : Random.Range(2, 7); geo += g; PlayerPrefs.SetInt("geo", geo);

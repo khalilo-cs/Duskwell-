@@ -157,7 +157,7 @@ public partial class Game : MonoBehaviour {
     }
     foes.Clear(); bossNow = null; x0 = x; y0 = y; foreach (var pf in puffs) if (pf.sr != null) Destroy(pf.sr.gameObject); puffs.Clear();
     Populate();
-    ArenaData ar; pendingArena = arenas.TryGetValue(id, out ar) && PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0 ? ar : null;   // the lord of this hall waits for the hero to walk in (Fight.cs)
+    ArenaData ar; pendingArena = arenas.TryGetValue(id, out ar) && (PlayerPrefs.GetInt("beat_" + ar.boss, 0) == 0 || dreamBoss == ar.boss) ? ar : null;   // the lord of this hall waits for the hero to walk in (Fight.cs)
     foreach (var e in room.enemies) {
       CreatureData d; if (!kinds.TryGetValue(e.type, out d)) continue;
       Sprite[] fr; if (!kindFrames.TryGetValue(e.type, out fr)) {

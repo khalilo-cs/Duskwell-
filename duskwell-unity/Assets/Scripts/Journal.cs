@@ -52,6 +52,12 @@ public partial class Game {
     float y = Both(tr, new[] { p.ar[0], p.en[0] }, H * 0.04f, Full(p) ? new Color(1, 0.9f, 0.65f, 1) : new Color(1, 0.96f, 0.88f, 1), TextAnchor.UpperCenter);
     string[] count = p.boss ? new[] { "سيّدٌ هزمته", "A lord you have beaten" } : new[] { "هزمت " + k + " / " + JNEED, "Beaten " + k + " / " + JNEED };
     y += Both(new Rect(tr.x, tr.y + y, tr.width, tr.height), count, H * 0.026f, new Color(0.75f, 0.78f, 0.85f, 1), TextAnchor.UpperCenter);
-    Both(new Rect(tr.x, tr.y + y + H * 0.015f, tr.width, tr.height), new[] { p.ar[1], p.en[1] }, H * 0.027f, new Color(0.88f, 0.88f, 0.9f, 1), TextAnchor.UpperRight);
+    y += H * 0.015f + Both(new Rect(tr.x, tr.y + y + H * 0.015f, tr.width, tr.height), new[] { p.ar[1], p.en[1] }, H * 0.027f, new Color(0.88f, 0.88f, 0.9f, 1), TextAnchor.UpperRight);
+    if (!p.boss) return;
+    // a lord beaten: its memory can be called back from a bench (Dream.cs)
+    if (DreamWon(p.k)) y += Both(new Rect(tr.x, tr.y + y + H * 0.01f, tr.width, H * 0.05f), new[] { "✦ انتصرتَ عليه في الذكرى", "✦ Beaten again in memory" }, H * 0.025f, new Color(1, 0.85f, 0.55f, 1), TextAnchor.UpperCenter) + H * 0.01f;
+    var br = new Rect(tr.x, Mathf.Min(tr.y + y + H * 0.02f, H * 0.84f), tr.width, H * 0.055f);
+    if (!AtBench()) { Both(br, new[] { "اجلس على مقعد لتستدعي ذكرى المعركة", "Sit on a bench to call back the battle" }, H * 0.024f, new Color(0.6f, 0.6f, 0.66f, 1), TextAnchor.UpperCenter); return; }
+    if (TextButton(br, "◆  استدعِ ذكرى المعركة  ◆")) StartDream(p.k);
   }
 }

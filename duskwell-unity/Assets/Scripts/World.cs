@@ -91,7 +91,13 @@ public partial class Game {
     if (room.levers != null) foreach (var l in room.levers) { var p = AddProp("lever", l.id, "props/lever", 2, new Vector2(0.5f, 10f / 160), 2, (l.x + 0.5f) * TILE, (l.y + 1) * TILE, l); if (p != null) p.on = PlayerPrefs.GetInt("lever_" + l.id, 0) == 1; }
     if (room.items != null) foreach (var it in room.items) if (!Got(it.id)) SpawnItem(it);
     SpawnShade(); MarkSeen();
-    if (room.area != lastArea) { lastArea = room.area; string[] a; if (Story.Area.TryGetValue(room.area, out a)) Card(null, new[] { a[0].Split('|')[0], a[1].Split('|')[0] }, new[] { a[0].Split('|')[1], a[1].Split('|')[1] }, 4.2f, true); }
+    if (room.area != lastArea) {
+      lastArea = room.area; string[] a;
+      if (Story.Area.TryGetValue(room.area, out a)) {
+        var nm = new[] { a[0].Split('|')[0], a[1].Split('|')[0] }; var ln = new[] { a[0].Split('|')[1], a[1].Split('|')[1] };
+        if (AreaScene(room.area, room.theme, nm, ln)) { } else Card(null, nm, ln, 4.2f, true);
+      }
+    }
   }
   Prop AddProp(string kind, string id, string pic, int frames, Vector2 pivot, float ppu, float px, float py, object data) {
     var fr = Strip(pic, frames, pivot, ppu); if (fr == null) return null;
@@ -256,7 +262,7 @@ public partial class Game {
     string br = PlayerPrefs.GetString("bench_room", "");
     if (br != "" && rooms.ContainsKey(br)) Enter(br, PlayerPrefs.GetFloat("bench_x"), PlayerPrefs.GetFloat("bench_y"));
     else Enter(startRoom, startX, startY);
-    Toast(new[] { "سقطتَ في الظلام… وظلّك ينتظر حيث سقطت ومعه الجيو. اهزمه لتستعيده.", "You fell into the dark... your shade waits where you fell, holding your geo. Beat it to take it back." });
+    if (!ShadeScene()) Toast(new[] { "سقطتَ في الظلام… وظلّك ينتظر حيث سقطت ومعه الجيو. اهزمه لتستعيده.", "You fell into the dark... your shade waits where you fell, holding your geo. Beat it to take it back." });
   }
   void UpdateMore(float rx, float ry) {
     float t = Time.time;

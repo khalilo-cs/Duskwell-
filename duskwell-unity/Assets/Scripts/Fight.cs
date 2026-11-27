@@ -243,8 +243,11 @@ public partial class Game {
     int seals = Seals();
     var lines = new List<string[]>();
     if (lord != null) lines.Add(lord.fall);
+    var shardLine = new[] { "استعدتَ شظيةً من القنديل. الشظايا: " + seals + " من 12", "You took back a shard of the lantern. Shards: " + seals + " of 12" };
+    // a seal lord's memory has its own painted scene (Scenes.cs): the lord's last words, then the memory, then the shard
+    if (seal && MemoryScene(key, mem, lines, shardLine, after)) return;
     lines.Add(mem);
-    if (seal) lines.Add(new[] { "استعدتَ شظيةً من القنديل. الشظايا: " + seals + " من 12", "You took back a shard of the lantern. Shards: " + seals + " of 12" });
+    if (seal) lines.Add(shardLine);
     StartTalk(new[] { "ذكرى", "A Memory" }, shardTex, lines, null, after, 1.6f);
   }
   int Seals() { int n = 0; foreach (var s in Story.Seals) if (Beaten(s)) n++; return n; }

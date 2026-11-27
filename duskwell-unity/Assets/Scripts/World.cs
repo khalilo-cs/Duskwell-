@@ -13,7 +13,7 @@ public partial class Game {
   readonly List<Prop> props = new List<Prop>(); readonly Dictionary<int, SpriteRenderer> tileSr = new Dictionary<int, SpriteRenderer>();
   readonly Dictionary<string, Texture2D> tex = new Dictionary<string, Texture2D>(); readonly Dictionary<string, string[]> texts = new Dictionary<string, string[]>();
   readonly Dictionary<int, float> crumbling = new Dictionary<int, float>();
-  int maxHp = 5, geo, nail; float soul, healT, orbCD, deadT, sdashT, sdashCharge; bool diving, upWas, soulWas, diveWas; float soulHeld; int swing;
+  int maxHp = 5, geo; float soul, healT, orbCD, deadT, sdashT, sdashCharge; bool diving, upWas, soulWas, diveWas; float soulHeld; int swing;
   bool upTouch, soulTouch, diveTouch; Prop near; string lastArea = "";
 
   Texture2D Tex(string n) { Texture2D t; if (!tex.TryGetValue(n, out t)) { t = Resources.Load<Texture2D>(n); tex[n] = t; } return t; }
@@ -23,18 +23,18 @@ public partial class Game {
     return fr;
   }
   bool Has(string a) { return PlayerPrefs.GetInt("abil_" + a, 0) == 1; }
-  bool Charmed(string c) { return PlayerPrefs.GetInt("charm_" + c, 0) == 1; }
+  bool Charmed(string c) { return PlayerPrefs.GetInt("charm_" + c, 0) == 1 && PlayerPrefs.GetInt("charm_on_" + c, 0) == 1; }    // found, and worn
   bool Got(string id) { return PlayerPrefs.GetInt("got_" + id, 0) == 1; }
-  int NailDmg() { return 5 + nail * 2 + (Charmed("fury") && hp == 1 ? 4 : 0); }
+  int NailDmg() { return BLADE[blade].dmg + (Charmed("fury") && hp == 1 ? 4 : 0); }
   float HurtTime() { return Charmed("shell") ? 1.8f : 1.2f; }
-  void GainSoul() { soul = Mathf.Min(99, soul + (Charmed("spirit") ? 17 : 11)); }
+  void GainSoul() { soul = Mathf.Min(99, soul + (Charmed("spirit") ? 17 : 11) + (blade >= 4 ? 5 : 0)); }
   static bool Dynamic(int t) { return t == 4 || t == 5 || t == 7 || t == 9; }
   string[] Txt(string key) { string[] v; return texts.TryGetValue(key, out v) ? v : null; }
 
   void InitMore() {
     var td = JsonUtility.FromJson<TextData>(Resources.Load<TextAsset>("texts").text);
     for (int i = 0; i < td.keys.Length; i++) texts[td.keys[i]] = new[] { td.ar[i], td.en[i] };
-    maxHp = Mathf.Clamp(PlayerPrefs.GetInt("maxhp", 5), 5, 9); geo = PlayerPrefs.GetInt("geo", 0); nail = PlayerPrefs.GetInt("nail", 0);
+    maxHp = Mathf.Clamp(PlayerPrefs.GetInt("maxhp", 5), 5, 9); geo = PlayerPrefs.GetInt("geo", 0); InitBlade();
     InitUi();
   }
   // ---------------------------------------------------------------- the tiles of the room as they are now
@@ -90,6 +90,7 @@ public partial class Game {
     if (room.signs != null) foreach (var s in room.signs) AddProp("sign", s.key, "props/sign", 1, new Vector2(0.5f, 10f / 220), 2.2f, (s.x + 0.5f) * TILE, (s.y + 1) * TILE, s);
     if (room.levers != null) foreach (var l in room.levers) { var p = AddProp("lever", l.id, "props/lever", 2, new Vector2(0.5f, 10f / 160), 2, (l.x + 0.5f) * TILE, (l.y + 1) * TILE, l); if (p != null) p.on = PlayerPrefs.GetInt("lever_" + l.id, 0) == 1; }
     if (room.items != null) foreach (var it in room.items) if (!Got(it.id)) SpawnItem(it);
+    SpawnShade(); MarkSeen();
     if (room.area != lastArea) { lastArea = room.area; string[] a; if (Story.Area.TryGetValue(room.area, out a)) Card(null, new[] { a[0].Split('|')[0], a[1].Split('|')[0] }, new[] { a[0].Split('|')[1], a[1].Split('|')[1] }, 4.2f, true); }
   }
   Prop AddProp(string kind, string id, string pic, int frames, Vector2 pivot, float ppu, float px, float py, object data) {
@@ -113,17 +114,17 @@ public partial class Game {
   Rect BtnSoul { get { var r = BtnAtk; r.y -= r.height * 1.15f; return r; } }
   Rect BtnDive { get { var r = BtnAtk; r.x -= r.width * 1.2f; return r; } }
   void ReadMore(bool dashHeld) {
-    upTouch = soulTouch = diveTouch = false;
+    upTouch = soulTouch = diveTouch = false; if (Input.touchCount == 0 && !Input.GetKey(KeyCode.F) && !Input.GetKey(KeyCode.A)) { if (!soulWas) { swiping = false; swipeDy = 0; } }
     for (int i = 0; i < Input.touchCount; i++) {
       var tp = Input.GetTouch(i).position; var q = new Vector2(tp.x, Screen.height - tp.y);
-      if (BtnUp.Contains(q)) upTouch = true; else if (BtnSoul.Contains(q)) soulTouch = true; else if (Has("dive") && BtnDive.Contains(q)) diveTouch = true;
+      if (BtnUp.Contains(q)) upTouch = true; else if (BtnSoul.Contains(q)) { soulTouch = true; if (!swiping) { swiping = true; swipeY0 = q.y; } swipeDy = swipeY0 - q.y; } else if (Has("dive") && BtnDive.Contains(q)) diveTouch = true;
     }
     bool up = Input.GetKey(KeyCode.UpArrow) || upTouch, sl = Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.A) || soulTouch, dv = Input.GetKey(KeyCode.DownArrow) && Input.GetKey(KeyCode.X) || diveTouch;
     if (up && !upWas && near != null) Interact(near);
     upWas = up;
     // soul: a quick press throws an orb, a held press heals
     if (sl) { soulHeld += Time.deltaTime; if (soulHeld > 0.25f && soul >= 33 && hp < maxHp && ground) { healT += Time.deltaTime; inX = 0; if (healT >= (Charmed("focus") ? 0.55f : 0.9f)) { healT = 0; soul -= 33; hp++; Play("w_heal_" + Random.Range(0, 2), 0.7f); Dust(x + PW / 2, y + PH / 2, 6, 60); } } }
-    else { if (soulWas && soulHeld < 0.25f && soul >= 33 && orbCD <= 0) { soul -= 33; orbCD = 0.4f; var s = Fire("orb", x + PW / 2 + face * 20, y + PH / 2, face * 720, 0, 1.4f); if (s != null) s.mine = true; struck.Clear(); Play("w_ability_" + Random.Range(0, 2), 0.6f); } soulHeld = 0; healT = 0; }
+    else { if (soulWas && soulHeld < 0.25f && soul >= 33 && orbCD <= 0) CastSpell(); soulHeld = 0; healT = 0; }
     soulWas = sl;
     if (dv && !diveWas && !ground && Has("dive") && !diving) { diving = true; vy = 1100; dashT = 0; Play("nail_down", 0.6f); }
     diveWas = dv;
@@ -131,6 +132,18 @@ public partial class Game {
     if (Has("superdash") && dashHeld && ground && sdashT <= 0) sdashCharge += Time.deltaTime;
     else { if (sdashCharge > 0.55f) { sdashT = 1.6f; Play("w_ability_0", 0.7f); Blow(0.05f, 5); } sdashCharge = 0; }
   }
+  float swipeY0, swipeDy; bool swiping;
+  void CastSpell() {
+    bool up = Input.GetKey(KeyCode.UpArrow) || swipeDy > 40, down = Input.GetKey(KeyCode.DownArrow) || swipeDy < -40;
+    soul -= 33; orbCD = 0.4f; struck.Clear();
+    if (up && Has("cry")) {                                                      // the dusk cry: a pillar of light above
+      for (int k = -1; k <= 1; k++) { var p = Fire("pillar", x + PW / 2 + k * 34, y + PH, 0, 0, 0.45f); if (p != null) { p.mine = true; p.h = 260; } }
+      Blow(0.05f, 6); Play("w_roar_" + Random.Range(0, 3), 0.5f); Play("w_ability_1", 0.8f); return;
+    }
+    if (down && Has("star") && !ground) { diving = true; starFall = true; vy = 1300; Play("w_ability_0", 0.8f); return; }   // the star fall: down like a falling star
+    var s = Fire("orb", x + PW / 2 + face * 20, y + PH / 2, face * 720, 0, 1.4f); if (s != null) s.mine = true; Play("w_ability_" + Random.Range(0, 2), 0.6f);
+  }
+  bool starFall;
   void Interact(Prop p) {
     if (p.kind == "npc") TalkTo(p);
     else if (p.kind == "bench") {
@@ -182,6 +195,7 @@ public partial class Game {
       vy = 1100;
       if (ground) {
         diving = false; Blow(0.07f, 9); Dust(x + PW / 2, y + PH, 10, 200); Play("w_slam_" + Random.Range(0, 3), 0.8f);
+        if (starFall) { starFall = false; Blow(0.12f, 14); foreach (int sd in new[] { -1, 1 }) { var w = Fire("shock", x + PW / 2 + sd * 20, y + PH, sd * 520, 0, 1.2f); if (w != null) w.mine = true; } }
         int ty = Mathf.FloorToInt((y + PH + 4) / TILE);
         for (int tx = Mathf.FloorToInt(x / TILE) - 1; tx <= Mathf.FloorToInt((x + PW) / TILE) + 1; tx++) if (Tile(tx, ty) == 7) { BreakWall(tx, ty); RefreshTiles(); }
         foreach (var f in foes) if (f.mode != 3 && Mathf.Abs(f.x + f.d.w / 2 - (x + PW / 2)) < 90 && Mathf.Abs(f.y + f.d.h - (y + PH)) < 60) { f.hp -= 10; f.flash = 0.15f; if (f.hp <= 0) { f.mode = 3; f.st = f.boss ? 1.2f : 0.3f; OnFoeDown(f); } }
@@ -220,6 +234,7 @@ public partial class Game {
       string[] pw; if (Story.Power.TryGetValue(it.name, out pw)) StartTalk(new[] { pw[0].Split('|')[0], pw[1].Split('|')[0] }, Tex("props/item_ability"), new List<string[]> { new[] { pw[0].Split('|')[1], pw[1].Split('|')[1] } }, null, null, 0.4f);
     } else if (it.kind == "charm") {
       PlayerPrefs.SetInt("charm_" + it.name, 1); Play("w_ability_0", 0.9f);
+      int cost; if (COST.TryGetValue(it.name, out cost) && NotchesUsed() + cost <= Notches()) PlayerPrefs.SetInt("charm_on_" + it.name, 1);   // worn at once if the notches allow
       string[] c; if (Story.Charm.TryGetValue(it.name, out c)) StartTalk(new[] { c[0].Split('|')[0], c[1].Split('|')[0] }, Tex("props/charm_" + it.name), new List<string[]> { new[] { c[0].Split('|')[1], c[1].Split('|')[1] } }, null, null, 0.4f);
     }
     PlayerPrefs.SetInt("geo", geo); PlayerPrefs.Save();
@@ -233,14 +248,14 @@ public partial class Game {
   }
   void Thorns() { if (!Charmed("thorn")) return; foreach (var f in foes) if (f.mode != 3 && Mathf.Abs(f.x + f.d.w / 2 - (x + PW / 2)) < 110 && Mathf.Abs(f.y + f.d.h / 2 - (y + PH / 2)) < 90) { f.hp -= 10; f.flash = 0.15f; if (f.hp <= 0) { f.mode = 3; f.st = 0.3f; OnFoeDown(f); } } }
   void Die() {
-    if (deadT > 0) return; deadT = 1.6f; hp = 0; vx = 0; vy = 0; Play("hero_die", 0.8f); Blow(0.2f, 10); Dust(x + PW / 2, y + PH / 2, 14, 180);
+    if (deadT > 0) return; LeaveShade(); deadT = 1.6f; hp = 0; vx = 0; vy = 0; Play("hero_die", 0.8f); Blow(0.2f, 10); Dust(x + PW / 2, y + PH / 2, 14, 180);
   }
   void Respawn() {
-    hp = maxHp; geo /= 2; PlayerPrefs.SetInt("geo", geo); soul = 0; fightOn = false; bossNow = null;
+    hp = maxHp; soul = 0; fightOn = false; bossNow = null;
     string br = PlayerPrefs.GetString("bench_room", "");
     if (br != "" && rooms.ContainsKey(br)) Enter(br, PlayerPrefs.GetFloat("bench_x"), PlayerPrefs.GetFloat("bench_y"));
     else Enter(startRoom, startX, startY);
-    Toast(new[] { "سقطتَ في الظلام… وعدتَ إلى آخر مقعد. ضاع نصف الجيو.", "You fell into the dark... and woke at your last bench. Half your geo is lost." });
+    Toast(new[] { "سقطتَ في الظلام… وظلّك ينتظر حيث سقطت ومعه الجيو. اهزمه لتستعيده.", "You fell into the dark... your shade waits where you fell, holding your geo. Beat it to take it back." });
   }
   void UpdateMore(float rx, float ry) {
     float t = Time.time;

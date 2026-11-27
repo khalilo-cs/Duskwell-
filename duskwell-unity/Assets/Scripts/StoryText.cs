@@ -139,6 +139,8 @@ public static class Story {
     { "wall", T("مخلب الجدار|التصق بالجدران وانزلق عليها، واقفز عنها.", "Mantis Grip|Cling to walls, slide down them, and leap off.") },
     { "double", T("أجنحة الغسق|اقفز مرةً ثانية في الهواء.", "Dusk Wings|Jump a second time in the air.") },
     { "dive", T("الانقضاض|في الهواء: اضغط زر الانقضاض لتهوي بقوة وتكسر الأرض المشقوقة.", "Dive|In the air, press dive to plunge and break cracked floors.") },
+    { "cry", T("صرخة الغسق|اضغط ↑ مع زر الروح (أو اسحب زر الروح إلى الأعلى) فيرتفع فوقك عمود نورٍ يحرق ما فوقك.", "Dusk Cry|Press ↑ with soul (or swipe the soul button up): a pillar of light burns what is above you.") },
+    { "star", T("هبوط النجم|في الهواء: اضغط ↓ مع زر الروح (أو اسحب زر الروح إلى الأسفل) فتهوي كنجمٍ وتنطلق موجتان عند الارتطام.", "Star Fall|In the air, press ↓ with soul (or swipe the soul button down): you fall like a star and two waves burst out.") },
     { "superdash", T("قلب البلّور|اضغط زر الاندفاع مطوّلاً ثم أفلته لتنطلق كالسهم عبر الهاوية.", "Crystal Heart|Hold dash, then let go to fly like an arrow across the chasm.") },
   };
   public static readonly Dictionary<string, string[]> Charm = new Dictionary<string, string[]> {

@@ -9,7 +9,7 @@ using UnityEngine;
 [Serializable] public class DoorData { public string id; public int x, y, w, h; public string to, toDoor; }
 [Serializable] public class EnemyData { public string type; public int x, y; }
 [Serializable] public class RoomData { public string id; public int w, h; public string theme, bg, area, t; public DoorData[] doors; public EnemyData[] enemies;
-  public NpcData[] npcs; public PosData[] benches; public SignData[] signs; public ItemData[] items; public LeverData[] levers; public SealData seal; public ArenaInfo arena; }
+  public NpcData[] npcs; public PosData[] benches; public SignData[] signs; public ItemData[] items; public LeverData[] levers; public SealData seal; public ArenaInfo arena; public int mx, my; }
 [Serializable] public class NpcData { public string type, shop; public int x, y; }
 [Serializable] public class PosData { public int x, y; }
 [Serializable] public class SignData { public string key; public int x, y; }
@@ -21,7 +21,7 @@ using UnityEngine;
 [Serializable] public class ArenaInfo { public string boss; public int trigger, x, y; public bool ending; public RectData[] gates; public RewardData reward; }
 [Serializable] public class TextData { public string[] keys, ar, en; }
 [Serializable] public class StartData { public string room; public float x, y; }
-[Serializable] public class WorldData { public StartData start; public RoomData[] rooms; }
+[Serializable] public class WorldData { public StartData start; public RoomData[] rooms; public int mapW, mapH; }
 [Serializable] public class FrameData { public float x, y, w, h, ax, ay; }
 [Serializable] public class AnimData { public string name; public FrameData[] f; }
 [Serializable] public class HeroData { public AnimData[] anims; }
@@ -71,7 +71,7 @@ public partial class Game : MonoBehaviour {
 
   void Awake() {
     Application.targetFrameRate = 60; QualitySettings.vSyncCount = 1; Screen.sleepTimeout = SleepTimeout.NeverSleep;
-    var world = JsonUtility.FromJson<WorldData>(Resources.Load<TextAsset>("world").text);
+    world = JsonUtility.FromJson<WorldData>(Resources.Load<TextAsset>("world").text);
     foreach (var r in world.rooms) rooms[r.id] = r;
     var camGo = new GameObject("Camera"); cam = camGo.AddComponent<Camera>(); camGo.tag = "MainCamera";
     cam.orthographic = true; cam.orthographicSize = 270; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
@@ -300,10 +300,10 @@ public partial class Game : MonoBehaviour {
     if (Input.GetKey(KeyCode.LeftArrow)) inX -= 1; if (Input.GetKey(KeyCode.RightArrow)) inX += 1;
     for (int i = 0; i < Input.touchCount; i++) {
       var p = Input.GetTouch(i).position; var q = new Vector2(p.x, Screen.height - p.y);
-      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (BtnDash.Contains(q)) dashTouch = true; else if (BtnSoul.Contains(q) || BtnUp.Contains(q) || Has("dive") && BtnDive.Contains(q)) { } else if (q.x > Screen.width * 0.5f) held = true;
+      if (BtnLeft.Contains(q)) inX = -1; else if (BtnRight.Contains(q)) inX = 1; else if (BtnAtk.Contains(q)) atkHeldTouch = true; else if (BtnDash.Contains(q)) dashTouch = true; else if (q.y < Screen.height * 0.18f || BtnSoul.Contains(q) || BtnUp.Contains(q) || Has("dive") && BtnDive.Contains(q)) { } else if (q.x > Screen.width * 0.5f) held = true;
     }
     bool atk = Input.GetKey(KeyCode.X) || atkHeldTouch;
-    if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = 0.42f; struck.Clear(); Play("nail_side", 0.7f); }
+    if (atk && !atkWas && atkCD <= 0) { atkT = 0.2f; atkCD = AtkCD(); struck.Clear(); Play("nail_side", 0.7f); }
     bool dash = Input.GetKey(KeyCode.C) || dashTouch;
     if (dash && !dashWas && dashCD <= 0 && (ground || airDash) && Has("dash")) { dashT = 0.18f; dashCD = Charmed("dashmaster") ? 0.25f : 0.5f; if (!ground) airDash = false; vy = 0; }
     dashWas = dash; ReadMore(dash);
@@ -411,7 +411,7 @@ public partial class Game : MonoBehaviour {
   bool SolidAt(float px, float py) { return Solid(Tile(Mathf.FloorToInt(px / TILE), Mathf.FloorToInt(py / TILE))); }
   void StepFoes(float dt) {
     atkT -= dt; atkCD -= dt;
-    float hx = face > 0 ? x + PW : x + PW - 64 - PW, hy = y - 4, hw = 64, hh = PH + 8;      // the blade's reach in front of the hero
+    float hw = 64 + Reach(), hx = face > 0 ? x + PW : x - hw, hy = y - 4, hh = PH + 8;      // the blade's reach in front of the hero
     if (atkT > 0) NailWorld(hx, hy, hw, hh);
     for (int i = foes.Count - 1; i >= 0; i--) {
       var f = foes[i]; f.t += dt; f.flash -= dt; f.px = f.x; f.py = f.y;
@@ -422,7 +422,8 @@ public partial class Game : MonoBehaviour {
         float ny = f.y + f.vy * dt; bool on = false;
         if (SolidAt(f.x + f.d.w / 2, ny + f.d.h)) { ny = Mathf.Floor((ny + f.d.h) / TILE) * TILE - f.d.h; f.vy = 0; on = true; }
         f.y = ny;
-        if (on) {
+        if (on && FoeAct(f, dt)) { }                                          // winding up, lunging or spitting (Fight.cs)
+        else if (on) {
           // one that sees the hero on its own ledge comes for them, faster
           float hdx = x + PW / 2 - (f.x + f.d.w / 2); bool sees = Mathf.Abs(hdx) < 280 && Mathf.Abs(y + PH - (f.y + f.d.h)) < 48;
           f.vx = sees && Mathf.Abs(hdx) > 12 ? Mathf.Sign(hdx) * 85 : Mathf.Sign(f.vx == 0 ? 1 : f.vx) * 40;
@@ -433,11 +434,14 @@ public partial class Game : MonoBehaviour {
         if (f.y > room.h * TILE + 300) { Destroy(f.sr.gameObject); foes.RemoveAt(i); continue; }
       } else if (f.mode == 1) {                                                // a flyer: bobs, and drifts toward the hero when near
         float dx = x + PW / 2 - (f.x + f.d.w / 2), dy = y + PH / 2 - (f.y + f.d.h / 2); bool near = Mathf.Abs(dx) < 320 && Mathf.Abs(dy) < 220;
+        if (FoeAct(f, dt)) { float sx2 = f.x + f.vx * dt, sy2 = f.y + f.vy * dt; if (!SolidAt(sx2 + f.d.w / 2, sy2 + f.d.h / 2)) { f.x = sx2; f.y = sy2; } else { f.vx = 0; f.vy = 0; } }
+        else {
         f.vx = Approach(f.vx, near ? Mathf.Sign(dx) * 70 : 0, 160 * dt); f.vy = Approach(f.vy, near ? Mathf.Sign(dy) * 50 : (f.homeY - f.y), 160 * dt);
         float nx = f.x + f.vx * dt, ny = f.y + f.vy * dt + Mathf.Sin(f.t * 3) * 0.4f;
         if (!SolidAt(nx + f.d.w / 2, f.y + f.d.h / 2)) f.x = nx; else f.vx = 0;
         if (!SolidAt(f.x + f.d.w / 2, ny + f.d.h / 2)) f.y = ny; else f.vy = 0;
         if (Mathf.Abs(f.vx) > 5) f.face = f.vx > 0 ? 1 : -1;
+        }
       }
       bool touch = x < f.x + f.d.w && x + PW > f.x && y < f.y + f.d.h && y + PH > f.y;
       if (atkT > 0 && !struck.Contains(f) && hx < f.x + f.d.w && hx + hw > f.x && hy < f.y + f.d.h && hy + hh > f.y) {
@@ -483,6 +487,7 @@ public partial class Game : MonoBehaviour {
   }
 
   void Update() {
+    if (mode == Mode.Play && deadT <= 0 && MenuKey()) OpenMenu(); else if (mode == Mode.Menu && MenuKey()) mode = Mode.Play;
     if (mode == Mode.Play && deadT <= 0) ReadInput(); else { inX = 0; jumpHeld = false; UiInput(); }
     acc += Mathf.Min(Time.deltaTime, 0.1f);
     if (stopT > 0) { stopT -= Time.unscaledDeltaTime; acc = Mathf.Min(acc, STEP * 0.99f); }
@@ -522,7 +527,7 @@ public partial class Game : MonoBehaviour {
       gp.sr.sprite = hero.sprite; gp.sr.flipX = hero.flipX; gp.sr.sortingOrder = 9; gg.transform.position = hero.transform.position; gg.transform.localScale = new Vector3(HERO_SCALE, HERO_SCALE, 1); puffs.Add(gp);
     }
     slash.enabled = atkT > 0 && slashFr[0] != null;
-    if (slash.enabled) { slash.sprite = slashFr[Mathf.Clamp((int)((0.2f - atkT) / 0.2f * 4), 0, 3)]; slash.flipX = face < 0; slash.transform.position = new Vector3(rx + PW / 2 + face * 10, -(ry + PH / 2), 0); }
+    if (slash.enabled) { slash.sprite = slashFr[Mathf.Clamp((int)((0.2f - atkT) / 0.2f * 4), 0, 3)]; slash.flipX = face < 0; slash.transform.position = new Vector3(rx + PW / 2 + face * (10 + Reach() / 2f), -(ry + PH / 2), 0); slash.color = BLADE[blade].arc; slash.transform.localScale = Vector3.one * (1 + blade * 0.09f); }
     hero.color = hurtT > 0 && (int)(hurtT * 16) % 2 == 0 ? new Color(1, 1, 1, 0.45f) : Color.white;
     UpdateMore(rx, ry);
     // the camera follows, kept inside the room
@@ -535,5 +540,6 @@ public partial class Game : MonoBehaviour {
     cam.transform.position = p + new Vector3(shakeX, shakeY, 0);
     // the far picture drifts a little against the view
     sky.transform.localPosition = new Vector3(-(p.x - W / 2) * 0.05f, (-p.y - H / 2) * 0.05f, 90);
+    StepAir(cam.transform.position.x, -cam.transform.position.y);
   }
 }

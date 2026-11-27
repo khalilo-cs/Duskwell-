@@ -32,6 +32,10 @@ Stage seven, the story and the rest of the game:
 - **The fights** (`Fight.cs`): every lord has a great move of its kind besides its lunge and its leap (floor waves and falling
   stones, rings of light, cuts across the hall, pillars of light), quicker below half strength, raging at the end; the charm wardens
   are the middle lords; the painted shots of the first version (`Resources/proj`).
+- **One blade** (`Weapon.cs`): the Ember Blade, five stages forged by the smith, each asking pale ember ore (from the charm wardens
+  and the road lords), geo, shards, creatures beaten and road lords; harder, longer, quicker, brighter at each stage (painted in
+  `Resources/blade`). The **shade**: the geo stays where the hero fell, with a shadow to beat. The **pause screen** (`Menu.cs`): the bag
+  and a map of the rooms walked into, on painted panels.
 - **Arabic on screen** (`Arabic.cs`): letters joined and read from the right, with the Cairo font (`Resources/font`).
 
 Everything is built from code at start (`Assets/Scripts/Game.cs`), so there is no hand-made scene.

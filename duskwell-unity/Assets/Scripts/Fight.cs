@@ -147,10 +147,11 @@ public partial class Game {
   void FoeLook(Foe f, float dk) {
     float dt = Time.deltaTime;
     f.svx += (-260 * (f.sx - 1) - 18 * f.svx) * dt; f.sx += f.svx * dt; f.svy += (-260 * (f.sy - 1) - 18 * f.svy) * dt; f.sy += f.svy * dt;
-    float crouch = (f.act == 1 || f.tele > 0) && f.mode == 4 ? 0.92f : 1;
-    float big = f.champ ? 1.5f : 1, s = f.sr.transform.localScale.y;
+    float crouch = f.tele > 0 || f.act == 1 && f.mode == 4 ? 0.9f : 1;
+    float big = f.champ ? 1.5f : f.d.type == "shade" ? HERO_SCALE : 1, s = f.sr.transform.localScale.y;
     f.sr.transform.localScale = new Vector3(big * Mathf.Clamp(f.sx, 0.7f, 1.3f) * (2 - crouch), big * s * Mathf.Clamp(f.sy, 0.7f, 1.3f) * crouch, 1);
     if (f.flash > 0) f.sr.color = new Color(1, 0.6f, 0.6f, 1);
+    else if (f.d.type == "shade") { f.sr.color = new Color(0.3f, 0.24f, 0.42f, 0.85f * dk); f.sr.flipX = f.face < 0; }
     else if (f.tele > 0) f.sr.color = new Color(1, 1, 0.75f + 0.25f * Mathf.Sin(Time.time * 40), dk);
     else if (f.enraged) f.sr.color = new Color(1, 0.72f + 0.18f * Mathf.Sin(Time.time * 7), 0.7f, dk);
     else if (f.champ) f.sr.color = new Color(1, 0.9f, 0.62f, dk);
@@ -178,12 +179,49 @@ public partial class Game {
     }
   }
 
+  // the creatures fight: a walker that has the hero close on its ledge rears back and lunges; a flyer hangs still, shivers and
+  // swoops; the spitting kinds stop, gather and spit. Each shows what it is about to do (it crouches and flashes) before it does it.
+  const string SPITTERS = " spitter imp lensling censer cinderling lavaworm orrery shroom glasscrab frostwisp ";
+  bool FoeAct(Foe f, float dt) {
+    if (f.boss || f.champ || f.d.type == "shade" || f.mode > 1) return false;
+    float cx = f.x + f.d.w / 2, cy = f.y + f.d.h / 2, hx = x + PW / 2, hy = y + PH / 2, dx = hx - cx, dy = hy - cy;
+    f.st -= dt;
+    if (f.act == 0) {                                                            // watching
+      if (f.st > 0 || deadT > 0) return false;
+      bool spit = SPITTERS.Contains(" " + f.d.type + " ");
+      if (spit && Mathf.Abs(dx) < 380 && Mathf.Abs(dy) < 200) { f.act = 4; f.tele = 0.45f; f.vx = 0; f.face = dx > 0 ? 1 : -1; return true; }
+      if (f.mode == 0 && Mathf.Abs(dx) < 150 && Mathf.Abs(y + PH - (f.y + f.d.h)) < 40) { f.act = 1; f.tele = 0.4f; f.vx = 0; f.face = dx > 0 ? 1 : -1; return true; }
+      if (f.mode == 1 && Mathf.Abs(dx) < 220 && Mathf.Abs(dy) < 180) { f.act = 1; f.tele = 0.5f; f.vx = f.vy = 0; f.face = dx > 0 ? 1 : -1; return true; }
+      return false;
+    }
+    if (f.tele > 0) { f.tele -= dt; f.vx = 0; if (f.mode == 1) f.vy = 0; if (f.tele <= 0) StartAct(f, dx, dy); return true; }
+    if (f.act == 2) {                                                            // lunging or swooping
+      f.special += 1; if (f.mode == 0) { float ahead = f.vx > 0 ? f.x + f.d.w + 2 : f.x - 2; if (SolidAt(ahead, f.y + f.d.h - 4) || !SolidAt(ahead, f.y + f.d.h + 4)) f.vx = 0; else f.x += f.vx * dt; }
+      if (f.st <= 0) { f.act = 3; f.st = f.mode == 1 ? 1.1f : 0.8f; f.vx *= 0.2f; f.vy *= 0.2f; }
+      return true;
+    }
+    if (f.act == 3) { f.vx *= 0.9f; f.vy *= 0.9f; if (f.st <= 0) { f.act = 0; f.st = 0.6f + Random.value * 0.6f; } return true; }   // recovering
+    f.act = 0; return false;
+  }
+  void StartAct(Foe f, float dx, float dy) {
+    if (f.act == 4) {                                                            // spit
+      float d = Mathf.Max(1, Mathf.Sqrt(dx * dx + dy * dy)); Fire("orb", f.x + f.d.w / 2 + f.face * f.d.w / 2, f.y + f.d.h / 2, dx / d * 300, dy / d * 300, 2.5f);
+      Play("w_slash_" + Random.Range(0, 4), 0.35f); f.act = 3; f.st = 1.6f + Random.value; return;
+    }
+    f.act = 2; f.svy -= 2.5f; f.svx += 2;
+    if (f.mode == 0) { f.vx = f.face * 360; f.st = 0.3f; }
+    else { float d = Mathf.Max(1, Mathf.Sqrt(dx * dx + dy * dy)); f.vx = dx / d * 430; f.vy = dy / d * 430; f.st = 0.42f; }
+    Play("w_slash_" + Random.Range(0, 4), 0.4f);
+  }
+
   // a creature, a warden or a lord falls
   void OnFoeDown(Foe f) {
+    if (f.d.type == "shade") { ShadeDown(); return; }
+    if (!f.boss && !f.champ) { kills++; PlayerPrefs.SetInt("kills", kills); }
     int g = f.boss ? 120 : f.champ ? 60 : Random.Range(2, 7); geo += g; PlayerPrefs.SetInt("geo", geo);
     Play(f.boss ? "w_bossDie_" + Random.Range(0, 2) : "w_enemyDie_" + Random.Range(0, 3), 0.8f);
     if (f.champ) {
-      if (!foes.Exists(o => o != f && o.guardOf == f.guardOf && o.mode != 3)) { PlayerPrefs.SetInt("champ_" + f.guardOf, 1); bossNow = null; Toast(new[] { "سقط الحارس. التعويذة لك.", "The warden falls. The charm is yours." }); RestoreMusic(); }
+      if (!foes.Exists(o => o != f && o.guardOf == f.guardOf && o.mode != 3)) { PlayerPrefs.SetInt("champ_" + f.guardOf, 1); bossNow = null; RestoreMusic(); GainOre(new[] { "سقط الحارس، فالتعويذة لك، وترك حجراً شاحباً.", "The warden falls: the charm is yours, and it left a pale stone." }); }
       PlayerPrefs.Save(); return;
     }
     if (!f.boss) { PlayerPrefs.Save(); return; }
@@ -197,6 +235,7 @@ public partial class Game {
     System.Action after = () => {
       if (room.arena != null && room.arena.ending) { StartScene(Story.Ending, "ending", () => { mode = Mode.Title; }); return; }
       RestoreMusic();
+      if (System.Array.IndexOf(ROADS, key) >= 0) GainOre(new[] { "سقط حارس الطريق وترك حجراً شاحباً.", "The road lord fell and left a pale stone." });
     };
     string[] mem = seal && Story.Memory.ContainsKey(key) ? Story.Memory[key] : Story.RoadLord;
     int seals = Seals();

@@ -1,0 +1,23 @@
+# Puts the Unity project (zipped, with its guide) on the releases page.
+name: Publish release
+on:
+  push:
+    branches: [clean-main]
+    paths: ['.github/workflows/release.yml']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The Unity project, zipped, with its guide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip -q -r Duskwell-Unity-Project.zip duskwell-unity -x "duskwell-unity/Library/*" "duskwell-unity/Temp/*" "duskwell-unity/Build/*"
+          cp duskwell-unity/START_HERE.md START_HERE.md
+          gh release delete unity-1 --yes --cleanup-tag >/dev/null 2>&1 || true
+          gh release create unity-1 Duskwell-Unity-Project.zip START_HERE.md \
+            --target "$GITHUB_SHA" --title "Duskwell Unity - نسخة يونيتي (المشروع كاملاً)" --latest=false \
+            --notes "مشروع نسخة يونيتي كاملاً في ملف مضغوط واحد. الجديد: نصل واحد بخمس مراحل مرسومة يصنعها الحدّاد بشروط (حجر الجذوة، جيو، شظايا، مخلوقات، حرّاس الطرق)، الظل الذي يحمل الجيو، قائمة بثلاث صفحات (الخريطة، الحقيبة، التمائم) على إطار مرسوم، تعويذتا صرخة الغسق وسقوط النجم، شراء خرائط المناطق من الرحّالة، هجمات خاصة للوحوش وضربات مميزة للزعماء، ضباب وأشعة ضوء ونباتات أمامية لعمق المشهد، وخط عناوين جديد، وحواف الشاشة وضباب الحوار وخلفية القائمة وورق الخريطة وحبرها وفتحات التمائم كلها مرسومة. نزّل Duskwell-Unity-Project.zip واتبع START_HERE.md خطوة بخطوة."

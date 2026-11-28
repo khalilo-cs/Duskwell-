@@ -54,6 +54,7 @@ public partial class Game {
   }
   void TalkTo(Prop p) {
     var n = (NpcData)p.data; Story.Person who; if (!Story.People.TryGetValue(n.type, out who)) return;
+    if (MeetScene(n.type, () => TalkTo(p))) return;                              // the first meeting is painted (Scenes.cs)
     int s = Seals(), stage = s == 0 ? 0 : s <= 6 ? 1 : s < 12 ? 2 : 3; var says = who.says[Mathf.Min(stage, who.says.Length - 1)];
     var lines = new List<string[]>(says);
     List<Choice> ch = null; System.Action done = null;
@@ -69,7 +70,7 @@ public partial class Game {
       int sl = Seals(); string teach = sl >= 8 && !Has("star") ? "star" : sl >= 4 && !Has("cry") ? "cry" : null;
       if (teach != null) {
         var pw = Story.Power[teach]; lines.Add(new[] { "اقترب… سأعلّمك ما تعلّمته من النجوم.", "Come closer... I will teach you what the stars taught me." });
-        done = () => { PlayerPrefs.SetInt("abil_" + teach, 1); PlayerPrefs.Save(); Play("w_ability_1", 0.9f); StartTalk(new[] { pw[0].Split('|')[0], pw[1].Split('|')[0] }, Tex("ui/power_" + teach), new List<string[]> { new[] { pw[0].Split('|')[1], pw[1].Split('|')[1] } }, null, null, 0.4f); };
+        done = () => { PlayerPrefs.SetInt("abil_" + teach, 1); PlayerPrefs.Save(); Play("w_ability_1", 0.9f); PowerScene(teach, () => StartTalk(new[] { pw[0].Split('|')[0], pw[1].Split('|')[0] }, Tex("ui/power_" + teach), new List<string[]> { new[] { pw[0].Split('|')[1], pw[1].Split('|')[1] } }, null, null, 0.4f)); };
       } else if (sl < 4) lines.Add(new[] { "عُد إليّ ومعك أربع شظايا، وسأعلّمك صرخة الغسق.", "Come back with four shards, and I will teach you the Dusk Cry." });
     } else if (n.type == "trader") {
       string ar0 = room.area; string[] an; Story.Area.TryGetValue(ar0, out an); string nm = an != null ? an[0].Split('|')[0] : ar0;

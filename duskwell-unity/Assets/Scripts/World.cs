@@ -237,7 +237,7 @@ public partial class Game {
     else if (it.kind == "seed" || it.kind == "fang") { maxHp = Mathf.Min(9, maxHp + 1); hp = maxHp; PlayerPrefs.SetInt("maxhp", maxHp); Play("w_heal_0", 0.8f); Toast(new[] { "بذرة القناع: صار لك قناعٌ جديد.", "A mask seed: you gained a mask." }); }
     else if (it.kind == "ability") {
       PlayerPrefs.SetInt("abil_" + it.name, 1); Play("w_ability_1", 0.9f); Blow(0.1f, 6);
-      string[] pw; if (Story.Power.TryGetValue(it.name, out pw)) StartTalk(new[] { pw[0].Split('|')[0], pw[1].Split('|')[0] }, Tex("props/item_ability"), new List<string[]> { new[] { pw[0].Split('|')[1], pw[1].Split('|')[1] } }, null, null, 0.4f);
+      string[] pw; if (Story.Power.TryGetValue(it.name, out pw)) PowerScene(it.name, () => StartTalk(new[] { pw[0].Split('|')[0], pw[1].Split('|')[0] }, Tex("ui/power_" + it.name) ?? Tex("props/item_ability"), new List<string[]> { new[] { pw[0].Split('|')[1], pw[1].Split('|')[1] } }, null, null, 0.4f));   // its painted scene first (Scenes.cs)
     } else if (it.kind == "charm") {
       PlayerPrefs.SetInt("charm_" + it.name, 1); Play("w_ability_0", 0.9f);
       int cost; if (COST.TryGetValue(it.name, out cost) && NotchesUsed() + cost <= Notches()) PlayerPrefs.SetInt("charm_on_" + it.name, 1);   // worn at once if the notches allow

@@ -43,7 +43,8 @@ Stage seven, the story and the rest of the game:
   the blade grows. **Travel** (`Travel.cs`): sitting on a bench, tap on the map any bench rested on before, and the lantern moth
   carries the hero there.
 - **Painted scenes** (`Scenes.cs`, `Resources/story`): an arrival painting for each area (`a_<area>`), a painting for each
-  shard's memory when its lord falls (`m_<lord>`), the first fall (`shade`), besides the prologue, the ending, the forge,
+  shard's memory when its lord falls (`m_<lord>`), the first fall (`shade`), the powers found (`w_<power>`, where painted) and the first meeting with each
+  of the people (`n_<who>`, where painted), besides the prologue, the ending, the forge,
   the travel and the dream.
 - **Memories of battle** (`Dream.cs`): from a bench, the journal calls back any beaten lord to fight again as a memory, with
   nothing lost on falling; won memories are marked in the journal.

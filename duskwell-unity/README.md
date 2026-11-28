@@ -42,6 +42,9 @@ Stage seven, the story and the rest of the game:
 - **Arts of the blade** (`Arts.cs`): hold strike, then let go — the Great Slash, the Dash Slash and the Cyclone, learned as
   the blade grows. **Travel** (`Travel.cs`): sitting on a bench, tap on the map any bench rested on before, and the lantern moth
   carries the hero there.
+- **Painted scenes** (`Scenes.cs`, `Resources/story`): an arrival painting for each area (`a_<area>`), a painting for each
+  shard's memory when its lord falls (`m_<lord>`), the first fall (`shade`), besides the prologue, the ending, the forge,
+  the travel and the dream.
 - **Memories of battle** (`Dream.cs`): from a bench, the journal calls back any beaten lord to fight again as a memory, with
   nothing lost on falling; won memories are marked in the journal.
 - **Spells and powers**: the soul orb, the dusk cry (↑ + F) and the star fall (↓ + F in the air), the dash, wall cling, double
